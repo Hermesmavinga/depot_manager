@@ -1,0 +1,73 @@
+{
+  "clients": [
+    {
+      "id": "1",
+      "nom": "Hermes",
+      "telephone": "0999999999"
+    },
+    {
+      "id": "2",
+      "nom": "Jean",
+      "telephone": "0888888888"
+    },
+    {
+      "id": "d3c0",
+      "nom": "rose",
+      "telephone": "+243 828 790 728"
+    },
+    {
+      "id": "947b",
+      "nom": "sharone ",
+      "telephone": "0995087107"
+    },
+    {
+      "id": "41bc",
+      "nom": "liyah",
+      "telephone": "+243 828 790 728"
+    },
+    {
+      "id": "afb7",
+      "nom": "binek",
+      "telephone": "+243 828 790 728"
+    },
+    {
+      "id": "6c4b",
+      "nom": "debeers",
+      "telephone": "+243 828 790 728"
+    },
+    {
+      "id": "44b6",
+      "nom": "janice",
+      "telephone": "+243 828 790 728"
+    },
+    {
+      "id": "0d86",
+      "nom": "georges",
+      "telephone": "+243 828 790 728"
+    },
+    {
+      "id": "db14",
+      "nom": "yves",
+      "telephone": "+243 828 790 728"
+    },
+    {
+      "id": "70e2",
+      "nom": "julie",
+      "telephone": "+243 828 790 728"
+    },
+    {
+      "id": "9d71",
+      "nom": "ercic",
+      "telephone": "+243 828 790 728"
+    }
+  ],
+  "produits": [
+    {
+      "id": "1",
+      "nom": "Casier bière",
+      "prix": 10
+    }
+  ],
+  "ventes": [],
+  "$schema": "./node_modules/json-server/schema.json"
+}
