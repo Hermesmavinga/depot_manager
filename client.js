@@ -205,3 +205,89 @@ async function addVente() {
     console.error(error);
   }
 }
+
+// historique des ventes
+
+// 🔹 éléments
+const showHistoriqueBtn = document.getElementById("showHistoriqueBtn");
+const historiqueClientId = document.getElementById("historiqueClientId");
+const historiqueMessage = document.getElementById("historiqueMessage");
+const historiqueTable = document.getElementById("historiqueTable");
+const tbody = historiqueTable.querySelector("tbody");
+const totalQuantiteEl = document.getElementById("totalQuantite");
+const totalPrixEl = document.getElementById("totalPrix");
+
+// 🔹 bouton pour afficher l'historique
+showHistoriqueBtn.addEventListener("click", afficherHistorique);
+
+async function afficherHistorique() {
+  const clientId = historiqueClientId.value.trim();
+  tbody.innerHTML = "";
+  totalQuantiteEl.textContent = "0";
+  totalPrixEl.textContent = "0$";
+  historiqueTable.style.display = "none";
+  historiqueMessage.innerHTML = "";
+
+  if (!clientId) {
+    historiqueMessage.innerHTML =
+      "<span style='color:red;'>Entrez l'ID du client</span>";
+    return;
+  }
+
+  try {
+    // 🔍 Vérifier le client
+    const clientResponse = await fetch(
+      `http://localhost:4000/clients/${clientId}`,
+    );
+    if (!clientResponse.ok) {
+      historiqueMessage.innerHTML =
+        "<span style='color:red;'>❌ Client introuvable</span>";
+      return;
+    }
+    const clientData = await clientResponse.json();
+
+    // 🔍 Récupérer les ventes du client
+    const ventesResponse = await fetch(
+      `http://localhost:4000/ventes?clientId=${clientId}`,
+    );
+    const ventes = await ventesResponse.json();
+
+    if (ventes.length === 0) {
+      historiqueMessage.innerHTML = `<span style='color:blue;'>Aucune vente pour ${clientData.nom}</span>`;
+      return;
+    }
+
+    // 🔹 Remplir le tableau
+    let totalQuantite = 0;
+    let totalPrix = 0;
+
+    ventes.forEach((v) => {
+      const prix = Number(v.prix) || 0; // prix par défaut 0 si absent
+      const quantite = Number(v.quantite) || 0; // quantite par défaut 0 si absent
+      const total = Number(v.total) || prix * quantite; // calcul total si absent
+
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${v.id}</td>
+        <td>${v.produit}</td>
+        <td>${quantite}</td>
+        <td>${prix}$</td>
+        <td>${total}$</td>
+        <td>${v.date}</td>
+      `;
+      tbody.appendChild(tr);
+
+      totalQuantite += quantite;
+      totalPrix += total;
+    });
+
+    totalQuantiteEl.textContent = totalQuantite;
+    totalPrixEl.textContent = totalPrix + "$";
+    historiqueTable.style.display = "table";
+    historiqueMessage.innerHTML = `<span style='color:green;'>Historique des ventes pour <strong>${clientData.nom}</strong></span>`;
+  } catch (error) {
+    console.error(error);
+    historiqueMessage.innerHTML =
+      "<span style='color:red;'>Erreur lors de la récupération des ventes</span>";
+  }
+}

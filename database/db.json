@@ -163,6 +163,15 @@
       "prix": 20,
       "total": 40,
       "date": "22/03/2026 16:20:55"
+    },
+    {
+      "id": "4e6e",
+      "clientId": 2,
+      "produit": "Casier bière",
+      "quantite": 4,
+      "prix": 10,
+      "total": 40,
+      "date": "22/03/2026 17:09:29"
     }
   ],
   "$schema": "./node_modules/json-server/schema.json"

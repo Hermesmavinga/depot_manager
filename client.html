@@ -39,6 +39,39 @@
 
     <p id="venteMessage"></p>
 
+    <h2>Historique des ventes</h2>
+
+    <input type="number" id="historiqueClientId" placeholder="ID du client" />
+    <button type="button" id="showHistoriqueBtn">Afficher l'historique</button>
+
+    <div id="historiqueMessage"></div>
+    <table
+      id="historiqueTable"
+      border="1"
+      style="width: 100%; margin-top: 10px; display: none"
+    >
+      <thead>
+        <tr>
+          <th>ID Vente</th>
+          <th>Produit</th>
+          <th>Quantité</th>
+          <th>Prix unitaire</th>
+          <th>Total</th>
+          <th>Date</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2"><strong>Total général</strong></td>
+          <td id="totalQuantite">0</td>
+          <td></td>
+          <td id="totalPrix">0$</td>
+          <td></td>
+        </tr>
+      </tfoot>
+    </table>
+
     <script src="client.js"></script>
   </body>
 </html>
