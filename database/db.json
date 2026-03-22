@@ -59,6 +59,51 @@
       "id": "9d71",
       "nom": "ercic",
       "telephone": "+243 828 790 728"
+    },
+    {
+      "id": "0963",
+      "nom": "Mavinga",
+      "telephone": "+243 828 790 728"
+    },
+    {
+      "id": "5051",
+      "nom": "Mavinga",
+      "telephone": "+243 828 790 728"
+    },
+    {
+      "id": "fdf7",
+      "nom": "Mavinga",
+      "telephone": "+243 828 790 728"
+    },
+    {
+      "id": "0e48",
+      "nom": "Mavinga",
+      "telephone": "+243 828 790 728"
+    },
+    {
+      "id": "1916",
+      "nom": "Mavinga",
+      "telephone": "+243 828 790 728"
+    },
+    {
+      "id": "0754",
+      "nom": "Mavinga",
+      "telephone": "+243 828 790 728"
+    },
+    {
+      "id": "efd2",
+      "nom": "paolina",
+      "telephone": "+243 828 790 728"
+    },
+    {
+      "id": "0efe",
+      "nom": "Mavinga",
+      "telephone": "+243 828 790 728"
+    },
+    {
+      "id": "d6f2",
+      "nom": "papa jean",
+      "telephone": "+243 828 790 728"
     }
   ],
   "produits": [
@@ -68,6 +113,57 @@
       "prix": 10
     }
   ],
-  "ventes": [],
+  "ventes": [
+    {
+      "id": "5855",
+      "clientId": 2,
+      "produit": "Casier bière",
+      "quantite": 4,
+      "date": "22/03/2026 15:24:36"
+    },
+    {
+      "id": "89f9",
+      "clientId": 1,
+      "produit": "Casier bière",
+      "quantite": 3,
+      "date": "22/03/2026 15:31:23"
+    },
+    {
+      "id": "6e85",
+      "clientId": 2,
+      "produit": "Casier bière",
+      "quantite": 3,
+      "prix": 45,
+      "total": 135,
+      "date": "22/03/2026 16:04:28"
+    },
+    {
+      "id": "919e",
+      "clientId": 1,
+      "produit": "Casier bière",
+      "quantite": 2,
+      "prix": 20,
+      "total": 40,
+      "date": "22/03/2026 16:07:06"
+    },
+    {
+      "id": "1560",
+      "clientId": 2,
+      "produit": "Casier bière",
+      "quantite": 4,
+      "prix": 12,
+      "total": 48,
+      "date": "22/03/2026 16:20:28"
+    },
+    {
+      "id": "0839",
+      "clientId": 2,
+      "produit": "Casier bière",
+      "quantite": 2,
+      "prix": 20,
+      "total": 40,
+      "date": "22/03/2026 16:20:55"
+    }
+  ],
   "$schema": "./node_modules/json-server/schema.json"
 }

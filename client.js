@@ -92,3 +92,116 @@ async function addClient() {
       "<span style='color:red;'>Erreur lors de l'ajout</span>";
   }
 }
+
+// faire une vente
+
+// 🔹 Récupération des éléments
+const venteBtn = document.getElementById("addVenteBtn");
+const clientInput = document.getElementById("venteClientId");
+const clientInfo = document.getElementById("clientInfo");
+const message = document.getElementById("venteMessage");
+
+// 🔹 Écoute la saisie de l'ID client pour auto affichage
+clientInput.addEventListener("input", afficherClient);
+
+// 🔹 Fonction auto affichage client
+async function afficherClient() {
+  const clientId = clientInput.value;
+
+  if (!clientId) {
+    clientInfo.innerHTML = "";
+    return;
+  }
+
+  try {
+    const response = await fetch(`http://localhost:4000/clients/${clientId}`);
+
+    if (!response.ok) {
+      clientInfo.innerHTML =
+        "<span style='color:red;'>❌ Client introuvable</span>";
+      return;
+    }
+
+    const data = await response.json();
+    clientInfo.innerHTML = `<span style="color:green;">👤 Client : <strong>${data.nom}</strong></span>`;
+  } catch (error) {
+    clientInfo.innerHTML =
+      "<span style='color:red;'>Erreur de connexion</span>";
+  }
+}
+
+// 🔹 Écoute du bouton pour enregistrer la vente
+venteBtn.addEventListener("click", addVente);
+
+// 🔹 Fonction pour ajouter une vente
+async function addVente() {
+  const clientId = clientInput.value;
+  const produit = document.getElementById("produit").value;
+  const quantite = document.getElementById("quantite").value;
+  const prix = document.getElementById("prix").value;
+
+  // ✅ Validation des champs
+  if (!clientId || !produit || !quantite || !prix) {
+    message.innerHTML =
+      "<span style='color:red;'>Remplis tous les champs</span>";
+    return;
+  }
+
+  try {
+    // 🔍 Vérifier si le client existe
+    const clientResponse = await fetch(
+      `http://localhost:4000/clients/${clientId}`,
+    );
+    if (!clientResponse.ok) {
+      message.innerHTML =
+        "<span style='color:red;'>❌ Client introuvable</span>";
+      return;
+    }
+    const clientData = await clientResponse.json();
+
+    // 💰 Calcul du total
+    const total = prix * quantite;
+
+    // 📤 Enregistrer la vente
+    const response = await fetch("http://localhost:4000/ventes", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        clientId: Number(clientId),
+        produit,
+        quantite: Number(quantite),
+        prix: Number(prix),
+        total: Number(total),
+        date: new Date().toLocaleString(),
+      }),
+    });
+
+    const data = await response.json();
+
+    // ✅ Affichage du succès
+    message.innerHTML = `
+      <div style="color:green; border:1px solid green; padding:10px;">
+        ✅ Vente enregistrée avec succès <br><br>
+        🧾 ID Vente : <strong>${data.id}</strong><br>
+        👤 Client : <strong>${clientData.nom}</strong><br>
+        📦 Produit : <strong>${produit}</strong><br>
+        🔢 Quantité : <strong>${quantite}</strong><br>
+        💰 Prix : <strong>${prix}$</strong><br>
+        🧾 Total : <strong>${total}$</strong><br>
+        🕒 Date : <strong>${data.date}</strong>
+        <br><br>
+        <button onclick="this.parentElement.remove()">Fermer</button>
+      </div>
+    `;
+
+    // 🔄 Reset des champs
+    clientInput.value = "";
+    document.getElementById("quantite").value = "";
+    document.getElementById("prix").value = "";
+    clientInfo.innerHTML = "";
+  } catch (error) {
+    message.innerHTML =
+      "<span style='color:red;'>Erreur lors de la vente</span>";
+    console.error(error);
+  }
+}
