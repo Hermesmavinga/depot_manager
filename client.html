@@ -24,16 +24,32 @@
     <h2>Faire une vente</h2>
 
     <input type="number" id="venteClientId" placeholder="ID du client" />
-
     <p id="clientInfo"></p>
-    <!-- ✅ ICI -->
 
     <select id="produit">
-      <option value="Casier bière">Casier bière</option>
+      <option value="Casier bière">Casier bière - 25€</option>
+      <option value="Caisse de vin">Caisse de vin - 45€</option>
+      <option value="Pack whisky">Pack whisky - 60€</option>
+      <option value="Carton de soda">Carton de soda - 15€</option>
+      <option value="Pack de bières artisanales">
+        Pack de bières artisanales - 35€
+      </option>
     </select>
 
-    <input type="number" id="quantite" placeholder="Quantité" />
-    <input type="number" id="prix" placeholder="Prix unitaire" />
+    <input
+      type="number"
+      id="quantite"
+      placeholder="Quantité"
+      min="1"
+      value="1"
+    />
+    <input
+      type="number"
+      id="prix"
+      placeholder="Prix unitaire"
+      step="0.01"
+      readonly
+    />
 
     <button type="button" id="addVenteBtn">Enregistrer vente</button>
 

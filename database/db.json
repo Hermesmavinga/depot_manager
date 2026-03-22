@@ -172,6 +172,15 @@
       "prix": 10,
       "total": 40,
       "date": "22/03/2026 17:09:29"
+    },
+    {
+      "id": "5e44",
+      "clientId": 2,
+      "produit": "Pack whisky",
+      "quantite": 6,
+      "prix": 60,
+      "total": 360,
+      "date": "22/03/2026 18:11:31"
     }
   ],
   "$schema": "./node_modules/json-server/schema.json"

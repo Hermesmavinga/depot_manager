@@ -100,13 +100,69 @@ const venteBtn = document.getElementById("addVenteBtn");
 const clientInput = document.getElementById("venteClientId");
 const clientInfo = document.getElementById("clientInfo");
 const message = document.getElementById("venteMessage");
+const produitSelect = document.getElementById("produit");
+const quantiteInput = document.getElementById("quantite");
+const prixInput = document.getElementById("prix");
+
+// 📦 Base de données des produits avec leurs prix
+const produits = {
+  "Casier bière": { prix: 25, unite: "casier" },
+  "Caisse de vin": { prix: 45, unite: "caisse" },
+  "Pack whisky": { prix: 60, unite: "pack" },
+  "Carton de soda": { prix: 15, unite: "carton" },
+  "Pack de bières artisanales": { prix: 35, unite: "pack" },
+};
+
+// 🔹 Initialisation : définir le prix selon le produit sélectionné
+function updatePrix() {
+  const produit = produitSelect.value;
+  if (produits[produit]) {
+    prixInput.value = produits[produit].prix;
+  } else {
+    prixInput.value = "";
+  }
+}
+
+// Écouter le changement de produit
+produitSelect.addEventListener("change", updatePrix);
+
+// Initialiser au chargement
+updatePrix();
+
+// 🔹 Ajouter un affichage du total en temps réel
+const totalDisplay = document.createElement("p");
+totalDisplay.id = "totalDisplay";
+totalDisplay.style.marginTop = "10px";
+totalDisplay.style.fontWeight = "bold";
+prixInput.insertAdjacentElement("afterend", totalDisplay);
+
+// Fonction pour calculer et afficher le total en temps réel
+function updateTotal() {
+  const quantite = parseFloat(quantiteInput.value) || 0;
+  const prix = parseFloat(prixInput.value) || 0;
+  const total = quantite * prix;
+
+  if (quantite > 0 && prix > 0) {
+    totalDisplay.innerHTML = `<span style="color: #4CAF50;">💰 Total : ${total.toFixed(2)}€</span>`;
+  } else {
+    totalDisplay.innerHTML = "";
+  }
+}
+
+// Écouter les changements de quantité et de prix
+quantiteInput.addEventListener("input", updateTotal);
+prixInput.addEventListener("input", updateTotal);
 
 // 🔹 Écoute la saisie de l'ID client pour auto affichage
-clientInput.addEventListener("input", afficherClient);
+let debounceTimeout;
+clientInput.addEventListener("input", function () {
+  clearTimeout(debounceTimeout);
+  debounceTimeout = setTimeout(afficherClient, 500);
+});
 
 // 🔹 Fonction auto affichage client
 async function afficherClient() {
-  const clientId = clientInput.value;
+  const clientId = clientInput.value.trim();
 
   if (!clientId) {
     clientInfo.innerHTML = "";
@@ -117,16 +173,30 @@ async function afficherClient() {
     const response = await fetch(`http://localhost:4000/clients/${clientId}`);
 
     if (!response.ok) {
-      clientInfo.innerHTML =
-        "<span style='color:red;'>❌ Client introuvable</span>";
+      clientInfo.innerHTML = `
+        <span style="color:red; background:#ffebee; padding:5px 10px; border-radius:5px; display:inline-block;">
+          ❌ Client introuvable (ID: ${clientId})
+        </span>
+      `;
       return;
     }
 
     const data = await response.json();
-    clientInfo.innerHTML = `<span style="color:green;">👤 Client : <strong>${data.nom}</strong></span>`;
+    clientInfo.innerHTML = `
+      <div style="color:green; background:#e8f5e9; padding:8px 12px; border-radius:5px; border-left:4px solid #4CAF50;">
+        ✅ <strong>Client trouvé !</strong><br>
+        👤 Nom : <strong>${data.nom}</strong><br>
+        📞 Téléphone : ${data.telephone || "Non renseigné"}<br>
+        🆔 ID : ${data.id}
+      </div>
+    `;
   } catch (error) {
-    clientInfo.innerHTML =
-      "<span style='color:red;'>Erreur de connexion</span>";
+    clientInfo.innerHTML = `
+      <span style="color:red; background:#ffebee; padding:5px 10px; border-radius:5px;">
+        ❌ Erreur de connexion au serveur
+      </span>
+    `;
+    console.error("Erreur recherche client:", error);
   }
 }
 
@@ -135,17 +205,48 @@ venteBtn.addEventListener("click", addVente);
 
 // 🔹 Fonction pour ajouter une vente
 async function addVente() {
-  const clientId = clientInput.value;
-  const produit = document.getElementById("produit").value;
-  const quantite = document.getElementById("quantite").value;
-  const prix = document.getElementById("prix").value;
+  const clientId = clientInput.value.trim();
+  const produit = produitSelect.value;
+  const quantite = quantiteInput.value.trim();
+  const prix = prixInput.value.trim();
 
   // ✅ Validation des champs
   if (!clientId || !produit || !quantite || !prix) {
-    message.innerHTML =
-      "<span style='color:red;'>Remplis tous les champs</span>";
+    message.innerHTML = `
+      <div style="color:red; border:1px solid red; padding:10px; background:#ffebee; border-radius:5px;">
+        ⚠️ Veuillez remplir tous les champs
+      </div>
+    `;
+    // Effacer le message après 3 secondes
+    setTimeout(() => {
+      if (message.innerHTML.includes("remplir tous les champs")) {
+        message.innerHTML = "";
+      }
+    }, 3000);
     return;
   }
+
+  // Vérifier que la quantité est positive
+  if (parseFloat(quantite) <= 0) {
+    message.innerHTML = `
+      <div style="color:red; border:1px solid red; padding:10px; background:#ffebee; border-radius:5px;">
+        ⚠️ La quantité doit être supérieure à 0
+      </div>
+    `;
+    setTimeout(() => {
+      if (message.innerHTML.includes("supérieure à 0")) {
+        message.innerHTML = "";
+      }
+    }, 3000);
+    return;
+  }
+
+  // Afficher un message de chargement
+  message.innerHTML = `
+    <div style="color:blue; border:1px solid blue; padding:10px; background:#e3f2fd; border-radius:5px;">
+      ⏳ Enregistrement en cours...
+    </div>
+  `;
 
   try {
     // 🔍 Vérifier si le client existe
@@ -153,14 +254,17 @@ async function addVente() {
       `http://localhost:4000/clients/${clientId}`,
     );
     if (!clientResponse.ok) {
-      message.innerHTML =
-        "<span style='color:red;'>❌ Client introuvable</span>";
+      message.innerHTML = `
+        <div style="color:red; border:1px solid red; padding:10px; background:#ffebee; border-radius:5px;">
+          ❌ Client introuvable (ID: ${clientId})
+        </div>
+      `;
       return;
     }
     const clientData = await clientResponse.json();
 
     // 💰 Calcul du total
-    const total = prix * quantite;
+    const total = parseFloat(prix) * parseFloat(quantite);
 
     // 📤 Enregistrer la vente
     const response = await fetch("http://localhost:4000/ventes", {
@@ -177,34 +281,72 @@ async function addVente() {
     });
 
     const data = await response.json();
+    const messageId = "successVente_" + Date.now();
 
     // ✅ Affichage du succès
     message.innerHTML = `
-      <div style="color:green; border:1px solid green; padding:10px;">
-        ✅ Vente enregistrée avec succès <br><br>
-        🧾 ID Vente : <strong>${data.id}</strong><br>
-        👤 Client : <strong>${clientData.nom}</strong><br>
-        📦 Produit : <strong>${produit}</strong><br>
-        🔢 Quantité : <strong>${quantite}</strong><br>
-        💰 Prix : <strong>${prix}$</strong><br>
-        🧾 Total : <strong>${total}$</strong><br>
-        🕒 Date : <strong>${data.date}</strong>
-        <br><br>
-        <button onclick="this.parentElement.remove()">Fermer</button>
+      <div id="${messageId}" style="color:green; border:2px solid green; padding:15px; background:#f0fff0; border-radius:8px; margin-top:10px;">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+          <div style="flex:1;">
+            <strong style="font-size:18px;">✅ Vente enregistrée avec succès !</strong><br><br>
+            <table style="width:100%; border-collapse:collapse;">
+              <tr><td style="padding:5px 0;"><strong>🧾 ID Vente :</strong></td><td>${data.id}</td></tr>
+              <tr><td style="padding:5px 0;"><strong>👤 Client :</strong></td><td>${clientData.nom} (ID: ${clientData.id})</td></tr>
+              <tr><td style="padding:5px 0;"><strong>📦 Produit :</strong></td><td>${produit}</td></tr>
+              <tr><td style="padding:5px 0;"><strong>🔢 Quantité :</strong></td><td>${quantite}</td></tr>
+              <tr><td style="padding:5px 0;"><strong>💰 Prix unitaire :</strong></td><td>${prix}€</td></tr>
+              <tr><td style="padding:5px 0;"><strong>🧾 Total :</strong></td><td><strong style="color:#4CAF50; font-size:16px;">${total.toFixed(2)}€</strong></td></tr>
+              <tr><td style="padding:5px 0;"><strong>🕒 Date :</strong></td><td>${data.date}</td></tr>
+            </table>
+          </div>
+          <button onclick="document.getElementById('${messageId}').remove()" 
+                  style="background:#ff4444; color:white; border:none; padding:8px 12px; cursor:pointer; border-radius:5px; font-size:16px; margin-left:10px;">
+            ✕
+          </button>
+        </div>
       </div>
     `;
 
     // 🔄 Reset des champs
     clientInput.value = "";
-    document.getElementById("quantite").value = "";
-    document.getElementById("prix").value = "";
+    quantiteInput.value = "1";
     clientInfo.innerHTML = "";
+    totalDisplay.innerHTML = "";
+
+    // Optionnel : Focus sur l'ID client pour la prochaine vente
+    clientInput.focus();
   } catch (error) {
-    message.innerHTML =
-      "<span style='color:red;'>Erreur lors de la vente</span>";
-    console.error(error);
+    message.innerHTML = `
+      <div style="color:red; border:1px solid red; padding:10px; background:#ffebee; border-radius:5px;">
+        ❌ Erreur lors de la vente : ${error.message}<br>
+        Vérifiez que le serveur est démarré sur http://localhost:4000
+      </div>
+    `;
+    console.error("Erreur vente:", error);
   }
 }
+
+// 🔹 Ajouter la touche Entrée pour valider rapidement
+clientInput.addEventListener("keypress", function (e) {
+  if (e.key === "Enter") {
+    e.preventDefault();
+    afficherClient();
+  }
+});
+
+quantiteInput.addEventListener("keypress", function (e) {
+  if (e.key === "Enter") {
+    e.preventDefault();
+    venteBtn.click();
+  }
+});
+
+prixInput.addEventListener("keypress", function (e) {
+  if (e.key === "Enter") {
+    e.preventDefault();
+    venteBtn.click();
+  }
+});
 
 // historique des ventes
 
