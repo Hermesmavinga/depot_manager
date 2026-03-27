@@ -119,6 +119,26 @@
       "id": "631b",
       "nom": "premice",
       "telephone": "+243 828 790 728"
+    },
+    {
+      "id": "5dc5",
+      "nom": "ruth",
+      "telephone": "+243 828 790 728"
+    },
+    {
+      "id": "f330",
+      "nom": "roro",
+      "telephone": "+243 828 790 728"
+    },
+    {
+      "id": "5d41",
+      "nom": "jacko",
+      "telephone": "+243 828 790 728"
+    },
+    {
+      "id": "65e0",
+      "nom": "hamilton",
+      "telephone": "+243 828 790 728"
     }
   ],
   "produits": [
@@ -196,6 +216,42 @@
       "prix": 60,
       "total": 360,
       "date": "22/03/2026 18:11:31"
+    },
+    {
+      "id": "0a3f",
+      "clientId": 1,
+      "produit": "Casier bière",
+      "quantite": 4,
+      "prix": 25,
+      "total": 100,
+      "date": "23/03/2026 10:53:12"
+    },
+    {
+      "id": "0430",
+      "clientId": 1,
+      "produit": "Caisse de vin",
+      "quantite": 7,
+      "prix": 45,
+      "total": 315,
+      "date": "23/03/2026 10:55:54"
+    },
+    {
+      "id": "0daf",
+      "clientId": 1,
+      "produit": "Casier bière",
+      "quantite": 6,
+      "prix": 25,
+      "total": 150,
+      "date": "23/03/2026 11:00:43"
+    },
+    {
+      "id": "8484",
+      "clientId": 1,
+      "produit": "Casier bière",
+      "quantite": 1,
+      "prix": 25,
+      "total": 25,
+      "date": "27/03/2026 16:28:05"
     }
   ],
   "$schema": "./node_modules/json-server/schema.json"

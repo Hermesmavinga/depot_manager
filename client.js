@@ -1,5 +1,9 @@
 // trouver un client
 
+// trouver un client
+
+// trouver un client
+
 const API_URL = "http://localhost:4000/clients";
 
 const button = document.getElementById("searchBtn");
@@ -8,23 +12,17 @@ const resultDiv = document.getElementById("result");
 
 button.addEventListener("click", searchClient);
 
-// Ajouter un indicateur de chargement
+// 🔍 Fonction principale
 async function searchClient() {
   const clientId = clientIdInput.value.trim();
 
-  // Validation
+  // ✅ Validation simple (on accepte texte + nombre)
   if (!clientId) {
     showError("Veuillez entrer un ID client", resultDiv);
     return;
   }
 
-  // Vérifier que c'est un nombre
-  if (isNaN(clientId)) {
-    showError("L'ID doit être un nombre", resultDiv);
-    return;
-  }
-
-  // Afficher un message de chargement
+  // 🔄 Chargement
   showLoading(resultDiv);
 
   try {
@@ -46,10 +44,11 @@ async function searchClient() {
   }
 }
 
-// Afficher les informations du client
+// ✅ Affichage du client
 function displayClient(client) {
   resultDiv.innerHTML = `
     <div style="border:2px solid #4CAF50; padding:15px; margin-top:10px; border-radius:8px; background:#f9f9f9;">
+      
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
         <h3 style="margin:0; color:#4CAF50;">✅ Client trouvé</h3>
         <button onclick="clearResult()" 
@@ -57,50 +56,56 @@ function displayClient(client) {
           ✕
         </button>
       </div>
+
       <table style="width:100%; border-collapse:collapse;">
         <tr style="border-bottom:1px solid #eee;">
           <td style="padding:10px 0;"><strong>🆔 ID :</strong></td>
           <td style="padding:10px 0;">${client.id}</td>
         </tr>
+
         <tr style="border-bottom:1px solid #eee;">
           <td style="padding:10px 0;"><strong>👤 Nom :</strong></td>
           <td style="padding:10px 0;">${escapeHtml(client.nom)}</td>
         </tr>
+
         <tr>
           <td style="padding:10px 0;"><strong>📞 Téléphone :</strong></td>
           <td style="padding:10px 0;">${escapeHtml(client.telephone)}</td>
         </tr>
       </table>
+
       <div style="margin-top:15px; padding-top:10px; border-top:1px solid #eee;">
-        <button onclick="fillVenteForm(${client.id})" 
+        <button onclick="fillVenteForm('${client.id}')" 
                 style="background:#4CAF50; color:white; border:none; padding:8px 15px; cursor:pointer; border-radius:5px;">
           🛒 Faire une vente
         </button>
       </div>
+
     </div>
   `;
 }
 
-// Fonction pour remplir automatiquement le formulaire de vente
+// 🔹 Remplir le formulaire de vente
 function fillVenteForm(clientId) {
   const venteClientInput = document.getElementById("venteClientId");
+
   if (venteClientInput) {
     venteClientInput.value = clientId;
-    // Déclencher la recherche auto du client dans le formulaire de vente
+
+    // 🔄 Déclencher affichage automatique du client
     const event = new Event("input", { bubbles: true });
     venteClientInput.dispatchEvent(event);
 
-    // Faire défiler jusqu'au formulaire de vente
+    // 📍 Scroll vers la section vente
     document
       .querySelector("h2:last-of-type")
       ?.scrollIntoView({ behavior: "smooth" });
 
-    // Optionnel : afficher une notification
     showTemporaryMessage("✅ ID client pré-rempli !", "venteMessage");
   }
 }
 
-// Afficher un message de chargement
+// ⏳ Chargement
 function showLoading(container) {
   container.innerHTML = `
     <div style="border:1px solid #2196F3; padding:10px; margin-top:10px; border-radius:5px; background:#e3f2fd;">
@@ -109,7 +114,7 @@ function showLoading(container) {
   `;
 }
 
-// Afficher une erreur
+// ❌ Erreur
 function showError(message, container) {
   container.innerHTML = `
     <div style="border:1px solid #ff4444; padding:10px; margin-top:10px; border-radius:5px; background:#ffebee;">
@@ -117,7 +122,6 @@ function showError(message, container) {
     </div>
   `;
 
-  // Effacer automatiquement après 5 secondes
   setTimeout(() => {
     if (container.innerHTML.includes(message)) {
       container.innerHTML = "";
@@ -125,12 +129,15 @@ function showError(message, container) {
   }, 5000);
 }
 
-// Afficher un message temporaire
+// ✅ Message temporaire
 function showTemporaryMessage(message, elementId) {
   const element = document.getElementById(elementId);
+
   if (element) {
     const originalContent = element.innerHTML;
+
     element.innerHTML = `<span style="color:green;">${message}</span>`;
+
     setTimeout(() => {
       if (
         element.innerHTML === `<span style="color:green;">${message}</span>`
@@ -141,19 +148,19 @@ function showTemporaryMessage(message, elementId) {
   }
 }
 
-// Fonction pour nettoyer le résultat
+// 🧹 Nettoyer
 function clearResult() {
   resultDiv.innerHTML = "";
 }
 
-// Échapper les caractères HTML pour éviter les injections XSS
+// 🔐 Protection XSS
 function escapeHtml(text) {
   const div = document.createElement("div");
   div.textContent = text;
   return div.innerHTML;
 }
 
-// Recherche avec la touche Entrée
+// ⌨️ Entrée clavier
 clientIdInput.addEventListener("keypress", function (e) {
   if (e.key === "Enter") {
     e.preventDefault();
@@ -161,9 +168,10 @@ clientIdInput.addEventListener("keypress", function (e) {
   }
 });
 
-// Ajouter un bouton pour effacer
+// 🔘 Bouton effacer
 const clearButton = document.createElement("button");
 clearButton.textContent = "Effacer";
+
 clearButton.style.marginLeft = "10px";
 clearButton.style.background = "#666";
 clearButton.style.color = "white";
@@ -171,14 +179,16 @@ clearButton.style.border = "none";
 clearButton.style.padding = "5px 10px";
 clearButton.style.cursor = "pointer";
 clearButton.style.borderRadius = "5px";
+
 clearButton.addEventListener("click", () => {
   clientIdInput.value = "";
   resultDiv.innerHTML = "";
   clientIdInput.focus();
 });
+
 button.insertAdjacentElement("afterend", clearButton);
 
-// Ajouter un historique des recherches récentes (optionnel)
+// 📜 Historique
 let searchHistory = JSON.parse(
   localStorage.getItem("clientSearchHistory") || "[]",
 );
@@ -186,7 +196,8 @@ let searchHistory = JSON.parse(
 function addToHistory(clientId) {
   if (!searchHistory.includes(clientId) && clientId) {
     searchHistory.unshift(clientId);
-    searchHistory = searchHistory.slice(0, 5); // Garder seulement les 5 derniers
+    searchHistory = searchHistory.slice(0, 5);
+
     localStorage.setItem("clientSearchHistory", JSON.stringify(searchHistory));
     updateHistoryDisplay();
   }
@@ -194,6 +205,7 @@ function addToHistory(clientId) {
 
 function updateHistoryDisplay() {
   let historyDiv = document.getElementById("searchHistory");
+
   if (!historyDiv) {
     historyDiv = document.createElement("div");
     historyDiv.id = "searchHistory";
@@ -220,14 +232,14 @@ function updateHistoryDisplay() {
   }
 }
 
-// Modifier la fonction displayClient pour ajouter l'historique
+// 🔄 Hook historique
 const originalDisplayClient = displayClient;
 displayClient = function (client) {
   originalDisplayClient(client);
   addToHistory(client.id);
 };
 
-// Initialiser l'affichage de l'historique
+// 🚀 Init
 updateHistoryDisplay();
 
 // trouver un client fin
