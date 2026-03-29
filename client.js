@@ -2,8 +2,6 @@
 
 // trouver un client
 
-// trouver un client
-
 const API_URL = "http://localhost:4000/clients";
 
 const button = document.getElementById("searchBtn");

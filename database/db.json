@@ -139,6 +139,16 @@
       "id": "65e0",
       "nom": "hamilton",
       "telephone": "+243 828 790 728"
+    },
+    {
+      "id": "0c3a",
+      "nom": "charo",
+      "telephone": "+243 828 790 728"
+    },
+    {
+      "id": "25b5",
+      "nom": "linda",
+      "telephone": "+243 828 790 728"
     }
   ],
   "produits": [
@@ -252,6 +262,33 @@
       "prix": 25,
       "total": 25,
       "date": "27/03/2026 16:28:05"
+    },
+    {
+      "id": "cee1",
+      "clientId": null,
+      "produit": "Casier bière",
+      "quantite": 1,
+      "prix": 25,
+      "total": 25,
+      "date": "29/03/2026 12:54:37"
+    },
+    {
+      "id": "1c4b",
+      "clientId": null,
+      "produit": "Pack whisky",
+      "quantite": 4,
+      "prix": 60,
+      "total": 240,
+      "date": "29/03/2026 12:56:15"
+    },
+    {
+      "id": "7ae2",
+      "clientId": null,
+      "produit": "Pack whisky",
+      "quantite": 1,
+      "prix": 60,
+      "total": 60,
+      "date": "29/03/2026 12:57:11"
     }
   ],
   "$schema": "./node_modules/json-server/schema.json"
