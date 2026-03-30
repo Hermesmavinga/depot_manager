@@ -663,7 +663,7 @@ async function addVente() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        clientId: Number(clientId),
+        clientId: clientId,
         produit,
         quantite: Number(quantite),
         prix: Number(prix),
@@ -682,13 +682,13 @@ async function addVente() {
           <div style="flex:1;">
             <strong style="font-size:18px;">✅ Vente enregistrée avec succès !</strong><br><br>
             <table style="width:100%; border-collapse:collapse;">
-              <tr><td style="padding:5px 0;"><strong>🧾 ID Vente :</strong></td><td>${data.id}</td></tr>
-              <tr><td style="padding:5px 0;"><strong>👤 Client :</strong></td><td>${clientData.nom} (ID: ${clientData.id})</td></tr>
-              <tr><td style="padding:5px 0;"><strong>📦 Produit :</strong></td><td>${produit}</td></tr>
-              <tr><td style="padding:5px 0;"><strong>🔢 Quantité :</strong></td><td>${quantite}</td></tr>
-              <tr><td style="padding:5px 0;"><strong>💰 Prix unitaire :</strong></td><td>${prix}€</td></tr>
-              <tr><td style="padding:5px 0;"><strong>🧾 Total :</strong></td><td><strong style="color:#4CAF50; font-size:16px;">${total.toFixed(2)}€</strong></td></tr>
-              <tr><td style="padding:5px 0;"><strong>🕒 Date :</strong></td><td>${data.date}</td></tr>
+               <tr><td style="padding:5px 0;"><strong>🧾 ID Vente :</strong></td><td>${data.id}</td></tr>
+               <tr><td style="padding:5px 0;"><strong>👤 Client :</strong></td><td>${clientData.nom} (ID: ${clientData.id})</td></tr>
+               <tr><td style="padding:5px 0;"><strong>📦 Produit :</strong></td><td>${produit}</td></tr>
+               <tr><td style="padding:5px 0;"><strong>🔢 Quantité :</strong></td><td>${quantite}</td></tr>
+               <tr><td style="padding:5px 0;"><strong>💰 Prix unitaire :</strong></td><td>${prix}€</td></tr>
+               <tr><td style="padding:5px 0;"><strong>🧾 Total :</strong></td><td><strong style="color:#4CAF50; font-size:16px;">${total.toFixed(2)}€</strong></td></tr>
+               <tr><td style="padding:5px 0;"><strong>🕒 Date :</strong></td><td>${data.date}</td></tr>
             </table>
           </div>
           <button onclick="document.getElementById('${messageId}').remove()" 
@@ -850,6 +850,8 @@ async function afficherHistorique() {
     if (ventes.length === 0) {
       showMessage(`📭 Aucune vente trouvée pour ${clientData.nom}`, "blue");
       filterContainer.style.display = "none";
+      // 🔥 Afficher un total mensuel à zéro
+      calculerTotalMensuel([]);
       return;
     }
 
@@ -943,6 +945,9 @@ function displayVentes(ventes, clientData) {
   totalPrixEl.textContent = totalPrix.toFixed(2) + "€";
   historiqueTable.style.display = "table";
 
+  // 🔥 RECALCULER LE TOTAL MENSUEL APRÈS AFFICHAGE 🔥
+  calculerTotalMensuel(ventes);
+
   showMessage(
     `✅ ${ventes.length} vente(s) trouvée(s) pour <strong>${escapeHtml(clientData.nom)}</strong>`,
     "green",
@@ -988,6 +993,8 @@ function appliquerFiltre(ventesOriginales, clientData) {
     totalQuantiteEl.textContent = "0";
     totalPrixEl.textContent = "0€";
     historiqueTable.style.display = "table";
+    // 🔥 Recalculer avec un tableau vide
+    calculerTotalMensuel([]);
   } else {
     displayVentes(ventesFiltrees, clientData);
     showMessage(
@@ -1253,4 +1260,124 @@ function escapeHtml(text) {
   const div = document.createElement("div");
   div.textContent = text;
   return div.innerHTML;
+}
+
+// remise et total mensuel
+
+function calculerTotalMensuel(ventes) {
+  console.log("Calcul du total mensuel avec", ventes.length, "ventes");
+
+  const now = new Date();
+  const currentMonth = now.getMonth();
+  const currentYear = now.getFullYear();
+
+  // Filtrer les ventes du mois en cours
+  const ventesDuMois = ventes.filter((vente) => {
+    if (!vente.date) return false;
+
+    let dateVente;
+    try {
+      dateVente = new Date(vente.date);
+      // Si la date est invalide, essayer de parser le format français
+      if (isNaN(dateVente.getTime())) {
+        const parts = vente.date.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+        if (parts) {
+          dateVente = new Date(parts[3], parts[2] - 1, parts[1]);
+        }
+      }
+    } catch (e) {
+      console.error("Erreur de parsing de date:", vente.date);
+      return false;
+    }
+
+    return (
+      dateVente.getMonth() === currentMonth &&
+      dateVente.getFullYear() === currentYear
+    );
+  });
+
+  console.log("Ventes du mois:", ventesDuMois.length);
+
+  // Total du mois
+  const totalMensuel = ventesDuMois.reduce((sum, vente) => {
+    const total = vente.total || vente.prix * vente.quantite || 0;
+    return sum + total;
+  }, 0);
+
+  console.log("Total mensuel brut:", totalMensuel);
+
+  // Remise 5%
+  const remise = totalMensuel * 0.05;
+
+  // Total final
+  const totalFinal = totalMensuel - remise;
+
+  // Créer ou mettre à jour le conteneur des totaux mensuels
+  updateOrCreateMonthlyTotalDisplay(totalMensuel, remise, totalFinal);
+
+  // Retourner les valeurs pour une utilisation éventuelle
+  return { totalMensuel, remise, totalFinal };
+}
+
+function updateOrCreateMonthlyTotalDisplay(totalMensuel, remise, totalFinal) {
+  // Chercher si le conteneur existe déjà
+  let monthlyTotalContainer = document.getElementById("monthlyTotalContainer");
+
+  // Si le conteneur n'existe pas, le créer
+  if (!monthlyTotalContainer) {
+    monthlyTotalContainer = document.createElement("div");
+    monthlyTotalContainer.id = "monthlyTotalContainer";
+    monthlyTotalContainer.style.marginTop = "20px";
+    monthlyTotalContainer.style.padding = "15px";
+    monthlyTotalContainer.style.backgroundColor = "#f0f8ff";
+    monthlyTotalContainer.style.borderRadius = "8px";
+    monthlyTotalContainer.style.border = "1px solid #ddd";
+    monthlyTotalContainer.style.borderLeft = "4px solid #4CAF50";
+
+    // Insérer après le tableau d'historique
+    const historiqueTable = document.getElementById("historiqueTable");
+    if (historiqueTable) {
+      historiqueTable.insertAdjacentElement("afterend", monthlyTotalContainer);
+    } else {
+      // Fallback: ajouter après le conteneur de filtres
+      const filterContainer = document.getElementById("filterContainer");
+      if (filterContainer) {
+        filterContainer.insertAdjacentElement(
+          "afterend",
+          monthlyTotalContainer,
+        );
+      }
+    }
+  }
+
+  // Mettre à jour le contenu
+  monthlyTotalContainer.innerHTML = `
+    <h4 style="margin: 0 0 10px 0; color: #333;">📊 Total mensuel (${new Date().toLocaleString("fr-FR", { month: "long", year: "numeric" })})</h4>
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+      <div style="flex: 1;">
+        <strong>💰 Total mensuel :</strong> 
+        <span style="color: #666; font-size: 18px;">${totalMensuel.toFixed(2)}€</span>
+      </div>
+      <div style="flex: 1;">
+        <strong>🎁 Remise (5%) :</strong> 
+        <span style="color: #FF9800; font-size: 18px;">-${remise.toFixed(2)}€</span>
+      </div>
+      <div style="flex: 1;">
+        <strong>💵 Total à payer :</strong> 
+        <span style="color: #4CAF50; font-size: 20px; font-weight: bold;">${totalFinal.toFixed(2)}€</span>
+      </div>
+    </div>
+    ${totalMensuel === 0 ? '<p style="color: #999; margin-top: 10px;">⚠️ Aucun achat ce mois-ci</p>' : ""}
+  `;
+
+  // Mettre à jour aussi les anciens éléments s'ils existent (pour compatibilité)
+  const totalMensuelEl = document.getElementById("totalMensuel");
+  const remiseEl = document.getElementById("remise");
+  const totalFinalEl = document.getElementById("totalFinal");
+
+  if (totalMensuelEl)
+    totalMensuelEl.textContent = `Total mensuel : ${totalMensuel.toFixed(2)}€`;
+  if (remiseEl) remiseEl.textContent = `Remise (5%) : -${remise.toFixed(2)}€`;
+  if (totalFinalEl)
+    totalFinalEl.textContent = `Total à payer : ${totalFinal.toFixed(2)}€`;
 }
