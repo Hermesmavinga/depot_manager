@@ -866,40 +866,60 @@ function escapeHtml(text) {
 }
 
 // ============================================
-// MODULE 5: TOTAL MENSUEL ET REMISE
+// MODULE 5: TOTAL MENSUEL ET REMISE (VERSION AMÉLIORÉE)
 // ============================================
 
 function calculerTotalMensuel(ventes) {
   console.log("Calcul du total mensuel avec", ventes.length, "ventes");
+
   const now = new Date();
   const currentMonth = now.getMonth();
   const currentYear = now.getFullYear();
+
+  // Filtrer les ventes du mois en cours
   const ventesDuMois = ventes.filter((vente) => {
     if (!vente.date) return false;
+
     const dateVente = parseDate(vente.date);
+
+    // Vérifier si la date est valide
     if (isNaN(dateVente.getTime())) {
       console.error("Date invalide:", vente.date);
       return false;
     }
+
     return (
       dateVente.getMonth() === currentMonth &&
       dateVente.getFullYear() === currentYear
     );
   });
+
   console.log("Ventes du mois:", ventesDuMois.length);
-  const totalMensuel = ventesDuMois.reduce(
-    (sum, vente) => sum + (vente.total || vente.prix * vente.quantite || 0),
-    0,
-  );
+
+  // ✅ Version améliorée avec Number() pour gérer les cas où total = 0
+  const totalMensuel = ventesDuMois.reduce((sum, vente) => {
+    const total = Number(vente.total) || vente.prix * vente.quantite || 0;
+    return sum + total;
+  }, 0);
+
   console.log("Total mensuel brut:", totalMensuel);
+
+  // Remise 5%
   const remise = totalMensuel * 0.05;
+
+  // Total final
   const totalFinal = totalMensuel - remise;
+
+  // Créer ou mettre à jour le conteneur des totaux mensuels
   updateOrCreateMonthlyTotalDisplay(totalMensuel, remise, totalFinal);
+
+  // Retourner les valeurs pour une utilisation éventuelle
   return { totalMensuel, remise, totalFinal };
 }
 
 function updateOrCreateMonthlyTotalDisplay(totalMensuel, remise, totalFinal) {
   let monthlyTotalContainer = document.getElementById("monthlyTotalContainer");
+
   if (!monthlyTotalContainer) {
     monthlyTotalContainer = document.createElement("div");
     monthlyTotalContainer.id = "monthlyTotalContainer";
@@ -909,22 +929,45 @@ function updateOrCreateMonthlyTotalDisplay(totalMensuel, remise, totalFinal) {
     monthlyTotalContainer.style.borderRadius = "8px";
     monthlyTotalContainer.style.border = "1px solid #ddd";
     monthlyTotalContainer.style.borderLeft = "4px solid #4CAF50";
+
     const historiqueTable = document.getElementById("historiqueTable");
-    if (historiqueTable)
+    if (historiqueTable) {
       historiqueTable.insertAdjacentElement("afterend", monthlyTotalContainer);
-    else {
+    } else {
       const filterContainer = document.getElementById("filterContainer");
-      if (filterContainer)
+      if (filterContainer) {
         filterContainer.insertAdjacentElement(
           "afterend",
           monthlyTotalContainer,
         );
+      }
     }
   }
-  monthlyTotalContainer.innerHTML = `<h4 style="margin: 0 0 10px 0; color: #333;">📊 Total mensuel (${new Date().toLocaleString("fr-FR", { month: "long", year: "numeric" })})</h4><div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;"><div style="flex: 1;"><strong>💰 Total mensuel :</strong> <span style="color: #666; font-size: 18px;">${totalMensuel.toFixed(2)}€</span></div><div style="flex: 1;"><strong>🎁 Remise (5%) :</strong> <span style="color: #FF9800; font-size: 18px;">-${remise.toFixed(2)}€</span></div><div style="flex: 1;"><strong>💵 Total à payer :</strong> <span style="color: #4CAF50; font-size: 20px; font-weight: bold;">${totalFinal.toFixed(2)}€</span></div></div>${totalMensuel === 0 ? '<p style="color: #999; margin-top: 10px;">⚠️ Aucun achat ce mois-ci</p>' : ""}`;
+
+  monthlyTotalContainer.innerHTML = `
+    <h4 style="margin: 0 0 10px 0; color: #333;">📊 Total mensuel (${new Date().toLocaleString("fr-FR", { month: "long", year: "numeric" })})</h4>
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+      <div style="flex: 1;">
+        <strong>💰 Total mensuel :</strong> 
+        <span style="color: #666; font-size: 18px;">${totalMensuel.toFixed(2)}€</span>
+      </div>
+      <div style="flex: 1;">
+        <strong>🎁 Remise (5%) :</strong> 
+        <span style="color: #FF9800; font-size: 18px;">-${remise.toFixed(2)}€</span>
+      </div>
+      <div style="flex: 1;">
+        <strong>💵 Total à payer :</strong> 
+        <span style="color: #4CAF50; font-size: 20px; font-weight: bold;">${totalFinal.toFixed(2)}€</span>
+      </div>
+    </div>
+    ${totalMensuel === 0 ? '<p style="color: #999; margin-top: 10px;">⚠️ Aucun achat ce mois-ci</p>' : ""}
+  `;
+
+  // Mettre à jour aussi les anciens éléments s'ils existent (pour compatibilité)
   const totalMensuelEl = document.getElementById("totalMensuel");
   const remiseEl = document.getElementById("remise");
   const totalFinalEl = document.getElementById("totalFinal");
+
   if (totalMensuelEl)
     totalMensuelEl.textContent = `Total mensuel : ${totalMensuel.toFixed(2)}€`;
   if (remiseEl) remiseEl.textContent = `Remise (5%) : -${remise.toFixed(2)}€`;
