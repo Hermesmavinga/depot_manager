@@ -682,13 +682,13 @@ async function addVente() {
           <div style="flex:1;">
             <strong style="font-size:18px;">✅ Vente enregistrée avec succès !</strong><br><br>
             <table style="width:100%; border-collapse:collapse;">
-               <tr><td style="padding:5px 0;"><strong>🧾 ID Vente :</strong></td><td>${data.id}</td></tr>
-               <tr><td style="padding:5px 0;"><strong>👤 Client :</strong></td><td>${clientData.nom} (ID: ${clientData.id})</td></tr>
-               <tr><td style="padding:5px 0;"><strong>📦 Produit :</strong></td><td>${produit}</td></tr>
-               <tr><td style="padding:5px 0;"><strong>🔢 Quantité :</strong></td><td>${quantite}</td></tr>
-               <tr><td style="padding:5px 0;"><strong>💰 Prix unitaire :</strong></td><td>${prix}€</td></tr>
-               <tr><td style="padding:5px 0;"><strong>🧾 Total :</strong></td><td><strong style="color:#4CAF50; font-size:16px;">${total.toFixed(2)}€</strong></td></tr>
-               <tr><td style="padding:5px 0;"><strong>🕒 Date :</strong></td><td>${data.date}</td></tr>
+                <tr><td style="padding:5px 0;"><strong>🧾 ID Vente :</strong></td><td>${data.id}</td></tr>
+                <tr><td style="padding:5px 0;"><strong>👤 Client :</strong></td><td>${clientData.nom} (ID: ${clientData.id})</td></tr>
+                <tr><td style="padding:5px 0;"><strong>📦 Produit :</strong></td><td>${produit}</td></tr>
+                <tr><td style="padding:5px 0;"><strong>🔢 Quantité :</strong></td><td>${quantite}</td></tr>
+                <tr><td style="padding:5px 0;"><strong>💰 Prix unitaire :</strong></td><td>${prix}€</td></tr>
+                <tr><td style="padding:5px 0;"><strong>🧾 Total :</strong></td><td><strong style="color:#4CAF50; font-size:16px;">${total.toFixed(2)}€</strong></td></tr>
+                <tr><td style="padding:5px 0;"><strong>🕒 Date :</strong></td><td>${data.date}</td></tr>
             </table>
           </div>
           <button onclick="document.getElementById('${messageId}').remove()" 
@@ -810,6 +810,26 @@ historiqueClientId.addEventListener("keypress", function (e) {
   }
 });
 
+// 🔹 Fonction utilitaire pour parser les dates correctement
+function parseDate(dateString) {
+  if (!dateString) return new Date(0);
+
+  let date = new Date(dateString);
+
+  // Si la date est invalide, essayer de parser le format français (DD/MM/YYYY HH:MM:SS)
+  if (isNaN(date.getTime())) {
+    const parts = dateString.match(
+      /(\d{1,2})\/(\d{1,2})\/(\d{4})\s?(\d{1,2})?:?(\d{2})?:?(\d{2})?/,
+    );
+    if (parts) {
+      const [_, day, month, year, hour = 0, minute = 0, second = 0] = parts;
+      date = new Date(year, month - 1, day, hour, minute, second);
+    }
+  }
+
+  return date;
+}
+
 // 🔹 Fonction principale pour afficher l'historique
 async function afficherHistorique() {
   const clientId = historiqueClientId.value.trim();
@@ -889,8 +909,8 @@ function displayVentes(ventes, clientData) {
 
   // Trier par date décroissante
   const ventesTriees = [...ventes].sort((a, b) => {
-    const dateA = new Date(a.date);
-    const dateB = new Date(b.date);
+    const dateA = parseDate(a.date);
+    const dateB = parseDate(b.date);
     return dateB - dateA;
   });
 
@@ -954,7 +974,7 @@ function displayVentes(ventes, clientData) {
   );
 }
 
-// 🔹 Fonction pour appliquer les filtres
+// 🔹 Fonction pour appliquer les filtres - VERSION CORRIGÉE
 function appliquerFiltre(ventesOriginales, clientData) {
   const filterType = document.querySelector(
     'input[name="filterType"]:checked',
@@ -965,23 +985,31 @@ function appliquerFiltre(ventesOriginales, clientData) {
   switch (filterType) {
     case "today":
       ventesFiltrees = ventesOriginales.filter((v) => {
-        const vDate = new Date(v.date);
+        const vDate = parseDate(v.date);
         return vDate.toDateString() === now.toDateString();
       });
       break;
     case "week":
+      // Filtrer les 7 derniers jours (y compris aujourd'hui)
       const weekAgo = new Date();
       weekAgo.setDate(weekAgo.getDate() - 7);
-      ventesFiltrees = ventesOriginales.filter(
-        (v) => new Date(v.date) >= weekAgo,
-      );
+      weekAgo.setHours(0, 0, 0, 0);
+      ventesFiltrees = ventesOriginales.filter((v) => {
+        const vDate = parseDate(v.date);
+        return vDate >= weekAgo;
+      });
       break;
     case "month":
-      const monthAgo = new Date();
-      monthAgo.setMonth(monthAgo.getMonth() - 1);
-      ventesFiltrees = ventesOriginales.filter(
-        (v) => new Date(v.date) >= monthAgo,
-      );
+      // Filtrer le mois en cours (pas les 30 derniers jours)
+      const currentYear = now.getFullYear();
+      const currentMonth = now.getMonth();
+      ventesFiltrees = ventesOriginales.filter((v) => {
+        const vDate = parseDate(v.date);
+        return (
+          vDate.getMonth() === currentMonth &&
+          vDate.getFullYear() === currentYear
+        );
+      });
       break;
     default:
       break;
@@ -1140,19 +1168,7 @@ function formatDate(dateString) {
     return "Date invalide";
   }
 
-  let date = new Date(dateString);
-
-  if (isNaN(date.getTime())) {
-    const parts = dateString.match(
-      /(\d{1,2})\/(\d{1,2})\/(\d{4})\s(\d{1,2}):(\d{2}):(\d{2})/,
-    );
-    if (parts) {
-      const [_, day, month, year, hour, minute, second] = parts;
-      date = new Date(year, month - 1, day, hour, minute, second);
-    } else {
-      return dateString;
-    }
-  }
+  let date = parseDate(dateString);
 
   if (isNaN(date.getTime())) {
     return dateString;
@@ -1262,7 +1278,7 @@ function escapeHtml(text) {
   return div.innerHTML;
 }
 
-// remise et total mensuel
+// remise et total mensuel - VERSION CORRIGÉE
 
 function calculerTotalMensuel(ventes) {
   console.log("Calcul du total mensuel avec", ventes.length, "ventes");
@@ -1275,18 +1291,11 @@ function calculerTotalMensuel(ventes) {
   const ventesDuMois = ventes.filter((vente) => {
     if (!vente.date) return false;
 
-    let dateVente;
-    try {
-      dateVente = new Date(vente.date);
-      // Si la date est invalide, essayer de parser le format français
-      if (isNaN(dateVente.getTime())) {
-        const parts = vente.date.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
-        if (parts) {
-          dateVente = new Date(parts[3], parts[2] - 1, parts[1]);
-        }
-      }
-    } catch (e) {
-      console.error("Erreur de parsing de date:", vente.date);
+    const dateVente = parseDate(vente.date);
+
+    // Vérifier si la date est valide
+    if (isNaN(dateVente.getTime())) {
+      console.error("Date invalide:", vente.date);
       return false;
     }
 
