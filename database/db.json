@@ -149,6 +149,11 @@
       "id": "25b5",
       "nom": "linda",
       "telephone": "+243 828 790 728"
+    },
+    {
+      "id": "0b2c",
+      "nom": "hamilton",
+      "telephone": "+243 828 790 728"
     }
   ],
   "produits": [
@@ -352,6 +357,33 @@
       "prix": 35,
       "total": 70,
       "date": "30/03/2026 12:24:21"
+    },
+    {
+      "id": "e511",
+      "clientId": "0b2c",
+      "produit": "Caisse de vin",
+      "quantite": 6,
+      "prix": 45,
+      "total": 270,
+      "date": "30/03/2026 13:20:45"
+    },
+    {
+      "id": "dc37",
+      "clientId": "0b2c",
+      "produit": "Carton de soda",
+      "quantite": 4,
+      "prix": 15,
+      "total": 60,
+      "date": "30/03/2026 13:22:52"
+    },
+    {
+      "id": "acc8",
+      "clientId": "25b5",
+      "produit": "Casier bière",
+      "quantite": 1,
+      "prix": 25,
+      "total": 25,
+      "date": "30/03/2026 18:44:36"
     }
   ],
   "$schema": "./node_modules/json-server/schema.json"
