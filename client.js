@@ -21,7 +21,7 @@ async function searchClient() {
   showLoading(resultDiv);
 
   try {
-    const response = await fetch(`${API_URL}/${clientId}`);
+    const response = await fetch(`${API_URL}/${String(clientId)}`);
 
     if (!response.ok) {
       if (response.status === 404) {
@@ -56,7 +56,7 @@ function displayClient(client) {
         <tr style="border-bottom:1px solid #eee;">
           <td style="padding:10px 0;"><strong>👤 Nom :</strong> <td style="padding:10px 0;">${escapeHtml(client.nom)}
         </tr>
-        <tr>
+        <tr style="border-bottom:1px solid #eee;">
           <td style="padding:10px 0;"><strong>📞 Téléphone :</strong> <td style="padding:10px 0;">${escapeHtml(client.telephone)}
         </tr>
       </table>
@@ -236,7 +236,7 @@ async function addClient() {
             </div>
             <table style="width:100%; border-collapse:collapse;">
               <tr style="border-bottom:1px solid #ddd;"><td style="padding:8px 0;"><strong>👤 Nom :</strong> <td style="padding:8px 0;">${escapeHtml(nom)}</tr>
-              <tr><td style="padding:8px 0;"><strong>📞 Téléphone :</strong> <td style="padding:8px 0;">${escapeHtml(telephone)}</tr>
+              <tr style="border-bottom:1px solid #ddd;"><td style="padding:8px 0;"><strong>📞 Téléphone :</strong> <td style="padding:8px 0;">${escapeHtml(telephone)}</tr>
             </table>
             <div style="margin-top:15px; padding-top:10px; border-top:1px solid #ddd;">
               <button onclick="fillVenteFormWithId(${data.id})" style="background:#4CAF50; color:white; border:none; padding:8px 15px; cursor:pointer; border-radius:5px; margin-right:10px;">🛒 Faire une vente</button>
@@ -391,7 +391,9 @@ async function afficherClient() {
     return;
   }
   try {
-    const response = await fetch(`http://localhost:4000/clients/${clientId}`);
+    const response = await fetch(
+      `http://localhost:4000/clients/${String(clientId)}`,
+    );
     if (!response.ok) {
       clientInfo.innerHTML = `<span style="color:red; background:#ffebee; padding:5px 10px; border-radius:5px; display:inline-block;">❌ Client introuvable (ID: ${clientId})</span>`;
       return;
@@ -432,7 +434,7 @@ async function addVente() {
 
   try {
     const clientResponse = await fetch(
-      `http://localhost:4000/clients/${clientId}`,
+      `http://localhost:4000/clients/${String(clientId)}`,
     );
     if (!clientResponse.ok) {
       message.innerHTML = `<div style="color:red; border:1px solid red; padding:10px; background:#ffebee; border-radius:5px;">❌ Client introuvable (ID: ${clientId})</div>`;
@@ -445,7 +447,7 @@ async function addVente() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        clientId,
+        clientId: String(clientId), // ✅ Forcer en chaîne
         produit,
         quantite: Number(quantite),
         prix: Number(prix),
@@ -490,7 +492,7 @@ prixInput.addEventListener("keypress", function (e) {
 });
 
 // ============================================
-// MODULE 4: HISTORIQUE DES VENTES
+// MODULE 4: HISTORIQUE DES VENTES (VERSION CORRIGÉE)
 // ============================================
 
 const showHistoriqueBtn = document.getElementById("showHistoriqueBtn");
@@ -559,38 +561,80 @@ function parseDate(dateString) {
 
 async function afficherHistorique() {
   const clientId = historiqueClientId.value.trim();
+
   resetDisplay();
+
   if (!clientId) {
     showMessage("Entrez l'ID du client", "red");
     return;
   }
+
   showMessage("⏳ Chargement de l'historique...", "blue");
+
   try {
+    // ✅ Convertir l'ID en chaîne pour la recherche
+    const clientIdStr = String(clientId);
+
+    // Vérifier le client
     const clientResponse = await fetch(
-      `http://localhost:4000/clients/${clientId}`,
+      `http://localhost:4000/clients/${clientIdStr}`,
     );
+
     if (!clientResponse.ok) {
-      if (clientResponse.status === 404)
+      if (clientResponse.status === 404) {
         showMessage(`❌ Client avec l'ID ${clientId} non trouvé`, "red");
-      else showMessage(`❌ Erreur serveur (${clientResponse.status})`, "red");
+      } else {
+        showMessage(`❌ Erreur serveur (${clientResponse.status})`, "red");
+      }
       return;
     }
+
     const clientData = await clientResponse.json();
     currentClientId = clientId;
+
     showClientInfo(clientData);
-    const ventesResponse = await fetch(
-      `http://localhost:4000/ventes?clientId=${clientId}`,
-    );
-    let ventes = await ventesResponse.json();
+
+    // ✅ Récupérer les ventes avec gestion des types d'ID
+    let ventes = [];
+
+    try {
+      // Essayer de récupérer toutes les ventes et filtrer côté client
+      const allVentesResponse = await fetch(`http://localhost:4000/ventes`);
+      const allVentes = await allVentesResponse.json();
+
+      // Filtrer en comparant les IDs comme chaînes
+      ventes = allVentes.filter((v) => String(v.clientId) === clientIdStr);
+
+      console.log(
+        `🔍 Ventes trouvées pour le client ${clientIdStr}: ${ventes.length}`,
+      );
+
+      if (ventes.length > 0) {
+        console.log("Première vente:", ventes[0]);
+      }
+    } catch (error) {
+      console.error("Erreur lors de la récupération des ventes:", error);
+      ventes = [];
+    }
+
     if (ventes.length === 0) {
-      showMessage(`📭 Aucune vente trouvée pour ${clientData.nom}`, "blue");
+      showMessage(
+        `📭 Aucune vente trouvée pour ${clientData.nom} (ID: ${clientId})`,
+        "blue",
+      );
       filterContainer.style.display = "none";
       calculerTotalMensuel([]);
       return;
     }
+
+    // Stocker les ventes originales
     ventesOriginales = ventes;
+
+    // Afficher les ventes
     displayVentes(ventes, clientData);
     filterContainer.style.display = "block";
+
+    // Gérer le filtrage
     const applyFilterBtn = document.getElementById("applyFilterBtn");
     if (applyFilterBtn) {
       const newBtn = applyFilterBtn.cloneNode(true);
@@ -613,36 +657,72 @@ function displayVentes(ventes, clientData) {
   tbody.innerHTML = "";
   let totalQuantite = 0;
   let totalPrix = 0;
+
   const ventesTriees = [...ventes].sort(
     (a, b) => parseDate(b.date) - parseDate(a.date),
   );
+
   ventesTriees.forEach((v, index) => {
     const prix = Number(v.prix) || 0;
     const quantite = Number(v.quantite) || 0;
     const total = Number(v.total) || prix * quantite;
+
     const tr = document.createElement("tr");
     tr.style.borderBottom = "1px solid #ddd";
+
     if (index % 2 === 0) tr.style.backgroundColor = "#f9f9f9";
-    const btnId = `details_btn_${v.id}_${Date.now()}_${index}`;
-    tr.innerHTML = `<td style="padding: 8px; text-align: center;">${v.id}<td style="padding: 8px;">${escapeHtml(v.produit)}<td style="padding: 8px; text-align: right;">${quantite}<td style="padding: 8px; text-align: right;">${prix.toFixed(2)}€<td style="padding: 8px; text-align: right; font-weight: bold; color: #4CAF50;">${total.toFixed(2)}€<td style="padding: 8px;">${formatDate(v.date)}<td style="padding: 8px; text-align: center;"><button id="${btnId}" style="background: #2196F3; color: white; border: none; padding: 5px 10px; cursor: pointer; border-radius: 3px; font-size: 12px;">📄 Détails</button>`;
+
+    const btnDetailsId = `details_btn_${v.id}_${Date.now()}_${index}`;
+    const btnFactureId = `facture_btn_${v.id}_${Date.now()}_${index}`;
+
+    tr.innerHTML = `
+      <td style="padding: 8px; text-align: center;">${v.id}</td>
+      <td style="padding: 8px;">${escapeHtml(v.produit)}</td>
+      <td style="padding: 8px; text-align: right;">${quantite}</td>
+      <td style="padding: 8px; text-align: right;">${prix.toFixed(2)}€</td>
+      <td style="padding: 8px; text-align: right; font-weight: bold; color: #4CAF50;">
+        ${total.toFixed(2)}€
+      </td>
+      <td style="padding: 8px;">${formatDate(v.date)}</td>
+      <td style="padding: 8px; text-align: center;">
+        <button id="${btnDetailsId}" style="background: #2196F3; color: white; border: none; padding: 5px 10px; cursor: pointer; border-radius: 3px; font-size: 12px;">
+          📄 Détails
+        </button>
+        <button id="${btnFactureId}" style="background: #4CAF50; color: white; border: none; padding: 5px 10px; cursor: pointer; border-radius: 3px; font-size: 12px; margin-left: 5px;">
+          🧾 Facture
+        </button>
+      </td>
+    `;
+
     tbody.appendChild(tr);
-    const detailsBtn = document.getElementById(btnId);
-    if (detailsBtn)
-      detailsBtn.addEventListener(
-        "click",
-        (function (venteId) {
-          return function () {
-            showVenteDetails(venteId);
-          };
-        })(v.id),
-      );
+
+    // 🔹 Bouton détails
+    const detailsBtn = document.getElementById(btnDetailsId);
+    if (detailsBtn) {
+      detailsBtn.addEventListener("click", () => {
+        showVenteDetails(v.id);
+      });
+    }
+
+    // 🔹 Bouton facture (🔥 NOUVEAU)
+    const factureBtn = document.getElementById(btnFactureId);
+    if (factureBtn) {
+      factureBtn.addEventListener("click", () => {
+        genererFacture(v, clientData);
+      });
+    }
+
     totalQuantite += quantite;
     totalPrix += total;
   });
+
   totalQuantiteEl.textContent = totalQuantite;
   totalPrixEl.textContent = totalPrix.toFixed(2) + "€";
+
   historiqueTable.style.display = "table";
+
   calculerTotalMensuel(ventes);
+
   showMessage(
     `✅ ${ventes.length} vente(s) trouvée(s) pour <strong>${escapeHtml(clientData.nom)}</strong>`,
     "green",
@@ -725,7 +805,7 @@ async function showVenteDetails(venteId) {
     let clientInfo = "";
     try {
       const clientResponse = await fetch(
-        `http://localhost:4000/clients/${vente.clientId}`,
+        `http://localhost:4000/clients/${String(vente.clientId)}`,
       );
       if (clientResponse.ok) {
         const client = await clientResponse.json();
@@ -876,18 +956,13 @@ function calculerTotalMensuel(ventes) {
   const currentMonth = now.getMonth();
   const currentYear = now.getFullYear();
 
-  // Filtrer les ventes du mois en cours
   const ventesDuMois = ventes.filter((vente) => {
     if (!vente.date) return false;
-
     const dateVente = parseDate(vente.date);
-
-    // Vérifier si la date est valide
     if (isNaN(dateVente.getTime())) {
       console.error("Date invalide:", vente.date);
       return false;
     }
-
     return (
       dateVente.getMonth() === currentMonth &&
       dateVente.getFullYear() === currentYear
@@ -896,7 +971,6 @@ function calculerTotalMensuel(ventes) {
 
   console.log("Ventes du mois:", ventesDuMois.length);
 
-  // ✅ Version améliorée avec Number() pour gérer les cas où total = 0
   const totalMensuel = ventesDuMois.reduce((sum, vente) => {
     const total = Number(vente.total) || vente.prix * vente.quantite || 0;
     return sum + total;
@@ -904,16 +978,11 @@ function calculerTotalMensuel(ventes) {
 
   console.log("Total mensuel brut:", totalMensuel);
 
-  // Remise 5%
   const remise = totalMensuel * 0.05;
-
-  // Total final
   const totalFinal = totalMensuel - remise;
 
-  // Créer ou mettre à jour le conteneur des totaux mensuels
   updateOrCreateMonthlyTotalDisplay(totalMensuel, remise, totalFinal);
 
-  // Retourner les valeurs pour une utilisation éventuelle
   return { totalMensuel, remise, totalFinal };
 }
 
@@ -963,7 +1032,6 @@ function updateOrCreateMonthlyTotalDisplay(totalMensuel, remise, totalFinal) {
     ${totalMensuel === 0 ? '<p style="color: #999; margin-top: 10px;">⚠️ Aucun achat ce mois-ci</p>' : ""}
   `;
 
-  // Mettre à jour aussi les anciens éléments s'ils existent (pour compatibilité)
   const totalMensuelEl = document.getElementById("totalMensuel");
   const remiseEl = document.getElementById("remise");
   const totalFinalEl = document.getElementById("totalFinal");
@@ -973,4 +1041,41 @@ function updateOrCreateMonthlyTotalDisplay(totalMensuel, remise, totalFinal) {
   if (remiseEl) remiseEl.textContent = `Remise (5%) : -${remise.toFixed(2)}€`;
   if (totalFinalEl)
     totalFinalEl.textContent = `Total à payer : ${totalFinal.toFixed(2)}€`;
+}
+
+// ============================================
+// MODULE 6: CREATION FACTURE
+// ============================================
+
+function genererFacture(vente, client) {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+
+  // 🧾 Données
+  const produit = vente.produit;
+  const quantite = vente.quantite;
+  const prix = vente.prix;
+  const total = prix * quantite;
+
+  const remise = total * 0.05;
+  const totalFinal = total - remise;
+
+  // 🧾 Contenu PDF
+  doc.setFontSize(18);
+  doc.text("FACTURE", 80, 20);
+
+  doc.setFontSize(12);
+  doc.text(`Client : ${client.nom}`, 20, 40);
+  doc.text(`Produit : ${produit}`, 20, 50);
+  doc.text(`Quantité : ${quantite}`, 20, 60);
+  doc.text(`Prix unitaire : ${prix} $`, 20, 70);
+
+  doc.text(`Total : ${total} $`, 20, 90);
+  doc.text(`Remise (5%) : ${remise.toFixed(2)} $`, 20, 100);
+  doc.text(`Montant final : ${totalFinal.toFixed(2)} $`, 20, 110);
+
+  doc.text("Merci pour votre achat 🙏", 20, 140);
+
+  // 📥 Télécharger
+  doc.save(`facture_${client.nom}.pdf`);
 }

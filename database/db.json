@@ -384,6 +384,51 @@
       "prix": 25,
       "total": 25,
       "date": "30/03/2026 18:44:36"
+    },
+    {
+      "id": "2f21",
+      "clientId": "25b5",
+      "produit": "Pack de bières artisanales",
+      "quantite": 2,
+      "prix": 35,
+      "total": 70,
+      "date": "30/03/2026 19:31:07"
+    },
+    {
+      "id": "8017",
+      "clientId": "65e0",
+      "produit": "Casier bière",
+      "quantite": 1,
+      "prix": 25,
+      "total": 25,
+      "date": "30/03/2026 19:36:16"
+    },
+    {
+      "id": "8269",
+      "clientId": "65e0",
+      "produit": "Casier bière",
+      "quantite": 1,
+      "prix": 25,
+      "total": 25,
+      "date": "30/03/2026 19:36:16"
+    },
+    {
+      "id": "267f",
+      "clientId": "65e0",
+      "produit": "Pack de bières artisanales",
+      "quantite": 3,
+      "prix": 35,
+      "total": 105,
+      "date": "30/03/2026 19:40:32"
+    },
+    {
+      "id": "5099",
+      "clientId": "65e0",
+      "produit": "Casier bière",
+      "quantite": 1,
+      "prix": 25,
+      "total": 25,
+      "date": "30/03/2026 19:53:14"
     }
   ],
   "$schema": "./node_modules/json-server/schema.json"
