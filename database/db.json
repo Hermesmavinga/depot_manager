@@ -154,6 +154,16 @@
       "id": "0b2c",
       "nom": "hamilton",
       "telephone": "+243 828 790 728"
+    },
+    {
+      "id": "86bf",
+      "nom": "roger madila",
+      "telephone": "+243 828 790 728"
+    },
+    {
+      "id": "a6a7",
+      "nom": "henry",
+      "telephone": "+243 828 790 728"
     }
   ],
   "produits": [
@@ -429,6 +439,51 @@
       "prix": 25,
       "total": 25,
       "date": "30/03/2026 19:53:14"
+    },
+    {
+      "id": "c6d5",
+      "clientId": "86bf",
+      "produit": "Pack whisky",
+      "quantite": 5,
+      "prix": 60,
+      "total": 300,
+      "date": "01/04/2026 10:42:48"
+    },
+    {
+      "id": "9612",
+      "clientId": "86bf",
+      "produit": "Carton de soda",
+      "quantite": 1,
+      "prix": 15,
+      "total": 15,
+      "date": "01/04/2026 10:47:25"
+    },
+    {
+      "id": "67c1",
+      "clientId": "a6a7",
+      "produit": "Casier bière",
+      "quantite": 1,
+      "prix": 25,
+      "total": 25,
+      "date": "03/04/2026 14:19:34"
+    },
+    {
+      "id": "d6dd",
+      "clientId": "1",
+      "produit": "Casier bière",
+      "quantite": 3,
+      "prix": 25,
+      "total": 75,
+      "date": "03/04/2026 14:22:18"
+    },
+    {
+      "id": "2edd",
+      "clientId": "1",
+      "produit": "Casier bière",
+      "quantite": 1,
+      "prix": 25,
+      "total": 25,
+      "date": "2026-04-03T13:43:09.941Z"
     }
   ],
   "$schema": "./node_modules/json-server/schema.json"
