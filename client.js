@@ -334,8 +334,11 @@ testButton.addEventListener("click", () => {
 addBtn.insertAdjacentElement("afterend", testButton);
 
 // ============================================
-// MODULE 3: FAIRE UNE VENTE
+// MODULE 3: PANIER ET VENTE MULTI-PRODUITS
 // ============================================
+
+// Panier global
+let panier = [];
 
 const venteBtn = document.getElementById("addVenteBtn");
 const clientInput = document.getElementById("venteClientId");
@@ -344,6 +347,7 @@ const message = document.getElementById("venteMessage");
 const produitSelect = document.getElementById("produit");
 const quantiteInput = document.getElementById("quantite");
 const prixInput = document.getElementById("prix");
+const ajouterPanierBtn = document.getElementById("ajouterPanierBtn");
 
 const produits = {
   "Casier bière": { prix: 25, unite: "casier" },
@@ -406,27 +410,97 @@ async function afficherClient() {
   }
 }
 
-venteBtn.addEventListener("click", addVente);
-
-async function addVente() {
-  const clientId = clientInput.value.trim();
+// 🛒 Fonction pour ajouter au panier
+function ajouterAuPanier() {
   const produit = produitSelect.value;
-  const quantite = quantiteInput.value.trim();
-  const prix = prixInput.value.trim();
+  const quantite = Number(quantiteInput.value);
+  const prix = Number(prixInput.value);
 
-  if (!clientId || !produit || !quantite || !prix) {
-    message.innerHTML = `<div style="color:red; border:1px solid red; padding:10px; background:#ffebee; border-radius:5px;">⚠️ Veuillez remplir tous les champs</div>`;
-    setTimeout(() => {
-      if (message.innerHTML.includes("remplir tous les champs"))
-        message.innerHTML = "";
-    }, 3000);
+  if (!produit || quantite <= 0 || prix <= 0) {
+    showTemporaryNotification("❌ Données invalides");
     return;
   }
-  if (parseFloat(quantite) <= 0) {
-    message.innerHTML = `<div style="color:red; border:1px solid red; padding:10px; background:#ffebee; border-radius:5px;">⚠️ La quantité doit être supérieure à 0</div>`;
-    setTimeout(() => {
-      if (message.innerHTML.includes("supérieure à 0")) message.innerHTML = "";
-    }, 3000);
+
+  panier.push({
+    nom: produit,
+    quantite: quantite,
+    prix: prix,
+  });
+
+  afficherPanier();
+
+  // Réinitialiser la quantité
+  quantiteInput.value = "1";
+  updateTotal();
+
+  showTemporaryNotification(`✅ ${produit} ajouté au panier !`);
+}
+
+// 📦 Fonction pour afficher le panier
+function afficherPanier() {
+  let panierDiv = document.getElementById("panier");
+
+  if (!panierDiv) {
+    panierDiv = document.createElement("div");
+    panierDiv.id = "panier";
+    panierDiv.style.marginTop = "15px";
+    panierDiv.style.padding = "10px";
+    panierDiv.style.border = "1px solid #ddd";
+    panierDiv.style.borderRadius = "5px";
+    panierDiv.style.backgroundColor = "#f9f9f9";
+    prixInput.insertAdjacentElement("afterend", panierDiv);
+  }
+
+  if (panier.length === 0) {
+    panierDiv.innerHTML = "";
+    return;
+  }
+
+  let total = 0;
+  let html = "<h4 style='margin:0 0 10px 0;'>🛒 Panier :</h4>";
+  html += "<div style='max-height:200px; overflow-y:auto;'>";
+
+  panier.forEach((item, index) => {
+    const sousTotal = item.prix * item.quantite;
+    total += sousTotal;
+
+    html += `
+      <div style="display:flex; justify-content:space-between; align-items:center; padding:5px; border-bottom:1px solid #eee;">
+        <span><strong>${item.nom}</strong> - ${item.quantite} x ${item.prix}€ = ${sousTotal.toFixed(2)}€</span>
+        <button onclick="supprimerDuPanier(${index})" style="background:#ff4444; color:white; border:none; padding:3px 8px; cursor:pointer; border-radius:3px;">
+          ❌
+        </button>
+      </div>
+    `;
+  });
+
+  html += "</div>";
+  html += `<div style="margin-top:10px; padding-top:10px; border-top:2px solid #ddd; text-align:right;">
+            <strong>Total panier : ${total.toFixed(2)}€</strong>
+           </div>`;
+
+  panierDiv.innerHTML = html;
+}
+
+// ❌ Fonction pour supprimer un produit du panier
+function supprimerDuPanier(index) {
+  const produit = panier[index].nom;
+  panier.splice(index, 1);
+  afficherPanier();
+  showTemporaryNotification(`❌ ${produit} retiré du panier`);
+}
+
+// 💾 Fonction pour enregistrer la vente (multi-produits)
+async function addVente() {
+  const clientId = clientInput.value.trim();
+
+  if (!clientId) {
+    showTemporaryNotification("❌ Veuillez sélectionner un client");
+    return;
+  }
+
+  if (panier.length === 0) {
+    showTemporaryNotification("❌ Ajoutez des produits au panier");
     return;
   }
 
@@ -441,44 +515,64 @@ async function addVente() {
       return;
     }
     const clientData = await clientResponse.json();
-    const total = parseFloat(prix) * parseFloat(quantite);
+
+    const total = panier.reduce((sum, item) => {
+      return sum + item.prix * item.quantite;
+    }, 0);
 
     const response = await fetch("http://localhost:4000/ventes", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         clientId: String(clientId),
-        produit,
-        quantite: Number(quantite),
-        prix: Number(prix),
-        total: Number(total),
+        produits: panier,
+        total: total,
         date: new Date().toISOString(),
       }),
     });
 
     const data = await response.json();
+
+    // Générer la facture unique
+    genererFacturePanier(data, clientData);
+
+    // Vider le panier
+    panier = [];
+    afficherPanier();
+
     const messageId = "successVente_" + Date.now();
     const dateAffichage = new Date(data.date).toLocaleString();
 
-    message.innerHTML = `<div id="${messageId}" style="color:green; border:2px solid green; padding:15px; background:#f0fff0; border-radius:8px; margin-top:10px;"><div style="display:flex; justify-content:space-between; align-items:flex-start;"><div style="flex:1;"><strong style="font-size:18px;">✅ Vente enregistrée avec succès !</strong><br><br><table style="width:100%; border-collapse:collapse;"><tr><td style="padding:5px 0;"><strong>🧾 ID Vente :</strong><td style="padding:5px 0;">${data.id}</td></tr>
-      <tr><td style="padding:5px 0;"><strong>👤 Client :</strong><td style="padding:5px 0;">${clientData.nom} (ID: ${clientData.id})</td></tr>
-      <tr><td style="padding:5px 0;"><strong>📦 Produit :</strong><td style="padding:5px 0;">${produit}</td></tr>
-      <tr><td style="padding:5px 0;"><strong>🔢 Quantité :</strong><td style="padding:5px 0;">${quantite}</td></tr>
-      <tr><td style="padding:5px 0;"><strong>💰 Prix unitaire :</strong><td style="padding:5px 0;">${prix}€</td></tr>
-      <tr><td style="padding:5px 0;"><strong>🧾 Total :</strong><td style="padding:5px 0;"><strong style="color:#4CAF50; font-size:16px;">${total.toFixed(2)}€</strong></td></tr>
-      <tr><td style="padding:5px 0;"><strong>🕒 Date :</strong><td style="padding:5px 0;">${dateAffichage}</td></tr>
-    </table></div><button onclick="document.getElementById('${messageId}').remove()" style="background:#ff4444; color:white; border:none; padding:8px 12px; cursor:pointer; border-radius:5px; font-size:16px; margin-left:10px;">✕</button></div></div>`;
+    message.innerHTML = `<div id="${messageId}" style="color:green; border:2px solid green; padding:15px; background:#f0fff0; border-radius:8px; margin-top:10px;">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+        <div style="flex:1;">
+          <strong style="font-size:18px;">✅ Vente enregistrée avec succès !</strong><br><br>
+          <strong>🧾 ID Vente :</strong> ${data.id}<br>
+          <strong>👤 Client :</strong> ${clientData.nom} (ID: ${clientData.id})<br>
+          <strong>📦 Produits :</strong><br>
+          ${data.produits.map((p) => `&nbsp;&nbsp;- ${p.nom}: ${p.quantite} x ${p.prix}€ = ${(p.prix * p.quantite).toFixed(2)}€<br>`).join("")}
+          <strong>💰 Total :</strong> <strong style="color:#4CAF50;">${total.toFixed(2)}€</strong><br>
+          <strong>🕒 Date :</strong> ${dateAffichage}
+        </div>
+        <button onclick="document.getElementById('${messageId}').remove()" 
+                style="background:#ff4444; color:white; border:none; padding:8px 12px; cursor:pointer; border-radius:5px; font-size:16px;">
+          ✕
+        </button>
+      </div>
+    </div>`;
 
-    clientInput.value = "";
-    quantiteInput.value = "1";
-    clientInfo.innerHTML = "";
-    totalDisplay.innerHTML = "";
     clientInput.focus();
   } catch (error) {
-    message.innerHTML = `<div style="color:red; border:1px solid red; padding:10px; background:#ffebee; border-radius:5px;">❌ Erreur lors de la vente : ${error.message}<br>Vérifiez que le serveur est démarré sur http://localhost:4000</div>`;
+    message.innerHTML = `<div style="color:red; border:1px solid red; padding:10px; background:#ffebee; border-radius:5px;">❌ Erreur lors de la vente : ${error.message}</div>`;
     console.error("Erreur vente:", error);
   }
 }
+
+// Écouteurs d'événements
+if (ajouterPanierBtn) {
+  ajouterPanierBtn.addEventListener("click", ajouterAuPanier);
+}
+venteBtn.addEventListener("click", addVente);
 
 clientInput.addEventListener("keypress", function (e) {
   if (e.key === "Enter") {
@@ -486,21 +580,9 @@ clientInput.addEventListener("keypress", function (e) {
     afficherClient();
   }
 });
-quantiteInput.addEventListener("keypress", function (e) {
-  if (e.key === "Enter") {
-    e.preventDefault();
-    venteBtn.click();
-  }
-});
-prixInput.addEventListener("keypress", function (e) {
-  if (e.key === "Enter") {
-    e.preventDefault();
-    venteBtn.click();
-  }
-});
 
 // ============================================
-// MODULE 4: HISTORIQUE DES VENTES
+// MODULE 4: HISTORIQUE DES VENTES (MULTI-PRODUITS)
 // ============================================
 
 const showHistoriqueBtn = document.getElementById("showHistoriqueBtn");
@@ -565,7 +647,6 @@ exportBtn.style.cursor = "pointer";
 exportBtn.style.borderRadius = "5px";
 showHistoriqueBtn.insertAdjacentElement("afterend", exportBtn);
 
-// Ajouter un bouton pour la facture mensuelle
 const factureMensuelleBtn = document.createElement("button");
 factureMensuelleBtn.textContent = "🧾 Facture mensuelle";
 factureMensuelleBtn.style.marginLeft = "10px";
@@ -580,7 +661,7 @@ factureMensuelleBtn.addEventListener("click", () => {
     fetch(`http://localhost:4000/clients/${currentClientId}`)
       .then((res) => res.json())
       .then((client) => {
-        genererFactureMensuelle(ventesOriginales, client);
+        genererFactureMensuelleMulti(ventesOriginales, client);
       });
   } else {
     showTemporaryNotification("❌ Aucune vente trouvée pour ce client");
@@ -667,13 +748,13 @@ async function afficherHistorique() {
         "blue",
       );
       filterContainer.style.display = "none";
-      calculerTotalMensuel([]);
+      calculerTotalMensuelMulti(ventes);
       return;
     }
 
     ventesOriginales = ventes;
 
-    displayVentes(ventes, clientData);
+    displayVentesMulti(ventes, clientData);
     filterContainer.style.display = "block";
 
     const applyFilterBtn = document.getElementById("applyFilterBtn");
@@ -681,7 +762,7 @@ async function afficherHistorique() {
       const newBtn = applyFilterBtn.cloneNode(true);
       applyFilterBtn.parentNode.replaceChild(newBtn, applyFilterBtn);
       newBtn.addEventListener("click", () =>
-        appliquerFiltre(ventes, clientData),
+        appliquerFiltreMulti(ventes, clientData),
       );
     }
   } catch (error) {
@@ -694,7 +775,7 @@ async function afficherHistorique() {
   }
 }
 
-function displayVentes(ventes, clientData) {
+function displayVentesMulti(ventes, clientData) {
   if (!tbody) {
     tbody = historiqueTable.querySelector("tbody");
     if (!tbody) {
@@ -712,9 +793,22 @@ function displayVentes(ventes, clientData) {
   );
 
   ventesTriees.forEach((v, index) => {
-    const prix = Number(v.prix) || 0;
-    const quantite = Number(v.quantite) || 0;
-    const total = Number(v.total) || prix * quantite;
+    // Calculer la quantité totale et le prix total de la vente
+    let quantiteTotale = 0;
+    let produitsListe = "";
+
+    if (v.produits && Array.isArray(v.produits)) {
+      v.produits.forEach((p) => {
+        quantiteTotale += p.quantite;
+        produitsListe += `${p.nom} (${p.quantite}) `;
+      });
+    } else {
+      // Compatibilité avec l'ancien format
+      quantiteTotale = v.quantite || 0;
+      produitsListe = v.produit || "Produit inconnu";
+    }
+
+    const total = Number(v.total) || 0;
 
     const tr = document.createElement("tr");
     tr.style.borderBottom = "1px solid #ddd";
@@ -726,9 +820,9 @@ function displayVentes(ventes, clientData) {
 
     tr.innerHTML = `
       <td style="padding: 8px; text-align: center;">${v.id}</td>
-      <td style="padding: 8px;">${escapeHtml(v.produit)}</td>
-      <td style="padding: 8px; text-align: right;">${quantite}</td>
-      <td style="padding: 8px; text-align: right;">${prix.toFixed(2)}€</td>
+      <td style="padding: 8px;">${escapeHtml(produitsListe.substring(0, 30))}${produitsListe.length > 30 ? "..." : ""}</td>
+      <td style="padding: 8px; text-align: right;">${quantiteTotale}</td>
+      <td style="padding: 8px; text-align: right;">${(total / quantiteTotale || 0).toFixed(2)}€ (moyen)</td>
       <td style="padding: 8px; text-align: right; font-weight: bold; color: #4CAF50;">
         ${total.toFixed(2)}€
       </td>
@@ -740,7 +834,7 @@ function displayVentes(ventes, clientData) {
         <button id="${btnFactureId}" style="background: #4CAF50; color: white; border: none; padding: 5px 8px; cursor: pointer; border-radius: 3px; font-size: 11px; margin-left: 3px;">
           🧾 Facture
         </button>
-      </td>
+       </td>
     `;
 
     tbody.appendChild(tr);
@@ -748,18 +842,18 @@ function displayVentes(ventes, clientData) {
     const detailsBtn = document.getElementById(btnDetailsId);
     if (detailsBtn) {
       detailsBtn.addEventListener("click", () => {
-        showVenteDetails(v.id);
+        showVenteDetailsMulti(v.id);
       });
     }
 
     const factureBtn = document.getElementById(btnFactureId);
     if (factureBtn) {
       factureBtn.addEventListener("click", () => {
-        genererFacture(v, clientData);
+        genererFacturePanier(v, clientData);
       });
     }
 
-    totalQuantite += quantite;
+    totalQuantite += quantiteTotale;
     totalPrix += total;
   });
 
@@ -771,7 +865,7 @@ function displayVentes(ventes, clientData) {
 
   historiqueTable.style.display = "table";
 
-  calculerTotalMensuel(ventes);
+  calculerTotalMensuelMulti(ventes);
 
   showMessage(
     `✅ ${ventes.length} vente(s) trouvée(s) pour <strong>${escapeHtml(clientData.nom)}</strong>`,
@@ -779,7 +873,7 @@ function displayVentes(ventes, clientData) {
   );
 }
 
-function appliquerFiltre(ventesOriginales, clientData) {
+function appliquerFiltreMulti(ventesOriginales, clientData) {
   const filterType = document.querySelector(
     'input[name="filterType"]:checked',
   ).value;
@@ -824,9 +918,9 @@ function appliquerFiltre(ventesOriginales, clientData) {
     if (totalQuantiteSpan) totalQuantiteSpan.textContent = "0";
     if (totalPrixSpan) totalPrixSpan.textContent = "0€";
     historiqueTable.style.display = "table";
-    calculerTotalMensuel([]);
+    calculerTotalMensuelMulti([]);
   } else {
-    displayVentes(ventesFiltrees, clientData);
+    displayVentesMulti(ventesFiltrees, clientData);
     showMessage(
       `✅ ${ventesFiltrees.length} vente(s) trouvée(s) pour cette période`,
       "green",
@@ -857,7 +951,7 @@ function showClientInfo(clientData) {
   `;
 }
 
-async function showVenteDetails(venteId) {
+async function showVenteDetailsMulti(venteId) {
   try {
     showMessage("⏳ Chargement des détails...", "blue");
     const response = await fetch(`http://localhost:4000/ventes/${venteId}`);
@@ -882,16 +976,24 @@ async function showVenteDetails(venteId) {
       console.error("Erreur récupération client:", e);
     }
 
+    let produitsHtml = "<p><strong>📦 Produits :</strong></p><ul>";
+    if (vente.produits && Array.isArray(vente.produits)) {
+      vente.produits.forEach((p) => {
+        produitsHtml += `<li>${p.nom} : ${p.quantite} x ${p.prix}€ = ${(p.prix * p.quantite).toFixed(2)}€</li>`;
+      });
+    } else {
+      produitsHtml += `<li>${vente.produit || "Produit inconnu"} : ${vente.quantite || 0} x ${vente.prix || 0}€ = ${vente.total || 0}€</li>`;
+    }
+    produitsHtml += "</ul>";
+
     const detailsHtml = `
-      <div id="venteDetails" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 25px; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); z-index: 1000; max-width: 450px; width: 90%;">
+      <div id="venteDetails" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 25px; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); z-index: 1000; max-width: 500px; width: 90%;">
         <h3 style="margin-top: 0; color: #4CAF50;">📋 Détails de la vente</h3>
         <hr>
         <p><strong>🆔 ID Vente :</strong> ${vente.id}</p>
         ${clientInfo}
-        <p><strong>📦 Produit :</strong> ${escapeHtml(vente.produit)}</p>
-        <p><strong>🔢 Quantité :</strong> ${vente.quantite}</p>
-        <p><strong>💰 Prix unitaire :</strong> ${vente.prix}€</p>
-        <p><strong>💵 Total :</strong> <strong style="color: #4CAF50;">${vente.total}€</strong></p>
+        ${produitsHtml}
+        <p><strong>💰 Total :</strong> <strong style="color: #4CAF50;">${vente.total}€</strong></p>
         <p><strong>📅 Date :</strong> ${formatDate(vente.date)}</p>
         <hr>
         <div style="display: flex; gap: 10px; justify-content: flex-end;">
@@ -965,22 +1067,21 @@ function exportToCSV() {
   }
 
   const clientId = historiqueClientId.value;
-  const headers = [
-    "ID Vente",
-    "Produit",
-    "Quantité",
-    "Prix unitaire",
-    "Total",
-    "Date",
-  ];
-  const rows = ventesOriginales.map((v) => [
-    v.id,
-    v.produit,
-    v.quantite,
-    v.prix,
-    v.total,
-    v.date,
-  ]);
+  const headers = ["ID Vente", "Produits", "Quantité totale", "Total", "Date"];
+  const rows = ventesOriginales.map((v) => {
+    let produitsListe = "";
+    let quantiteTotale = 0;
+    if (v.produits && Array.isArray(v.produits)) {
+      produitsListe = v.produits
+        .map((p) => `${p.nom}(${p.quantite})`)
+        .join(", ");
+      quantiteTotale = v.produits.reduce((sum, p) => sum + p.quantite, 0);
+    } else {
+      produitsListe = v.produit || "";
+      quantiteTotale = v.quantite || 0;
+    }
+    return [v.id, produitsListe, quantiteTotale, v.total, v.date];
+  });
 
   const csvContent = [headers, ...rows].map((row) => row.join(",")).join("\n");
   const blob = new Blob(["\uFEFF" + csvContent], {
@@ -1049,10 +1150,10 @@ function escapeHtml(text) {
 }
 
 // ============================================
-// MODULE 5: TOTAL MENSUEL ET REMISE
+// MODULE 5: TOTAL MENSUEL MULTI-PRODUITS
 // ============================================
 
-function calculerTotalMensuel(ventes) {
+function calculerTotalMensuelMulti(ventes) {
   console.log("Calcul du total mensuel avec", ventes.length, "ventes");
 
   if (!ventes || ventes.length === 0) {
@@ -1083,8 +1184,7 @@ function calculerTotalMensuel(ventes) {
   });
 
   const totalMensuel = ventesDuMois.reduce((sum, vente) => {
-    const total = Number(vente.total) || vente.prix * vente.quantite || 0;
-    return sum + total;
+    return sum + (Number(vente.total) || 0);
   }, 0);
 
   const remise = totalMensuel * 0.05;
@@ -1134,14 +1234,6 @@ function updateOrCreateMonthlyTotalDisplay(
     const historiqueTable = document.getElementById("historiqueTable");
     if (historiqueTable) {
       historiqueTable.insertAdjacentElement("afterend", monthlyTotalContainer);
-    } else {
-      const filterContainer = document.getElementById("filterContainer");
-      if (filterContainer) {
-        filterContainer.insertAdjacentElement(
-          "afterend",
-          monthlyTotalContainer,
-        );
-      }
     }
   }
 
@@ -1163,23 +1255,13 @@ function updateOrCreateMonthlyTotalDisplay(
     </div>
     ${totalMensuel === 0 ? '<p style="color: #999; margin-top: 10px;">⚠️ Aucun achat ce mois-ci</p>' : ""}
   `;
-
-  const totalMensuelEl = document.getElementById("totalMensuel");
-  const remiseEl = document.getElementById("remise");
-  const totalFinalEl = document.getElementById("totalFinal");
-
-  if (totalMensuelEl)
-    totalMensuelEl.textContent = `Total mensuel : ${totalMensuel.toFixed(2)}€`;
-  if (remiseEl) remiseEl.textContent = `Remise (5%) : -${remise.toFixed(2)}€`;
-  if (totalFinalEl)
-    totalFinalEl.textContent = `Total à payer : ${totalFinal.toFixed(2)}€`;
 }
 
 // ============================================
-// MODULE 6.1: FACTURE PAR ACHAT (SANS REMISE)
+// MODULE 6.1: FACTURE PANIER (PLUSIEURS PRODUITS)
 // ============================================
 
-function genererFacture(vente, client) {
+function genererFacturePanier(vente, client) {
   if (typeof window.jspdf === "undefined") {
     console.error("jsPDF n'est pas chargé !");
     showTemporaryNotification(
@@ -1191,8 +1273,7 @@ function genererFacture(vente, client) {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
 
-  const total =
-    Number(vente.total) || Number(vente.prix) * Number(vente.quantite);
+  const total = Number(vente.total) || 0;
   const dateFacture = new Date().toLocaleString("fr-FR");
 
   doc.setFontSize(22);
@@ -1224,7 +1305,7 @@ function genererFacture(vente, client) {
 
   doc.setFontSize(12);
   doc.setFont("helvetica", "bold");
-  doc.text("Détails de la vente", 20, 98);
+  doc.text("Détails des produits", 20, 98);
 
   doc.setFontSize(10);
   doc.setFont("helvetica", "bold");
@@ -1235,15 +1316,30 @@ function genererFacture(vente, client) {
 
   doc.line(20, 110, 190, 110);
 
+  let yPosition = 118;
   doc.setFont("helvetica", "normal");
-  doc.text(vente.produit, 20, 118);
-  doc.text(vente.quantite.toString(), 100, 118);
-  doc.text(`${Number(vente.prix).toFixed(2)} €`, 130, 118);
-  doc.text(`${total.toFixed(2)} €`, 165, 118);
 
-  doc.line(20, 125, 190, 125);
+  if (vente.produits && Array.isArray(vente.produits)) {
+    vente.produits.forEach((item) => {
+      const sousTotal = item.prix * item.quantite;
 
-  let yPosition = 140;
+      doc.text(item.nom.substring(0, 25), 20, yPosition);
+      doc.text(item.quantite.toString(), 100, yPosition);
+      doc.text(`${Number(item.prix).toFixed(2)} €`, 130, yPosition);
+      doc.text(`${sousTotal.toFixed(2)} €`, 165, yPosition);
+
+      yPosition += 8;
+
+      if (yPosition > 250) {
+        doc.addPage();
+        yPosition = 20;
+      }
+    });
+  }
+
+  doc.line(20, yPosition + 2, 190, yPosition + 2);
+  yPosition += 12;
+
   doc.setFont("helvetica", "bold");
   doc.setFontSize(12);
   doc.text("TOTAL À PAYER:", 140, yPosition);
@@ -1263,10 +1359,10 @@ function genererFacture(vente, client) {
 }
 
 // ============================================
-// MODULE 6.2: FACTURE MENSUELLE (AVEC REMISE 5%)
+// MODULE 6.2: FACTURE MENSUELLE MULTI-PRODUITS
 // ============================================
 
-function genererFactureMensuelle(ventes, client) {
+function genererFactureMensuelleMulti(ventes, client) {
   if (typeof window.jspdf === "undefined") {
     console.error("jsPDF n'est pas chargé !");
     showTemporaryNotification(
@@ -1294,7 +1390,7 @@ function genererFactureMensuelle(ventes, client) {
   }
 
   const total = ventesDuMois.reduce((sum, v) => {
-    return sum + (Number(v.total) || Number(v.prix) * Number(v.quantite));
+    return sum + (Number(v.total) || 0);
   }, 0);
 
   const remise = total * 0.05;
@@ -1341,9 +1437,8 @@ function genererFactureMensuelle(ventes, client) {
 
   doc.setFontSize(9);
   doc.setFont("helvetica", "bold");
-  doc.text("Produit", 20, 108);
-  doc.text("Quantité", 80, 108);
-  doc.text("Prix unitaire", 110, 108);
+  doc.text("Date", 20, 108);
+  doc.text("Produits", 60, 108);
   doc.text("Total", 160, 108);
 
   doc.line(20, 110, 190, 110);
@@ -1353,13 +1448,20 @@ function genererFactureMensuelle(ventes, client) {
   doc.setFontSize(9);
 
   ventesDuMois.forEach((vente, index) => {
-    const totalVente =
-      Number(vente.total) || Number(vente.prix) * Number(vente.quantite);
+    let produitsListe = "";
+    if (vente.produits && Array.isArray(vente.produits)) {
+      produitsListe = vente.produits
+        .map((p) => `${p.nom}(${p.quantite})`)
+        .join(", ");
+    } else {
+      produitsListe = vente.produit || "Produit inconnu";
+    }
 
-    doc.text(vente.produit.substring(0, 20), 20, yPosition);
-    doc.text(vente.quantite.toString(), 80, yPosition);
-    doc.text(`${Number(vente.prix).toFixed(2)} €`, 110, yPosition);
-    doc.text(`${totalVente.toFixed(2)} €`, 160, yPosition);
+    const dateStr = formatDate(vente.date);
+
+    doc.text(dateStr.substring(0, 10), 20, yPosition);
+    doc.text(produitsListe.substring(0, 35), 60, yPosition);
+    doc.text(`${Number(vente.total).toFixed(2)} €`, 160, yPosition);
 
     yPosition += 8;
 

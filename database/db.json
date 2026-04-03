@@ -484,6 +484,29 @@
       "prix": 25,
       "total": 25,
       "date": "2026-04-03T13:43:09.941Z"
+    },
+    {
+      "id": "c718",
+      "clientId": "1",
+      "produits": [
+        {
+          "nom": "Casier bière",
+          "quantite": 1,
+          "prix": 25
+        },
+        {
+          "nom": "Pack whisky",
+          "quantite": 2,
+          "prix": 60
+        },
+        {
+          "nom": "Carton de soda",
+          "quantite": 3,
+          "prix": 15
+        }
+      ],
+      "total": 190,
+      "date": "2026-04-03T16:18:46.405Z"
     }
   ],
   "$schema": "./node_modules/json-server/schema.json"
