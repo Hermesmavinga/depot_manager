@@ -179,6 +179,11 @@
       "id": "34d9",
       "nom": "rudy",
       "telephone": "+243 828 790 728"
+    },
+    {
+      "id": "4224",
+      "nom": "paolina",
+      "telephone": "+243 828 790 728"
     }
   ],
   "produits": [
@@ -620,6 +625,32 @@
       ],
       "total": 25,
       "date": "2026-04-05T14:05:38.289Z"
+    },
+    {
+      "id": "e0a5",
+      "clientId": "1",
+      "produits": [
+        {
+          "nom": "Pack whisky",
+          "quantite": 1,
+          "prix": 60
+        }
+      ],
+      "total": 60,
+      "date": "2026-04-05T14:32:02.151Z"
+    },
+    {
+      "id": "ce09",
+      "clientId": "1",
+      "produits": [
+        {
+          "nom": "Casier bière",
+          "quantite": 1,
+          "prix": 25
+        }
+      ],
+      "total": 25,
+      "date": "2026-04-05T20:21:08.713Z"
     }
   ],
   "$schema": "./node_modules/json-server/schema.json"
