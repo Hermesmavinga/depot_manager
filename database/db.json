@@ -169,6 +169,16 @@
       "id": "0498",
       "nom": "Mavinga",
       "telephone": "+243 828 790 728"
+    },
+    {
+      "id": "d9c5",
+      "nom": "papa jean",
+      "telephone": "+243 828 790 728"
+    },
+    {
+      "id": "34d9",
+      "nom": "rudy",
+      "telephone": "+243 828 790 728"
     }
   ],
   "produits": [
@@ -597,6 +607,19 @@
       ],
       "total": 25,
       "date": "2026-04-05T12:26:11.631Z"
+    },
+    {
+      "id": "423a",
+      "clientId": "34d9",
+      "produits": [
+        {
+          "nom": "Casier bière",
+          "quantite": 1,
+          "prix": 25
+        }
+      ],
+      "total": 25,
+      "date": "2026-04-05T14:05:38.289Z"
     }
   ],
   "$schema": "./node_modules/json-server/schema.json"

@@ -65,6 +65,10 @@ function displayClient(client) {
                 style="background:#4CAF50; color:white; border:none; padding:8px 15px; cursor:pointer; border-radius:5px;">
           🛒 Faire une vente
         </button>
+        <button onclick="copyToClipboard('${client.id}')" 
+                style="background:#2196F3; color:white; border:none; padding:8px 15px; cursor:pointer; border-radius:5px; margin-left:10px;">
+          📋 Copier l'ID
+        </button>
       </div>
     </div>
   `;
@@ -236,11 +240,11 @@ async function addClient() {
             </div>
             <table style="width:100%; border-collapse:collapse;">
               <tr style="border-bottom:1px solid #ddd;"><td style="padding:8px 0;"><strong>👤 Nom :</strong> <td style="padding:8px 0;">${escapeHtml(nom)}</td>
-              <tr style="border-bottom:1px solid #ddd;"><td style="padding:8px 0;"><strong>📞 Téléphone :</strong> <td style="padding:8px 0;">${escapeHtml(telephone)}</tr>
+              <tr style="border-bottom:1px solid #ddd;"><td style="padding:8px 0;"><strong>📞 Téléphone :</strong> <td style="padding:8px 0;">${escapeHtml(telephone)}</td>
             </table>
             <div style="margin-top:15px; padding-top:10px; border-top:1px solid #ddd;">
-              <button onclick="fillVenteFormWithId(${data.id})" style="background:#4CAF50; color:white; border:none; padding:8px 15px; cursor:pointer; border-radius:5px; margin-right:10px;">🛒 Faire une vente</button>
-              <button onclick="copyToClipboard(${data.id})" style="background:#2196F3; color:white; border:none; padding:8px 15px; cursor:pointer; border-radius:5px;">📋 Copier l'ID</button>
+              <button onclick="fillVenteFormWithId('${data.id}')" style="background:#4CAF50; color:white; border:none; padding:8px 15px; cursor:pointer; border-radius:5px; margin-right:10px;">🛒 Faire une vente</button>
+              <button onclick="copyToClipboard('${data.id}')" style="background:#2196F3; color:white; border:none; padding:8px 15px; cursor:pointer; border-radius:5px;">📋 Copier l'ID</button>
             </div>
           </div>
           <button onclick="document.getElementById('${messageId}').remove()" style="background:#ff4444; color:white; border:none; padding:5px 10px; cursor:pointer; border-radius:5px; font-size:16px;">✕</button>
@@ -282,19 +286,66 @@ function fillVenteFormWithId(clientId) {
   }
 }
 
+// ============================================
+// FONCTION COPIER ID CORRIGÉE
+// ============================================
+
 async function copyToClipboard(text) {
   try {
+    // Méthode moderne (navigateur récent)
     await navigator.clipboard.writeText(text.toString());
-    showTemporaryNotification("✅ ID copié dans le presse-papier !");
+    showCopyNotification("✅ ID copié dans le presse-papier !");
   } catch (err) {
-    const textarea = document.createElement("textarea");
-    textarea.value = text;
-    document.body.appendChild(textarea);
-    textarea.select();
-    document.execCommand("copy");
-    document.body.removeChild(textarea);
-    showTemporaryNotification("✅ ID copié !");
+    console.error("Erreur de copie (méthode moderne):", err);
+
+    // Méthode de secours (anciens navigateurs)
+    try {
+      const textarea = document.createElement("textarea");
+      textarea.value = text;
+      textarea.style.position = "fixed";
+      textarea.style.left = "-9999px";
+      textarea.style.top = "-9999px";
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textarea);
+      showCopyNotification("✅ ID copié !");
+    } catch (err2) {
+      console.error("Erreur de copie (méthode secours):", err2);
+      showCopyNotification("❌ Impossible de copier l'ID", "error");
+    }
   }
+}
+
+// Fonction de notification spécifique pour la copie
+function showCopyNotification(message, type = "success") {
+  const notification = document.createElement("div");
+  notification.style.position = "fixed";
+  notification.style.bottom = "20px";
+  notification.style.right = "20px";
+  notification.style.backgroundColor =
+    type === "success" ? "#4CAF50" : "#ff4444";
+  notification.style.color = "white";
+  notification.style.padding = "12px 20px";
+  notification.style.borderRadius = "5px";
+  notification.style.zIndex = "9999";
+  notification.style.boxShadow = "0 2px 10px rgba(0,0,0,0.2)";
+  notification.style.fontSize = "14px";
+  notification.style.fontWeight = "bold";
+  notification.innerHTML = message;
+
+  document.body.appendChild(notification);
+
+  // Animation d'entrée
+  notification.style.transform = "translateX(0)";
+
+  // Disparition après 3 secondes
+  setTimeout(() => {
+    notification.style.opacity = "0";
+    notification.style.transform = "translateX(100px)";
+    notification.style.transition = "all 0.3s ease";
+    setTimeout(() => notification.remove(), 300);
+  }, 3000);
 }
 
 function showTemporaryNotification(message) {
@@ -1336,12 +1387,10 @@ function genererFacturePanier(vente, client) {
   const produits = venteNettoyee.produits;
   const dateFacture = new Date().toLocaleString("fr-FR");
 
-  // En-tête
   doc.setFontSize(22);
   doc.setFont("helvetica", "bold");
   doc.text("FACTURE", pageWidth / 2, 20, { align: "center" });
 
-  // Informations entreprise
   doc.setFontSize(9);
   doc.setFont("helvetica", "normal");
   doc.text("Votre Entreprise SARL", marginX, 35);
@@ -1349,15 +1398,12 @@ function genererFacturePanier(vente, client) {
   doc.text("75001 Paris, France", marginX, 45);
   doc.text("Tél: 01 23 45 67 89", marginX, 50);
 
-  // Numéro et date
   doc.setFontSize(9);
   doc.text(`Facture N°: ${vente.id}`, rightX - 40, 35, { align: "right" });
   doc.text(`Date: ${dateFacture}`, rightX - 40, 40, { align: "right" });
 
-  // Ligne de séparation
   doc.line(marginX, 55, rightX, 55);
 
-  // Informations client
   doc.setFontSize(11);
   doc.setFont("helvetica", "bold");
   doc.text("Client :", marginX, 68);
@@ -1367,10 +1413,8 @@ function genererFacturePanier(vente, client) {
   doc.text(`Téléphone: ${client.telephone}`, marginX, 75);
   doc.text(`ID Client: ${client.id}`, marginX, 82);
 
-  // Ligne de séparation
   doc.line(marginX, 88, rightX, 88);
 
-  // Tableau des produits
   doc.setFontSize(11);
   doc.setFont("helvetica", "bold");
   doc.text("Détails des produits", marginX, 98);
@@ -1404,12 +1448,10 @@ function genererFacturePanier(vente, client) {
     }
   });
 
-  // Ligne avant total
   yPosition += 5;
   doc.line(marginX, yPosition, rightX, yPosition);
   yPosition += 8;
 
-  // Total à payer
   doc.setFont("helvetica", "bold");
   doc.setFontSize(11);
   doc.text("TOTAL À PAYER :", 130, yPosition);
@@ -1417,7 +1459,6 @@ function genererFacturePanier(vente, client) {
   doc.setTextColor(76, 175, 80);
   doc.text(`${total.toFixed(2)} €`, rightX, yPosition, { align: "right" });
 
-  // Pied de page
   doc.setFontSize(8);
   doc.setTextColor(100, 100, 100);
   doc.text("Merci de votre confiance !", pageWidth / 2, 280, {
@@ -1485,12 +1526,10 @@ function genererFactureMensuelleMulti(ventes, client) {
   const marginX = 20;
   const rightX = pageWidth - marginX;
 
-  // En-tête
   doc.setFontSize(20);
   doc.setFont("helvetica", "bold");
   doc.text("FACTURE MENSUELLE", pageWidth / 2, 20, { align: "center" });
 
-  // Informations entreprise
   doc.setFontSize(9);
   doc.setFont("helvetica", "normal");
   doc.text("Votre Entreprise SARL", marginX, 35);
@@ -1498,17 +1537,14 @@ function genererFactureMensuelleMulti(ventes, client) {
   doc.text("75001 Paris, France", marginX, 45);
   doc.text("Tél: 01 23 45 67 89", marginX, 50);
 
-  // Période et date
   doc.setFontSize(9);
   doc.text(`Période: ${moisTexte}`, rightX - 40, 35, { align: "right" });
   doc.text(`Date d'édition: ${dateFacture}`, rightX - 40, 40, {
     align: "right",
   });
 
-  // Ligne de séparation
   doc.line(marginX, 55, rightX, 55);
 
-  // Informations client
   doc.setFontSize(11);
   doc.setFont("helvetica", "bold");
   doc.text("Client :", marginX, 68);
@@ -1518,10 +1554,8 @@ function genererFactureMensuelleMulti(ventes, client) {
   doc.text(`Téléphone: ${client.telephone}`, marginX, 75);
   doc.text(`ID Client: ${client.id}`, marginX, 82);
 
-  // Ligne de séparation
   doc.line(marginX, 88, rightX, 88);
 
-  // Tableau récapitulatif
   doc.setFontSize(11);
   doc.setFont("helvetica", "bold");
   doc.text(`Récapitulatif des achats - ${moisTexte}`, marginX, 98);
@@ -1557,12 +1591,10 @@ function genererFactureMensuelleMulti(ventes, client) {
     }
   });
 
-  // Ligne avant totaux
   yPosition += 5;
   doc.line(marginX, yPosition, rightX, yPosition);
   yPosition += 8;
 
-  // Totaux
   doc.setFont("helvetica", "normal");
   doc.setFontSize(10);
   doc.text("Sous-total:", 130, yPosition);
@@ -1580,7 +1612,6 @@ function genererFactureMensuelleMulti(ventes, client) {
   doc.setTextColor(76, 175, 80);
   doc.text(`${totalFinal.toFixed(2)} €`, rightX, yPosition, { align: "right" });
 
-  // Pied de page
   doc.setFontSize(8);
   doc.setTextColor(100, 100, 100);
   doc.text("Merci de votre confiance !", pageWidth / 2, 280, {
