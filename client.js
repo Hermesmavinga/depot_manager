@@ -235,7 +235,7 @@ async function addClient() {
               <strong>🆔 ID du client :</strong> <span style="font-size:20px; font-weight:bold; color:#4CAF50;">${data.id}</span>
             </div>
             <table style="width:100%; border-collapse:collapse;">
-              <tr style="border-bottom:1px solid #ddd;"><td style="padding:8px 0;"><strong>👤 Nom :</strong> <td style="padding:8px 0;">${escapeHtml(nom)}</tr>
+              <tr style="border-bottom:1px solid #ddd;"><td style="padding:8px 0;"><strong>👤 Nom :</strong> <td style="padding:8px 0;">${escapeHtml(nom)}</td>
               <tr style="border-bottom:1px solid #ddd;"><td style="padding:8px 0;"><strong>📞 Téléphone :</strong> <td style="padding:8px 0;">${escapeHtml(telephone)}</tr>
             </table>
             <div style="margin-top:15px; padding-top:10px; border-top:1px solid #ddd;">
@@ -410,7 +410,6 @@ async function afficherClient() {
   }
 }
 
-// 🛒 Fonction pour ajouter au panier
 function ajouterAuPanier() {
   const produit = produitSelect.value;
   const quantite = Number(quantiteInput.value);
@@ -429,14 +428,12 @@ function ajouterAuPanier() {
 
   afficherPanier();
 
-  // Réinitialiser la quantité
   quantiteInput.value = "1";
   updateTotal();
 
   showTemporaryNotification(`✅ ${produit} ajouté au panier !`);
 }
 
-// 📦 Fonction pour afficher le panier
 function afficherPanier() {
   let panierDiv = document.getElementById("panier");
 
@@ -466,7 +463,7 @@ function afficherPanier() {
 
     html += `
       <div style="display:flex; justify-content:space-between; align-items:center; padding:5px; border-bottom:1px solid #eee;">
-        <span><strong>${item.nom}</strong> - ${item.quantite} x ${item.prix}€ = ${sousTotal.toFixed(2)}€</span>
+        <span><strong>${escapeHtml(item.nom)}</strong> - ${item.quantite} x ${item.prix}€ = ${sousTotal.toFixed(2)}€</span>
         <button onclick="supprimerDuPanier(${index})" style="background:#ff4444; color:white; border:none; padding:3px 8px; cursor:pointer; border-radius:3px;">
           ❌
         </button>
@@ -482,7 +479,6 @@ function afficherPanier() {
   panierDiv.innerHTML = html;
 }
 
-// ❌ Fonction pour supprimer un produit du panier
 function supprimerDuPanier(index) {
   const produit = panier[index].nom;
   panier.splice(index, 1);
@@ -490,7 +486,6 @@ function supprimerDuPanier(index) {
   showTemporaryNotification(`❌ ${produit} retiré du panier`);
 }
 
-// 💾 Fonction pour enregistrer la vente (multi-produits)
 async function addVente() {
   const clientId = clientInput.value.trim();
 
@@ -533,10 +528,8 @@ async function addVente() {
 
     const data = await response.json();
 
-    // Générer la facture unique
     genererFacturePanier(data, clientData);
 
-    // Vider le panier
     panier = [];
     afficherPanier();
 
@@ -550,7 +543,7 @@ async function addVente() {
           <strong>🧾 ID Vente :</strong> ${data.id}<br>
           <strong>👤 Client :</strong> ${clientData.nom} (ID: ${clientData.id})<br>
           <strong>📦 Produits :</strong><br>
-          ${data.produits.map((p) => `&nbsp;&nbsp;- ${p.nom}: ${p.quantite} x ${p.prix}€ = ${(p.prix * p.quantite).toFixed(2)}€<br>`).join("")}
+          ${afficherProduitsHtml(data.produits)}
           <strong>💰 Total :</strong> <strong style="color:#4CAF50;">${total.toFixed(2)}€</strong><br>
           <strong>🕒 Date :</strong> ${dateAffichage}
         </div>
@@ -568,7 +561,16 @@ async function addVente() {
   }
 }
 
-// Écouteurs d'événements
+function afficherProduitsHtml(produits) {
+  if (!produits || produits.length === 0) return "Aucun produit";
+  return produits
+    .map(
+      (p) =>
+        `&nbsp;&nbsp;• ${escapeHtml(p.nom)} : ${p.quantite} x ${p.prix}€ = ${(p.prix * p.quantite).toFixed(2)}€<br>`,
+    )
+    .join("");
+}
+
 if (ajouterPanierBtn) {
   ajouterPanierBtn.addEventListener("click", ajouterAuPanier);
 }
@@ -582,7 +584,7 @@ clientInput.addEventListener("keypress", function (e) {
 });
 
 // ============================================
-// MODULE 4: HISTORIQUE DES VENTES (MULTI-PRODUITS)
+// MODULE 4: HISTORIQUE DES VENTES (VERSION COMPATIBLE AVEC CORRECTION NaN)
 // ============================================
 
 const showHistoriqueBtn = document.getElementById("showHistoriqueBtn");
@@ -594,25 +596,6 @@ let tbody = historiqueTable.querySelector("tbody");
 if (!tbody) {
   tbody = document.createElement("tbody");
   historiqueTable.appendChild(tbody);
-}
-
-let totalQuantiteEl = document.getElementById("totalQuantite");
-let totalPrixEl = document.getElementById("totalPrix");
-
-if (!totalQuantiteEl) {
-  totalQuantiteEl = document.createElement("span");
-  totalQuantiteEl.id = "totalQuantite";
-  totalQuantiteEl.textContent = "0";
-  const totalGeneralDiv = document.createElement("div");
-  totalGeneralDiv.innerHTML = "<strong>Total général : </strong>";
-  totalGeneralDiv.appendChild(totalQuantiteEl);
-  historiqueTable.insertAdjacentElement("afterend", totalGeneralDiv);
-}
-
-if (!totalPrixEl) {
-  totalPrixEl = document.createElement("span");
-  totalPrixEl.id = "totalPrix";
-  totalPrixEl.textContent = "0€";
 }
 
 let currentClientId = null;
@@ -691,6 +674,86 @@ function parseDate(dateString) {
     }
   }
   return date;
+}
+
+// 🔥 FONCTION DE NETTOYAGE DES DONNÉES CORROMPUES
+function nettoyerVente(vente) {
+  let produitsListe = [];
+  let total = Number(vente.total) || 0;
+
+  // Cas 1: Nouveau format avec produits[]
+  if (
+    vente.produits &&
+    Array.isArray(vente.produits) &&
+    vente.produits.length > 0
+  ) {
+    produitsListe = vente.produits
+      .filter((p) => {
+        // Filtrer les produits invalides
+        return (
+          p &&
+          p.nom &&
+          typeof p.quantite === "number" &&
+          typeof p.prix === "number" &&
+          !isNaN(p.prix) &&
+          p.prix > 0
+        );
+      })
+      .map((p) => ({
+        nom: p.nom,
+        quantite: p.quantite,
+        prix: p.prix,
+      }));
+
+    // Recalculer le total à partir des produits nettoyés
+    if (produitsListe.length > 0) {
+      total = produitsListe.reduce((sum, p) => sum + p.prix * p.quantite, 0);
+    }
+  }
+  // Cas 2: Ancien format avec produit unique
+  else if (
+    vente.produit &&
+    vente.quantite &&
+    vente.prix &&
+    !isNaN(vente.prix) &&
+    vente.prix > 0
+  ) {
+    produitsListe = [
+      {
+        nom: vente.produit,
+        quantite: Number(vente.quantite),
+        prix: Number(vente.prix),
+      },
+    ];
+    total = vente.prix * vente.quantite;
+  }
+  // Cas 3: Données corrompues - essayer de récupérer depuis le total
+  else if (total > 0 && !produitsListe.length) {
+    produitsListe = [
+      {
+        nom: "Produit (données manquantes)",
+        quantite: 1,
+        prix: total,
+      },
+    ];
+  }
+
+  return { produits: produitsListe, total: total };
+}
+
+function afficherProduitsListe(produits) {
+  if (!produits || produits.length === 0) return "Aucun produit";
+  return `
+    <ul style="margin: 0; padding-left: 20px; text-align: left;">
+      ${produits
+        .map(
+          (p) => `
+        <li style="margin: 2px 0;">${escapeHtml(p.nom)} - ${p.quantite} x ${p.prix}€</li>
+      `,
+        )
+        .join("")}
+    </ul>
+  `;
 }
 
 async function afficherHistorique() {
@@ -793,22 +856,19 @@ function displayVentesMulti(ventes, clientData) {
   );
 
   ventesTriees.forEach((v, index) => {
-    // Calculer la quantité totale et le prix total de la vente
-    let quantiteTotale = 0;
-    let produitsListe = "";
+    // 🔥 NETTOYER LA VENTE AVANT AFFICHAGE
+    const venteNettoyee = nettoyerVente(v);
+    const produitsListe = venteNettoyee.produits;
+    const total = venteNettoyee.total;
 
-    if (v.produits && Array.isArray(v.produits)) {
-      v.produits.forEach((p) => {
-        quantiteTotale += p.quantite;
-        produitsListe += `${p.nom} (${p.quantite}) `;
-      });
-    } else {
-      // Compatibilité avec l'ancien format
-      quantiteTotale = v.quantite || 0;
-      produitsListe = v.produit || "Produit inconnu";
+    let quantiteTotale = produitsListe.reduce((sum, p) => sum + p.quantite, 0);
+    const prixMoyen = quantiteTotale > 0 ? total / quantiteTotale : 0;
+
+    // 🔥 VÉRIFIER SI LES DONNÉES SONT VALIDES
+    if (isNaN(total) || !isFinite(total)) {
+      console.warn(`Vente ${v.id} a un total invalide, ignorée`);
+      return; // Ignorer cette vente si le total est invalide
     }
-
-    const total = Number(v.total) || 0;
 
     const tr = document.createElement("tr");
     tr.style.borderBottom = "1px solid #ddd";
@@ -820,9 +880,9 @@ function displayVentesMulti(ventes, clientData) {
 
     tr.innerHTML = `
       <td style="padding: 8px; text-align: center;">${v.id}</td>
-      <td style="padding: 8px;">${escapeHtml(produitsListe.substring(0, 30))}${produitsListe.length > 30 ? "..." : ""}</td>
-      <td style="padding: 8px; text-align: right;">${quantiteTotale}</td>
-      <td style="padding: 8px; text-align: right;">${(total / quantiteTotale || 0).toFixed(2)}€ (moyen)</td>
+      <td style="padding: 8px; text-align: left;">${afficherProduitsListe(produitsListe)}</td>
+      <td style="padding: 8px; text-align: center;">${quantiteTotale}</td>
+      <td style="padding: 8px; text-align: right;">${prixMoyen.toFixed(2)}€</td>
       <td style="padding: 8px; text-align: right; font-weight: bold; color: #4CAF50;">
         ${total.toFixed(2)}€
       </td>
@@ -834,7 +894,7 @@ function displayVentesMulti(ventes, clientData) {
         <button id="${btnFactureId}" style="background: #4CAF50; color: white; border: none; padding: 5px 8px; cursor: pointer; border-radius: 3px; font-size: 11px; margin-left: 3px;">
           🧾 Facture
         </button>
-       </td>
+      </td>
     `;
 
     tbody.appendChild(tr);
@@ -849,7 +909,7 @@ function displayVentesMulti(ventes, clientData) {
     const factureBtn = document.getElementById(btnFactureId);
     if (factureBtn) {
       factureBtn.addEventListener("click", () => {
-        genererFacturePanier(v, clientData);
+        genererFacturePanier(venteNettoyee, clientData);
       });
     }
 
@@ -976,14 +1036,19 @@ async function showVenteDetailsMulti(venteId) {
       console.error("Erreur récupération client:", e);
     }
 
-    let produitsHtml = "<p><strong>📦 Produits :</strong></p><ul>";
-    if (vente.produits && Array.isArray(vente.produits)) {
-      vente.produits.forEach((p) => {
-        produitsHtml += `<li>${p.nom} : ${p.quantite} x ${p.prix}€ = ${(p.prix * p.quantite).toFixed(2)}€</li>`;
-      });
-    } else {
-      produitsHtml += `<li>${vente.produit || "Produit inconnu"} : ${vente.quantite || 0} x ${vente.prix || 0}€ = ${vente.total || 0}€</li>`;
-    }
+    // Nettoyer les produits
+    const venteNettoyee = nettoyerVente(vente);
+    const produits = venteNettoyee.produits;
+    const total = venteNettoyee.total;
+
+    let produitsHtml =
+      "<p><strong>📦 Produits :</strong></p><ul style='margin-top: 0;'>";
+    let totalArticles = 0;
+
+    produits.forEach((p) => {
+      produitsHtml += `<li>${escapeHtml(p.nom)} : ${p.quantite} x ${p.prix}€ = ${(p.prix * p.quantite).toFixed(2)}€</li>`;
+      totalArticles += p.quantite;
+    });
     produitsHtml += "</ul>";
 
     const detailsHtml = `
@@ -993,7 +1058,8 @@ async function showVenteDetailsMulti(venteId) {
         <p><strong>🆔 ID Vente :</strong> ${vente.id}</p>
         ${clientInfo}
         ${produitsHtml}
-        <p><strong>💰 Total :</strong> <strong style="color: #4CAF50;">${vente.total}€</strong></p>
+        <p><strong>📊 Nombre total d'articles :</strong> ${totalArticles}</p>
+        <p><strong>💰 Total :</strong> <strong style="color: #4CAF50;">${total.toFixed(2)}€</strong></p>
         <p><strong>📅 Date :</strong> ${formatDate(vente.date)}</p>
         <hr>
         <div style="display: flex; gap: 10px; justify-content: flex-end;">
@@ -1069,18 +1135,21 @@ function exportToCSV() {
   const clientId = historiqueClientId.value;
   const headers = ["ID Vente", "Produits", "Quantité totale", "Total", "Date"];
   const rows = ventesOriginales.map((v) => {
+    const venteNettoyee = nettoyerVente(v);
     let produitsListe = "";
     let quantiteTotale = 0;
-    if (v.produits && Array.isArray(v.produits)) {
-      produitsListe = v.produits
+
+    if (venteNettoyee.produits.length > 0) {
+      produitsListe = venteNettoyee.produits
         .map((p) => `${p.nom}(${p.quantite})`)
         .join(", ");
-      quantiteTotale = v.produits.reduce((sum, p) => sum + p.quantite, 0);
-    } else {
-      produitsListe = v.produit || "";
-      quantiteTotale = v.quantite || 0;
+      quantiteTotale = venteNettoyee.produits.reduce(
+        (sum, p) => sum + p.quantite,
+        0,
+      );
     }
-    return [v.id, produitsListe, quantiteTotale, v.total, v.date];
+
+    return [v.id, produitsListe, quantiteTotale, venteNettoyee.total, v.date];
   });
 
   const csvContent = [headers, ...rows].map((row) => row.join(",")).join("\n");
@@ -1184,7 +1253,8 @@ function calculerTotalMensuelMulti(ventes) {
   });
 
   const totalMensuel = ventesDuMois.reduce((sum, vente) => {
-    return sum + (Number(vente.total) || 0);
+    const venteNettoyee = nettoyerVente(vente);
+    return sum + venteNettoyee.total;
   }, 0);
 
   const remise = totalMensuel * 0.05;
@@ -1258,7 +1328,7 @@ function updateOrCreateMonthlyTotalDisplay(
 }
 
 // ============================================
-// MODULE 6.1: FACTURE PANIER (PLUSIEURS PRODUITS)
+// MODULE 6.1: FACTURE PANIER
 // ============================================
 
 function genererFacturePanier(vente, client) {
@@ -1273,7 +1343,9 @@ function genererFacturePanier(vente, client) {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
 
-  const total = Number(vente.total) || 0;
+  const venteNettoyee = nettoyerVente(vente);
+  const total = venteNettoyee.total;
+  const produits = venteNettoyee.produits;
   const dateFacture = new Date().toLocaleString("fr-FR");
 
   doc.setFontSize(22);
@@ -1319,23 +1391,21 @@ function genererFacturePanier(vente, client) {
   let yPosition = 118;
   doc.setFont("helvetica", "normal");
 
-  if (vente.produits && Array.isArray(vente.produits)) {
-    vente.produits.forEach((item) => {
-      const sousTotal = item.prix * item.quantite;
+  produits.forEach((item) => {
+    const sousTotal = item.prix * item.quantite;
 
-      doc.text(item.nom.substring(0, 25), 20, yPosition);
-      doc.text(item.quantite.toString(), 100, yPosition);
-      doc.text(`${Number(item.prix).toFixed(2)} €`, 130, yPosition);
-      doc.text(`${sousTotal.toFixed(2)} €`, 165, yPosition);
+    doc.text(item.nom.substring(0, 25), 20, yPosition);
+    doc.text(item.quantite.toString(), 100, yPosition);
+    doc.text(`${Number(item.prix).toFixed(2)} €`, 130, yPosition);
+    doc.text(`${sousTotal.toFixed(2)} €`, 165, yPosition);
 
-      yPosition += 8;
+    yPosition += 8;
 
-      if (yPosition > 250) {
-        doc.addPage();
-        yPosition = 20;
-      }
-    });
-  }
+    if (yPosition > 250) {
+      doc.addPage();
+      yPosition = 20;
+    }
+  });
 
   doc.line(20, yPosition + 2, 190, yPosition + 2);
   yPosition += 12;
@@ -1359,7 +1429,7 @@ function genererFacturePanier(vente, client) {
 }
 
 // ============================================
-// MODULE 6.2: FACTURE MENSUELLE MULTI-PRODUITS
+// MODULE 6.2: FACTURE MENSUELLE
 // ============================================
 
 function genererFactureMensuelleMulti(ventes, client) {
@@ -1389,9 +1459,11 @@ function genererFactureMensuelleMulti(ventes, client) {
     return;
   }
 
-  const total = ventesDuMois.reduce((sum, v) => {
-    return sum + (Number(v.total) || 0);
-  }, 0);
+  let total = 0;
+  ventesDuMois.forEach((vente) => {
+    const venteNettoyee = nettoyerVente(vente);
+    total += venteNettoyee.total;
+  });
 
   const remise = total * 0.05;
   const totalFinal = total - remise;
@@ -1448,20 +1520,15 @@ function genererFactureMensuelleMulti(ventes, client) {
   doc.setFontSize(9);
 
   ventesDuMois.forEach((vente, index) => {
-    let produitsListe = "";
-    if (vente.produits && Array.isArray(vente.produits)) {
-      produitsListe = vente.produits
-        .map((p) => `${p.nom}(${p.quantite})`)
-        .join(", ");
-    } else {
-      produitsListe = vente.produit || "Produit inconnu";
-    }
-
+    const venteNettoyee = nettoyerVente(vente);
+    let produitsListe = venteNettoyee.produits
+      .map((p) => `${p.nom}(${p.quantite})`)
+      .join(", ");
     const dateStr = formatDate(vente.date);
 
     doc.text(dateStr.substring(0, 10), 20, yPosition);
     doc.text(produitsListe.substring(0, 35), 60, yPosition);
-    doc.text(`${Number(vente.total).toFixed(2)} €`, 160, yPosition);
+    doc.text(`${venteNettoyee.total.toFixed(2)} €`, 160, yPosition);
 
     yPosition += 8;
 
