@@ -337,7 +337,6 @@ addBtn.insertAdjacentElement("afterend", testButton);
 // MODULE 3: PANIER ET VENTE MULTI-PRODUITS
 // ============================================
 
-// Panier global
 let panier = [];
 
 const venteBtn = document.getElementById("addVenteBtn");
@@ -584,7 +583,7 @@ clientInput.addEventListener("keypress", function (e) {
 });
 
 // ============================================
-// MODULE 4: HISTORIQUE DES VENTES (VERSION COMPATIBLE AVEC CORRECTION NaN)
+// MODULE 4: HISTORIQUE DES VENTES
 // ============================================
 
 const showHistoriqueBtn = document.getElementById("showHistoriqueBtn");
@@ -676,12 +675,10 @@ function parseDate(dateString) {
   return date;
 }
 
-// 🔥 FONCTION DE NETTOYAGE DES DONNÉES CORROMPUES
 function nettoyerVente(vente) {
   let produitsListe = [];
   let total = Number(vente.total) || 0;
 
-  // Cas 1: Nouveau format avec produits[]
   if (
     vente.produits &&
     Array.isArray(vente.produits) &&
@@ -689,7 +686,6 @@ function nettoyerVente(vente) {
   ) {
     produitsListe = vente.produits
       .filter((p) => {
-        // Filtrer les produits invalides
         return (
           p &&
           p.nom &&
@@ -705,13 +701,10 @@ function nettoyerVente(vente) {
         prix: p.prix,
       }));
 
-    // Recalculer le total à partir des produits nettoyés
     if (produitsListe.length > 0) {
       total = produitsListe.reduce((sum, p) => sum + p.prix * p.quantite, 0);
     }
-  }
-  // Cas 2: Ancien format avec produit unique
-  else if (
+  } else if (
     vente.produit &&
     vente.quantite &&
     vente.prix &&
@@ -726,9 +719,7 @@ function nettoyerVente(vente) {
       },
     ];
     total = vente.prix * vente.quantite;
-  }
-  // Cas 3: Données corrompues - essayer de récupérer depuis le total
-  else if (total > 0 && !produitsListe.length) {
+  } else if (total > 0 && !produitsListe.length) {
     produitsListe = [
       {
         nom: "Produit (données manquantes)",
@@ -796,10 +787,6 @@ async function afficherHistorique() {
       const allVentes = await allVentesResponse.json();
 
       ventes = allVentes.filter((v) => String(v.clientId) === clientIdStr);
-
-      console.log(
-        `🔍 Ventes trouvées pour le client ${clientIdStr}: ${ventes.length}`,
-      );
     } catch (error) {
       console.error("Erreur lors de la récupération des ventes:", error);
       ventes = [];
@@ -856,7 +843,6 @@ function displayVentesMulti(ventes, clientData) {
   );
 
   ventesTriees.forEach((v, index) => {
-    // 🔥 NETTOYER LA VENTE AVANT AFFICHAGE
     const venteNettoyee = nettoyerVente(v);
     const produitsListe = venteNettoyee.produits;
     const total = venteNettoyee.total;
@@ -864,10 +850,9 @@ function displayVentesMulti(ventes, clientData) {
     let quantiteTotale = produitsListe.reduce((sum, p) => sum + p.quantite, 0);
     const prixMoyen = quantiteTotale > 0 ? total / quantiteTotale : 0;
 
-    // 🔥 VÉRIFIER SI LES DONNÉES SONT VALIDES
     if (isNaN(total) || !isFinite(total)) {
       console.warn(`Vente ${v.id} a un total invalide, ignorée`);
-      return; // Ignorer cette vente si le total est invalide
+      return;
     }
 
     const tr = document.createElement("tr");
@@ -1036,7 +1021,6 @@ async function showVenteDetailsMulti(venteId) {
       console.error("Erreur récupération client:", e);
     }
 
-    // Nettoyer les produits
     const venteNettoyee = nettoyerVente(vente);
     const produits = venteNettoyee.produits;
     const total = venteNettoyee.total;
@@ -1219,7 +1203,7 @@ function escapeHtml(text) {
 }
 
 // ============================================
-// MODULE 5: TOTAL MENSUEL MULTI-PRODUITS
+// MODULE 5: TOTAL MENSUEL
 // ============================================
 
 function calculerTotalMensuelMulti(ventes) {
@@ -1328,7 +1312,7 @@ function updateOrCreateMonthlyTotalDisplay(
 }
 
 // ============================================
-// MODULE 6.1: FACTURE PANIER
+// MODULE 6.1: FACTURE PANIER (CORRIGÉE)
 // ============================================
 
 function genererFacturePanier(vente, client) {
@@ -1343,84 +1327,105 @@ function genererFacturePanier(vente, client) {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
 
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const marginX = 20;
+  const rightX = pageWidth - marginX;
+
   const venteNettoyee = nettoyerVente(vente);
   const total = venteNettoyee.total;
   const produits = venteNettoyee.produits;
   const dateFacture = new Date().toLocaleString("fr-FR");
 
+  // En-tête
   doc.setFontSize(22);
   doc.setFont("helvetica", "bold");
-  doc.text("FACTURE", 105, 20, { align: "center" });
+  doc.text("FACTURE", pageWidth / 2, 20, { align: "center" });
 
-  doc.setFontSize(10);
+  // Informations entreprise
+  doc.setFontSize(9);
   doc.setFont("helvetica", "normal");
-  doc.text("Votre Entreprise SARL", 20, 35);
-  doc.text("123 Avenue du Commerce", 20, 40);
-  doc.text("75001 Paris, France", 20, 45);
-  doc.text("Tél: 01 23 45 67 89", 20, 50);
+  doc.text("Votre Entreprise SARL", marginX, 35);
+  doc.text("123 Avenue du Commerce", marginX, 40);
+  doc.text("75001 Paris, France", marginX, 45);
+  doc.text("Tél: 01 23 45 67 89", marginX, 50);
 
-  doc.setFontSize(10);
-  doc.text(`Facture N°: ${vente.id}`, 150, 35);
-  doc.text(`Date: ${dateFacture}`, 150, 40);
+  // Numéro et date
+  doc.setFontSize(9);
+  doc.text(`Facture N°: ${vente.id}`, rightX - 40, 35, { align: "right" });
+  doc.text(`Date: ${dateFacture}`, rightX - 40, 40, { align: "right" });
 
-  doc.line(20, 55, 190, 55);
+  // Ligne de séparation
+  doc.line(marginX, 55, rightX, 55);
 
-  doc.setFontSize(12);
+  // Informations client
+  doc.setFontSize(11);
   doc.setFont("helvetica", "bold");
-  doc.text("Client :", 20, 65);
+  doc.text("Client :", marginX, 68);
   doc.setFont("helvetica", "normal");
-  doc.text(`${client.nom}`, 20, 72);
-  doc.text(`Téléphone: ${client.telephone}`, 20, 78);
-  doc.text(`ID Client: ${client.id}`, 20, 84);
-
-  doc.line(20, 90, 190, 90);
-
-  doc.setFontSize(12);
-  doc.setFont("helvetica", "bold");
-  doc.text("Détails des produits", 20, 98);
-
   doc.setFontSize(10);
+  doc.text(`${client.nom}`, marginX + 30, 68);
+  doc.text(`Téléphone: ${client.telephone}`, marginX, 75);
+  doc.text(`ID Client: ${client.id}`, marginX, 82);
+
+  // Ligne de séparation
+  doc.line(marginX, 88, rightX, 88);
+
+  // Tableau des produits
+  doc.setFontSize(11);
   doc.setFont("helvetica", "bold");
-  doc.text("Produit", 20, 108);
+  doc.text("Détails des produits", marginX, 98);
+
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "bold");
+  doc.text("Produit", marginX, 108);
   doc.text("Quantité", 100, 108);
   doc.text("Prix unitaire", 130, 108);
   doc.text("Total", 165, 108);
 
-  doc.line(20, 110, 190, 110);
+  doc.line(marginX, 110, rightX, 110);
 
   let yPosition = 118;
   doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
 
-  produits.forEach((item) => {
+  produits.forEach((item, index) => {
     const sousTotal = item.prix * item.quantite;
 
-    doc.text(item.nom.substring(0, 25), 20, yPosition);
+    doc.text(item.nom.substring(0, 25), marginX, yPosition);
     doc.text(item.quantite.toString(), 100, yPosition);
     doc.text(`${Number(item.prix).toFixed(2)} €`, 130, yPosition);
     doc.text(`${sousTotal.toFixed(2)} €`, 165, yPosition);
 
-    yPosition += 8;
+    yPosition += 7;
 
-    if (yPosition > 250) {
+    if (yPosition > 250 && index < produits.length - 1) {
       doc.addPage();
       yPosition = 20;
     }
   });
 
-  doc.line(20, yPosition + 2, 190, yPosition + 2);
-  yPosition += 12;
+  // Ligne avant total
+  yPosition += 5;
+  doc.line(marginX, yPosition, rightX, yPosition);
+  yPosition += 8;
 
+  // Total à payer
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(12);
-  doc.text("TOTAL À PAYER:", 140, yPosition);
+  doc.setFontSize(11);
+  doc.text("TOTAL À PAYER :", 130, yPosition);
   doc.setFontSize(14);
   doc.setTextColor(76, 175, 80);
-  doc.text(`${total.toFixed(2)} €`, 175, yPosition, { align: "right" });
+  doc.text(`${total.toFixed(2)} €`, rightX, yPosition, { align: "right" });
 
-  doc.setFontSize(9);
+  // Pied de page
+  doc.setFontSize(8);
   doc.setTextColor(100, 100, 100);
-  doc.text("Merci de votre confiance !", 105, 280, { align: "center" });
-  doc.text("Paiement à réception de facture", 105, 285, { align: "center" });
+  doc.text("Merci de votre confiance !", pageWidth / 2, 280, {
+    align: "center",
+  });
+  doc.text("Paiement à réception de facture", pageWidth / 2, 285, {
+    align: "center",
+  });
 
   const nomFichier = `facture_${client.nom.replace(/\s/g, "_")}_${vente.id}.pdf`;
   doc.save(nomFichier);
@@ -1429,7 +1434,7 @@ function genererFacturePanier(vente, client) {
 }
 
 // ============================================
-// MODULE 6.2: FACTURE MENSUELLE
+// MODULE 6.2: FACTURE MENSUELLE (CORRIGÉE)
 // ============================================
 
 function genererFactureMensuelleMulti(ventes, client) {
@@ -1476,48 +1481,62 @@ function genererFactureMensuelleMulti(ventes, client) {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
 
-  doc.setFontSize(22);
-  doc.setFont("helvetica", "bold");
-  doc.text("FACTURE MENSUELLE", 105, 20, { align: "center" });
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const marginX = 20;
+  const rightX = pageWidth - marginX;
 
-  doc.setFontSize(10);
+  // En-tête
+  doc.setFontSize(20);
+  doc.setFont("helvetica", "bold");
+  doc.text("FACTURE MENSUELLE", pageWidth / 2, 20, { align: "center" });
+
+  // Informations entreprise
+  doc.setFontSize(9);
   doc.setFont("helvetica", "normal");
-  doc.text("Votre Entreprise SARL", 20, 35);
-  doc.text("123 Avenue du Commerce", 20, 40);
-  doc.text("75001 Paris, France", 20, 45);
-  doc.text("Tél: 01 23 45 67 89", 20, 50);
+  doc.text("Votre Entreprise SARL", marginX, 35);
+  doc.text("123 Avenue du Commerce", marginX, 40);
+  doc.text("75001 Paris, France", marginX, 45);
+  doc.text("Tél: 01 23 45 67 89", marginX, 50);
 
-  doc.setFontSize(10);
-  doc.text(`Période: ${moisTexte}`, 150, 35);
-  doc.text(`Date d'édition: ${dateFacture}`, 150, 40);
+  // Période et date
+  doc.setFontSize(9);
+  doc.text(`Période: ${moisTexte}`, rightX - 40, 35, { align: "right" });
+  doc.text(`Date d'édition: ${dateFacture}`, rightX - 40, 40, {
+    align: "right",
+  });
 
-  doc.line(20, 55, 190, 55);
+  // Ligne de séparation
+  doc.line(marginX, 55, rightX, 55);
 
-  doc.setFontSize(12);
+  // Informations client
+  doc.setFontSize(11);
   doc.setFont("helvetica", "bold");
-  doc.text("Client :", 20, 65);
+  doc.text("Client :", marginX, 68);
   doc.setFont("helvetica", "normal");
-  doc.text(`${client.nom}`, 20, 72);
-  doc.text(`Téléphone: ${client.telephone}`, 20, 78);
-  doc.text(`ID Client: ${client.id}`, 20, 84);
+  doc.setFontSize(10);
+  doc.text(`${client.nom}`, marginX + 30, 68);
+  doc.text(`Téléphone: ${client.telephone}`, marginX, 75);
+  doc.text(`ID Client: ${client.id}`, marginX, 82);
 
-  doc.line(20, 90, 190, 90);
+  // Ligne de séparation
+  doc.line(marginX, 88, rightX, 88);
 
-  doc.setFontSize(12);
+  // Tableau récapitulatif
+  doc.setFontSize(11);
   doc.setFont("helvetica", "bold");
-  doc.text(`Récapitulatif des achats - ${moisTexte}`, 20, 98);
+  doc.text(`Récapitulatif des achats - ${moisTexte}`, marginX, 98);
 
   doc.setFontSize(9);
   doc.setFont("helvetica", "bold");
-  doc.text("Date", 20, 108);
-  doc.text("Produits", 60, 108);
+  doc.text("Date", marginX, 108);
+  doc.text("Produits", 55, 108);
   doc.text("Total", 160, 108);
 
-  doc.line(20, 110, 190, 110);
+  doc.line(marginX, 110, rightX, 110);
 
   let yPosition = 118;
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(9);
+  doc.setFontSize(8);
 
   ventesDuMois.forEach((vente, index) => {
     const venteNettoyee = nettoyerVente(vente);
@@ -1526,11 +1545,11 @@ function genererFactureMensuelleMulti(ventes, client) {
       .join(", ");
     const dateStr = formatDate(vente.date);
 
-    doc.text(dateStr.substring(0, 10), 20, yPosition);
-    doc.text(produitsListe.substring(0, 35), 60, yPosition);
+    doc.text(dateStr.substring(0, 10), marginX, yPosition);
+    doc.text(produitsListe.substring(0, 45), 55, yPosition);
     doc.text(`${venteNettoyee.total.toFixed(2)} €`, 160, yPosition);
 
-    yPosition += 8;
+    yPosition += 7;
 
     if (yPosition > 250 && index < ventesDuMois.length - 1) {
       doc.addPage();
@@ -1538,29 +1557,38 @@ function genererFactureMensuelleMulti(ventes, client) {
     }
   });
 
-  yPosition += 10;
-  doc.line(20, yPosition - 5, 190, yPosition - 5);
-
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(10);
-  doc.text("Sous-total:", 140, yPosition);
-  doc.text(`${total.toFixed(2)} €`, 175, yPosition, { align: "right" });
-
+  // Ligne avant totaux
+  yPosition += 5;
+  doc.line(marginX, yPosition, rightX, yPosition);
   yPosition += 8;
-  doc.text("Remise (5%):", 140, yPosition);
-  doc.text(`-${remise.toFixed(2)} €`, 175, yPosition, { align: "right" });
+
+  // Totaux
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10);
+  doc.text("Sous-total:", 130, yPosition);
+  doc.text(`${total.toFixed(2)} €`, rightX, yPosition, { align: "right" });
+
+  yPosition += 7;
+  doc.text("Remise (5%):", 130, yPosition);
+  doc.text(`-${remise.toFixed(2)} €`, rightX, yPosition, { align: "right" });
 
   yPosition += 10;
+  doc.setFont("helvetica", "bold");
   doc.setFontSize(12);
-  doc.setTextColor(76, 175, 80);
-  doc.text("TOTAL À PAYER:", 140, yPosition);
+  doc.text("TOTAL À PAYER :", 130, yPosition);
   doc.setFontSize(14);
-  doc.text(`${totalFinal.toFixed(2)} €`, 175, yPosition, { align: "right" });
+  doc.setTextColor(76, 175, 80);
+  doc.text(`${totalFinal.toFixed(2)} €`, rightX, yPosition, { align: "right" });
 
-  doc.setFontSize(9);
+  // Pied de page
+  doc.setFontSize(8);
   doc.setTextColor(100, 100, 100);
-  doc.text("Merci de votre confiance !", 105, 280, { align: "center" });
-  doc.text("Paiement à réception de facture", 105, 285, { align: "center" });
+  doc.text("Merci de votre confiance !", pageWidth / 2, 280, {
+    align: "center",
+  });
+  doc.text("Paiement à réception de facture", pageWidth / 2, 285, {
+    align: "center",
+  });
 
   const nomFichier = `facture_mensuelle_${client.nom.replace(/\s/g, "_")}_${moisTexte.replace(/\s/g, "_")}.pdf`;
   doc.save(nomFichier);
