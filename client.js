@@ -287,18 +287,16 @@ function fillVenteFormWithId(clientId) {
 }
 
 // ============================================
-// FONCTION COPIER ID CORRIGÉE
+// FONCTION COPIER ID
 // ============================================
 
 async function copyToClipboard(text) {
   try {
-    // Méthode moderne (navigateur récent)
     await navigator.clipboard.writeText(text.toString());
     showCopyNotification("✅ ID copié dans le presse-papier !");
   } catch (err) {
     console.error("Erreur de copie (méthode moderne):", err);
 
-    // Méthode de secours (anciens navigateurs)
     try {
       const textarea = document.createElement("textarea");
       textarea.value = text;
@@ -317,7 +315,6 @@ async function copyToClipboard(text) {
   }
 }
 
-// Fonction de notification spécifique pour la copie
 function showCopyNotification(message, type = "success") {
   const notification = document.createElement("div");
   notification.style.position = "fixed";
@@ -336,10 +333,6 @@ function showCopyNotification(message, type = "success") {
 
   document.body.appendChild(notification);
 
-  // Animation d'entrée
-  notification.style.transform = "translateX(0)";
-
-  // Disparition après 3 secondes
   setTimeout(() => {
     notification.style.opacity = "0";
     notification.style.transform = "translateX(100px)";
@@ -930,7 +923,7 @@ function displayVentesMulti(ventes, clientData) {
         <button id="${btnFactureId}" style="background: #4CAF50; color: white; border: none; padding: 5px 8px; cursor: pointer; border-radius: 3px; font-size: 11px; margin-left: 3px;">
           🧾 Facture
         </button>
-      </td>
+       </td>
     `;
 
     tbody.appendChild(tr);
@@ -1161,6 +1154,10 @@ function formatDate(dateString) {
   else return `${date.toLocaleDateString()} à ${date.toLocaleTimeString()}`;
 }
 
+// ============================================
+// MODULE EXPORT CSV - VERSION INTERNATIONALE
+// ============================================
+
 function exportToCSV() {
   if (!ventesOriginales || ventesOriginales.length === 0) {
     showMessage("Aucune donnée à exporter", "red");
@@ -1168,7 +1165,47 @@ function exportToCSV() {
   }
 
   const clientId = historiqueClientId.value;
-  const headers = ["ID Vente", "Produits", "Quantité totale", "Total", "Date"];
+
+  // Détection automatique du séparateur en fonction des paramètres régionaux
+  let separator = ";"; // Par défaut pour français
+  const testNumber = 1.1;
+  const testString = testNumber.toLocaleString();
+
+  // Si la virgule est utilisée comme séparateur décimal (format français)
+  if (testString.indexOf(",") !== -1) {
+    separator = ";"; // Format français : utiliser point-virgule
+  } else {
+    separator = ","; // Format anglais : utiliser virgule
+  }
+
+  console.log(
+    `🌍 Séparateur détecté: "${separator}" (${testString} comme format décimal)`,
+  );
+
+  // Fonction pour échapper les champs
+  function formatField(field) {
+    if (field === undefined || field === null) return "";
+    const stringField = String(field);
+    // Si le champ contient le séparateur, des guillemets ou des sauts de ligne
+    if (
+      stringField.includes(separator) ||
+      stringField.includes('"') ||
+      stringField.includes("\n") ||
+      stringField.includes(",")
+    ) {
+      return `"${stringField.replace(/"/g, '""')}"`;
+    }
+    return stringField;
+  }
+
+  const headers = [
+    "ID Vente",
+    "Produits",
+    "Quantité totale",
+    "Total (€)",
+    "Date",
+  ].map((h) => formatField(h));
+
   const rows = ventesOriginales.map((v) => {
     const venteNettoyee = nettoyerVente(v);
     let produitsListe = "";
@@ -1184,13 +1221,28 @@ function exportToCSV() {
       );
     }
 
-    return [v.id, produitsListe, quantiteTotale, venteNettoyee.total, v.date];
+    const row = [
+      v.id,
+      produitsListe,
+      quantiteTotale,
+      venteNettoyee.total.toFixed(2),
+      formatDate(v.date),
+    ].map((field) => formatField(field));
+
+    return row;
   });
 
-  const csvContent = [headers, ...rows].map((row) => row.join(",")).join("\n");
+  // Construction du CSV
+  const csvContent = [headers, ...rows]
+    .map((row) => row.join(separator))
+    .join("\n");
+
+  // Ajout du BOM UTF-8 pour les caractères spéciaux (é, è, ç, etc.)
   const blob = new Blob(["\uFEFF" + csvContent], {
     type: "text/csv;charset=utf-8;",
   });
+
+  // Téléchargement
   const link = document.createElement("a");
   const url = URL.createObjectURL(blob);
   link.setAttribute("href", url);
@@ -1363,7 +1415,7 @@ function updateOrCreateMonthlyTotalDisplay(
 }
 
 // ============================================
-// MODULE 6.1: FACTURE PANIER (CORRIGÉE)
+// MODULE 6.1: FACTURE PANIER
 // ============================================
 
 function genererFacturePanier(vente, client) {
@@ -1475,7 +1527,7 @@ function genererFacturePanier(vente, client) {
 }
 
 // ============================================
-// MODULE 6.2: FACTURE MENSUELLE (CORRIGÉE)
+// MODULE 6.2: FACTURE MENSUELLE
 // ============================================
 
 function genererFactureMensuelleMulti(ventes, client) {
