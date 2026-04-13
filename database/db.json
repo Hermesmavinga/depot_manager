@@ -184,6 +184,41 @@
       "id": "4224",
       "nom": "paolina",
       "telephone": "+243 828 790 728"
+    },
+    {
+      "id": "45de",
+      "nom": "Mavinga",
+      "telephone": "+243 828 790 728"
+    },
+    {
+      "id": "59ac",
+      "nom": "Kapashi",
+      "telephone": "0814448955"
+    },
+    {
+      "id": "a64a",
+      "nom": "Hamillton",
+      "telephone": "0814448958"
+    },
+    {
+      "id": "1bae",
+      "nom": "toussaint",
+      "telephone": "+243 828 790 728"
+    },
+    {
+      "id": "872b",
+      "nom": "range niati",
+      "telephone": "+243 828 790 728"
+    },
+    {
+      "id": "5ef1",
+      "nom": "lufuma",
+      "telephone": "+243 828 790 728"
+    },
+    {
+      "id": "f737",
+      "nom": "henock",
+      "telephone": "+243 828 790 728"
     }
   ],
   "produits": [
@@ -651,6 +686,170 @@
       ],
       "total": 25,
       "date": "2026-04-05T20:21:08.713Z"
+    },
+    {
+      "id": "1eab",
+      "clientId": "59ac",
+      "produits": [
+        {
+          "nom": "Casier bière",
+          "quantite": 1,
+          "prix": 25
+        },
+        {
+          "nom": "Pack whisky",
+          "quantite": 1,
+          "prix": 60
+        },
+        {
+          "nom": "Pack de bières artisanales",
+          "quantite": 1,
+          "prix": 35
+        },
+        {
+          "nom": "Caisse de vin",
+          "quantite": 1,
+          "prix": 45
+        }
+      ],
+      "total": 165,
+      "date": "2026-04-07T15:18:48.455Z"
+    },
+    {
+      "id": "1743",
+      "clientId": "59ac",
+      "produits": [
+        {
+          "nom": "Pack whisky",
+          "quantite": 1,
+          "prix": 60
+        },
+        {
+          "nom": "Casier bière",
+          "quantite": 5,
+          "prix": 25
+        },
+        {
+          "nom": "Pack de bières artisanales",
+          "quantite": 6,
+          "prix": 35
+        }
+      ],
+      "total": 395,
+      "date": "2026-04-07T15:20:14.054Z"
+    },
+    {
+      "id": "81bc",
+      "clientId": "a64a",
+      "produits": [
+        {
+          "nom": "Caisse de vin",
+          "quantite": 5,
+          "prix": 45
+        },
+        {
+          "nom": "Carton de soda",
+          "quantite": 20,
+          "prix": 15
+        },
+        {
+          "nom": "Pack whisky",
+          "quantite": 48,
+          "prix": 60
+        },
+        {
+          "nom": "Caisse de vin",
+          "quantite": 66,
+          "prix": 45
+        }
+      ],
+      "total": 6375,
+      "date": "2026-04-07T15:24:42.733Z"
+    },
+    {
+      "id": "ba0f",
+      "clientId": "a64a",
+      "produits": [
+        {
+          "nom": "Casier bière",
+          "quantite": 7,
+          "prix": 25
+        },
+        {
+          "nom": "Caisse de vin",
+          "quantite": 89,
+          "prix": 45
+        },
+        {
+          "nom": "Pack whisky",
+          "quantite": 98,
+          "prix": 60
+        },
+        {
+          "nom": "Carton de soda",
+          "quantite": 32,
+          "prix": 15
+        }
+      ],
+      "total": 10540,
+      "date": "2026-04-07T15:26:01.312Z"
+    },
+    {
+      "id": "6137",
+      "clientId": "1bae",
+      "produits": [
+        {
+          "nom": "Pack whisky",
+          "quantite": 4,
+          "prix": 60
+        },
+        {
+          "nom": "Casier bière",
+          "quantite": 3,
+          "prix": 25
+        }
+      ],
+      "total": 315,
+      "date": "2026-04-08T10:42:29.997Z"
+    },
+    {
+      "id": "567e",
+      "clientId": "1",
+      "produits": [
+        {
+          "nom": "XXL (30cl)",
+          "quantite": 2,
+          "prix": 30000
+        }
+      ],
+      "total": 60000,
+      "date": "2026-04-13T14:44:43.245Z"
+    },
+    {
+      "id": "6920",
+      "clientId": "f737",
+      "produits": [
+        {
+          "nom": "Caisse de vin",
+          "quantite": 1,
+          "prix": 45
+        }
+      ],
+      "total": 45,
+      "date": "2026-04-13T21:01:43.637Z"
+    },
+    {
+      "id": "648e",
+      "clientId": "f737",
+      "produits": [
+        {
+          "nom": "nkoyi",
+          "quantite": 1,
+          "prix": 10000
+        }
+      ],
+      "total": 10000,
+      "date": "2026-04-13T21:03:19.907Z"
     }
   ],
   "$schema": "./node_modules/json-server/schema.json"

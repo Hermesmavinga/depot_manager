@@ -306,6 +306,22 @@
         color: white;
       }
 
+      /* Styles pour la gestion des produits */
+      .btn-edit-produit,
+      .btn-delete-produit {
+        transition: all 0.3s ease;
+      }
+
+      .btn-edit-produit:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 2px 5px rgba(33, 150, 243, 0.3);
+      }
+
+      .btn-delete-produit:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 2px 5px rgba(244, 67, 54, 0.3);
+      }
+
       /* Panier */
       .cart-container {
         background: #f8f9fa;
@@ -438,6 +454,15 @@
           padding: 10px;
           cursor: pointer;
         }
+
+        .stats-grid {
+          grid-template-columns: repeat(2, 1fr);
+          gap: 12px;
+        }
+
+        .stat-value {
+          font-size: 1.3rem;
+        }
       }
 
       .mobile-menu-btn {
@@ -510,6 +535,10 @@
       <div class="nav-item" data-section="clients">
         <i class="fas fa-users"></i>
         <span>Clients</span>
+      </div>
+      <div class="nav-item" data-section="produits">
+        <i class="fas fa-boxes"></i>
+        <span>Produits</span>
       </div>
       <div class="nav-item" data-section="ventes">
         <i class="fas fa-shopping-cart"></i>
@@ -653,6 +682,35 @@
         </div>
       </div>
 
+      <!-- SECTION PRODUITS -->
+      <div id="produitsSection" class="section">
+        <div class="section-title">
+          <i class="fas fa-boxes"></i>
+          <span>Gestion des produits</span>
+        </div>
+
+        <div style="margin-bottom: 20px">
+          <button id="ajouterProduitBtn" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Ajouter un produit
+          </button>
+        </div>
+
+        <div style="overflow-x: auto">
+          <table class="modern-table">
+            <thead>
+              <tr>
+                <th>Produit</th>
+                <th>Prix (€)</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="produitsTableBody">
+              <!-- Les produits seront chargés dynamiquement par JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       <!-- SECTION VENTES -->
       <div id="ventesSection" class="section">
         <div class="section-title">
@@ -682,13 +740,7 @@
           <div class="form-group">
             <label>Produit</label>
             <select id="produit" class="form-control">
-              <option value="Casier bière">🍺 Casier bière - 25€</option>
-              <option value="Caisse de vin">🍷 Caisse de vin - 45€</option>
-              <option value="Pack whisky">🥃 Pack whisky - 60€</option>
-              <option value="Carton de soda">🥤 Carton de soda - 15€</option>
-              <option value="Pack de bières artisanales">
-                🍻 Pack bières artisanales - 35€
-              </option>
+              <!-- Les options seront chargées dynamiquement -->
             </select>
           </div>
           <div class="form-group">
@@ -817,6 +869,7 @@
       const sections = {
         dashboard: document.getElementById("dashboardSection"),
         clients: document.getElementById("clientsSection"),
+        produits: document.getElementById("produitsSection"),
         ventes: document.getElementById("ventesSection"),
         historique: document.getElementById("historiqueSection"),
         factures: document.getElementById("facturesSection"),
@@ -830,7 +883,7 @@
           item.classList.add("active");
 
           Object.values(sections).forEach((section) => {
-            section.classList.remove("active-section");
+            if (section) section.classList.remove("active-section");
           });
 
           if (sections[sectionId]) {
@@ -1078,11 +1131,6 @@
             showNotification("Erreur lors de la création", "error");
           }
         });
-
-      // ============================================
-      // ICI, INTÉGRE LE RESTE DE TON CODE JS EXISTANT
-      // (panier, ventes, historique, factures, etc.)
-      // ============================================
 
       showNotification("Bienvenue sur VentesPro !", "success");
     </script>

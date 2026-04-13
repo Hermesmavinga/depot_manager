@@ -255,6 +255,19 @@ async function addClient() {
     nomInput.value = "";
     telephoneInput.value = "";
     nomInput.focus();
+
+    showTemporaryNotification("✅ Client créé avec succès !");
+    loadDashboardStats();
+
+    // 🔥 CORRECTION: Rester sur la section clients après création
+    setTimeout(() => {
+      const clientsNavItem = document.querySelector(
+        '.nav-item[data-section="clients"]',
+      );
+      if (clientsNavItem) {
+        clientsNavItem.click();
+      }
+    }, 100);
   } catch (error) {
     console.error("Erreur création client:", error);
     showErrorMessage(`Erreur lors de l'ajout : ${error.message}`, messageDiv);
@@ -1677,4 +1690,238 @@ function genererFactureMensuelleMulti(ventes, client) {
   doc.save(nomFichier);
 
   showTemporaryNotification(`✅ Facture mensuelle générée avec succès !`);
+}
+
+// ============================================
+// MODULE 7: GESTION DES PRODUITS
+// ============================================
+
+const PRODUITS_STORAGE_KEY = "ventes_pro_produits";
+
+// Mettre à jour le sélecteur de produits
+function mettreAJourSelecteurProduits() {
+  const selectProduit = document.getElementById("produit");
+  if (!selectProduit) return;
+
+  const selectedValue = selectProduit.value;
+  selectProduit.innerHTML = "";
+
+  Object.entries(produits).forEach(([nom, data]) => {
+    const option = document.createElement("option");
+    option.value = nom;
+    option.textContent = `${nom} - ${data.prix}€`;
+    if (nom === selectedValue) option.selected = true;
+    selectProduit.appendChild(option);
+  });
+
+  updatePrix();
+}
+
+// Afficher la liste des produits dans le tableau HTML
+function afficherListeProduits() {
+  const tbody = document.getElementById("produitsTableBody");
+  if (!tbody) return;
+
+  tbody.innerHTML = "";
+
+  Object.entries(produits).forEach(([nom, data]) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td style="padding: 10px;">${escapeHtml(nom)}</td>
+      <td style="padding: 10px; text-align: right;">${data.prix.toLocaleString()} €</td>
+      <td style="padding: 10px; text-align: center;">
+        <button class="btn-edit-produit" data-nom="${escapeHtml(nom)}" style="background:#2196F3; color:white; border:none; padding:6px 12px; border-radius:8px; cursor:pointer; margin-right:5px;">
+          ✏️ Modifier
+        </button>
+        <button class="btn-delete-produit" data-nom="${escapeHtml(nom)}" style="background:#f44336; color:white; border:none; padding:6px 12px; border-radius:8px; cursor:pointer;">
+          🗑️ Supprimer
+        </button>
+       </td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  // Ajouter les événements
+  document.querySelectorAll(".btn-edit-produit").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const nom = btn.getAttribute("data-nom");
+      modifierPrixPrompt(nom);
+    });
+  });
+
+  document.querySelectorAll(".btn-delete-produit").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const nom = btn.getAttribute("data-nom");
+      supprimerProduitPrompt(nom);
+    });
+  });
+}
+
+// Modifier le prix d'un produit (avec prompt)
+function modifierPrixPrompt(nom) {
+  const prixActuel = produits[nom]?.prix || 0;
+  const nouveauPrix = prompt(
+    `Modifier le prix de "${nom}"\nPrix actuel : ${prixActuel.toLocaleString()} €\nNouveau prix (en €) :`,
+    prixActuel,
+  );
+
+  if (nouveauPrix !== null) {
+    const prix = parseFloat(nouveauPrix);
+    if (isNaN(prix) || prix <= 0) {
+      showTemporaryNotification("❌ Prix invalide", "error");
+      return;
+    }
+    const resultat = modifierPrixProduit(nom, prix);
+    showTemporaryNotification(
+      resultat.message,
+      resultat.success ? "success" : "error",
+    );
+    if (resultat.success) {
+      mettreAJourSelecteurProduits();
+      afficherListeProduits();
+    }
+  }
+}
+
+// Supprimer un produit (avec confirmation)
+function supprimerProduitPrompt(nom) {
+  if (
+    confirm(
+      `⚠️ Êtes-vous sûr de vouloir supprimer le produit "${nom}" ?\nCette action est irréversible.`,
+    )
+  ) {
+    const resultat = supprimerProduit(nom);
+    showTemporaryNotification(
+      resultat.message,
+      resultat.success ? "success" : "error",
+    );
+    if (resultat.success) {
+      mettreAJourSelecteurProduits();
+      afficherListeProduits();
+      // Retirer le produit du panier s'il y est
+      panier = panier.filter((item) => item.nom !== nom);
+      afficherPanier();
+    }
+  }
+}
+
+// Ajouter un produit (avec prompt)
+function ajouterProduitPrompt() {
+  const nom = prompt("Nom du nouveau produit :");
+  if (!nom) return;
+
+  const prix = prompt(`Prix du produit "${nom}" en € :`);
+  if (!prix) return;
+
+  const prixNum = parseFloat(prix);
+  if (isNaN(prixNum) || prixNum <= 0) {
+    showTemporaryNotification("❌ Prix invalide", "error");
+    return;
+  }
+
+  const resultat = ajouterProduit(nom, prixNum);
+  showTemporaryNotification(
+    resultat.message,
+    resultat.success ? "success" : "error",
+  );
+  if (resultat.success) {
+    mettreAJourSelecteurProduits();
+    afficherListeProduits();
+  }
+}
+
+// Ajouter un produit
+function ajouterProduit(nom, prix, unite = "bouteille", devise = "€") {
+  const nomPropre = nom.trim();
+  if (!nomPropre) return { success: false, message: "Nom invalide" };
+  if (prix <= 0) return { success: false, message: "Prix invalide" };
+  if (produits[nomPropre])
+    return { success: false, message: "Ce produit existe déjà" };
+
+  produits[nomPropre] = { prix: Number(prix), unite, devise };
+  sauvegarderProduits();
+  return {
+    success: true,
+    message: `Produit "${nomPropre}" ajouté avec succès`,
+  };
+}
+
+// Modifier le prix d'un produit
+function modifierPrixProduit(nom, nouveauPrix) {
+  const nomPropre = nom.trim();
+  if (!produits[nomPropre])
+    return { success: false, message: "Produit non trouvé" };
+  if (nouveauPrix <= 0) return { success: false, message: "Prix invalide" };
+
+  produits[nomPropre].prix = Number(nouveauPrix);
+  sauvegarderProduits();
+  return {
+    success: true,
+    message: `Prix de "${nomPropre}" mis à jour : ${nouveauPrix} €`,
+  };
+}
+
+// Supprimer un produit
+function supprimerProduit(nom) {
+  const nomPropre = nom.trim();
+  if (!produits[nomPropre])
+    return { success: false, message: "Produit non trouvé" };
+
+  delete produits[nomPropre];
+  sauvegarderProduits();
+  return { success: true, message: `Produit "${nomPropre}" supprimé` };
+}
+
+// Charger les produits sauvegardés
+function chargerProduits() {
+  const saved = localStorage.getItem(PRODUITS_STORAGE_KEY);
+  if (saved) {
+    try {
+      const savedProduits = JSON.parse(saved);
+      Object.keys(savedProduits).forEach((key) => {
+        produits[key] = savedProduits[key];
+      });
+      console.log("✅ Produits chargés depuis localStorage");
+    } catch (e) {
+      console.error("Erreur chargement produits:", e);
+    }
+  }
+  return produits;
+}
+
+// Sauvegarder les produits
+function sauvegarderProduits() {
+  localStorage.setItem(PRODUITS_STORAGE_KEY, JSON.stringify(produits));
+  console.log("💾 Produits sauvegardés");
+}
+
+// Initialiser la gestion des produits
+function initGestionProduits() {
+  chargerProduits();
+  mettreAJourSelecteurProduits();
+  afficherListeProduits();
+
+  // Ajouter le bouton d'ajout de produit
+  const addProductBtn = document.getElementById("ajouterProduitBtn");
+  if (addProductBtn) {
+    addProductBtn.addEventListener("click", ajouterProduitPrompt);
+  }
+
+  console.log("🛠️ Gestion des produits initialisée");
+}
+
+// Exposer les fonctions dans la console pour debug
+window.gestionProduits = {
+  lister: () => console.table(produits),
+  ajouter: (nom, prix) => ajouterProduit(nom, prix),
+  modifierPrix: (nom, prix) => modifierPrixProduit(nom, prix),
+  supprimer: (nom) => supprimerProduit(nom),
+  produits: produits,
+};
+
+// Initialiser au chargement
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", initGestionProduits);
+} else {
+  initGestionProduits();
 }
