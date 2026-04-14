@@ -219,6 +219,16 @@
       "id": "f737",
       "nom": "henock",
       "telephone": "+243 828 790 728"
+    },
+    {
+      "id": "c4df",
+      "nom": "celeste",
+      "telephone": "+243 828 790 728"
+    },
+    {
+      "id": "89f6",
+      "nom": "MAVINGA LUFUNDISU",
+      "telephone": "+243 828 790 728"
     }
   ],
   "produits": [
@@ -850,6 +860,32 @@
       ],
       "total": 10000,
       "date": "2026-04-13T21:03:19.907Z"
+    },
+    {
+      "id": "78bf",
+      "clientId": "1",
+      "produits": [
+        {
+          "nom": "Nkoy Black (50cl)",
+          "quantite": 2,
+          "prix": 44000
+        }
+      ],
+      "total": 88000,
+      "date": "2026-04-14T10:08:32.333Z"
+    },
+    {
+      "id": "1e0d",
+      "clientId": "1",
+      "produits": [
+        {
+          "nom": "XXL (30cl)",
+          "quantite": 1,
+          "prix": 30000
+        }
+      ],
+      "total": 30000,
+      "date": "2026-04-14T10:29:11.105Z"
     }
   ],
   "$schema": "./node_modules/json-server/schema.json"

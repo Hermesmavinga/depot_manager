@@ -259,7 +259,6 @@ async function addClient() {
     showTemporaryNotification("✅ Client créé avec succès !");
     loadDashboardStats();
 
-    // 🔥 CORRECTION: Rester sur la section clients après création
     setTimeout(() => {
       const clientsNavItem = document.querySelector(
         '.nav-item[data-section="clients"]',
@@ -391,6 +390,18 @@ testButton.addEventListener("click", () => {
 addBtn.insertAdjacentElement("afterend", testButton);
 
 // ============================================
+// FONCTION DE FORMATAGE DES NOMBRES EN FC
+// ============================================
+
+function formatNumberFC(number) {
+  if (number === undefined || number === null) return "0";
+  const num = Number(number);
+  if (isNaN(num)) return "0";
+  const str = Math.floor(num).toString();
+  return str.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+}
+
+// ============================================
 // MODULE 3: PANIER ET VENTE MULTI-PRODUITS
 // ============================================
 
@@ -405,12 +416,16 @@ const quantiteInput = document.getElementById("quantite");
 const prixInput = document.getElementById("prix");
 const ajouterPanierBtn = document.getElementById("ajouterPanierBtn");
 
+// Produits en Francs Congolais (FC)
 const produits = {
-  "Casier bière": { prix: 25, unite: "casier" },
-  "Caisse de vin": { prix: 45, unite: "caisse" },
-  "Pack whisky": { prix: 60, unite: "pack" },
-  "Carton de soda": { prix: 15, unite: "carton" },
-  "Pack de bières artisanales": { prix: 35, unite: "pack" },
+  "XXL (30cl)": { prix: 30000, unite: "bouteille", devise: "FC" },
+  "NKOY (65cl)": { prix: 37000, unite: "bouteille", devise: "FC" },
+  "33 EXPORT (65cl)": { prix: 40000, unite: "bouteille", devise: "FC" },
+  "TEMBO (65cl)": { prix: 47000, unite: "bouteille", devise: "FC" },
+  "CASTEL (50cl)": { prix: 53500, unite: "bouteille", devise: "FC" },
+  "Beaufort (50cl)": { prix: 53500, unite: "bouteille", devise: "FC" },
+  "Nkoy Black (50cl)": { prix: 44000, unite: "bouteille", devise: "FC" },
+  "Doppel (50cl)": { prix: 48000, unite: "bouteille", devise: "FC" },
 };
 
 function updatePrix() {
@@ -432,7 +447,7 @@ function updateTotal() {
   const prix = parseFloat(prixInput.value) || 0;
   const total = quantite * prix;
   if (quantite > 0 && prix > 0)
-    totalDisplay.innerHTML = `<span style="color: #4CAF50;">💰 Total : ${total.toFixed(2)}€</span>`;
+    totalDisplay.innerHTML = `<span style="color: #4CAF50;">💰 Total : ${formatNumberFC(total)} FC</span>`;
   else totalDisplay.innerHTML = "";
 }
 quantiteInput.addEventListener("input", updateTotal);
@@ -519,7 +534,7 @@ function afficherPanier() {
 
     html += `
       <div style="display:flex; justify-content:space-between; align-items:center; padding:5px; border-bottom:1px solid #eee;">
-        <span><strong>${escapeHtml(item.nom)}</strong> - ${item.quantite} x ${item.prix}€ = ${sousTotal.toFixed(2)}€</span>
+        <span><strong>${escapeHtml(item.nom)}</strong> - ${item.quantite} x ${formatNumberFC(item.prix)} FC = ${formatNumberFC(sousTotal)} FC</span>
         <button onclick="supprimerDuPanier(${index})" style="background:#ff4444; color:white; border:none; padding:3px 8px; cursor:pointer; border-radius:3px;">
           ❌
         </button>
@@ -529,7 +544,7 @@ function afficherPanier() {
 
   html += "</div>";
   html += `<div style="margin-top:10px; padding-top:10px; border-top:2px solid #ddd; text-align:right;">
-            <strong>Total panier : ${total.toFixed(2)}€</strong>
+            <strong>Total panier : ${formatNumberFC(total)} FC</strong>
            </div>`;
 
   panierDiv.innerHTML = html;
@@ -600,7 +615,7 @@ async function addVente() {
           <strong>👤 Client :</strong> ${clientData.nom} (ID: ${clientData.id})<br>
           <strong>📦 Produits :</strong><br>
           ${afficherProduitsHtml(data.produits)}
-          <strong>💰 Total :</strong> <strong style="color:#4CAF50;">${total.toFixed(2)}€</strong><br>
+          <strong>💰 Total :</strong> <strong style="color:#4CAF50;">${formatNumberFC(total)} FC</strong><br>
           <strong>🕒 Date :</strong> ${dateAffichage}
         </div>
         <button onclick="document.getElementById('${messageId}').remove()" 
@@ -622,7 +637,7 @@ function afficherProduitsHtml(produits) {
   return produits
     .map(
       (p) =>
-        `&nbsp;&nbsp;• ${escapeHtml(p.nom)} : ${p.quantite} x ${p.prix}€ = ${(p.prix * p.quantite).toFixed(2)}€<br>`,
+        `&nbsp;&nbsp;• ${escapeHtml(p.nom)} : ${p.quantite} x ${formatNumberFC(p.prix)} FC = ${formatNumberFC(p.prix * p.quantite)} FC<br>`,
     )
     .join("");
 }
@@ -796,7 +811,7 @@ function afficherProduitsListe(produits) {
       ${produits
         .map(
           (p) => `
-        <li style="margin: 2px 0;">${escapeHtml(p.nom)} - ${p.quantite} x ${p.prix}€</li>
+        <li style="margin: 2px 0;">${escapeHtml(p.nom)} - ${p.quantite} x ${formatNumberFC(p.prix)} FC</li>
       `,
         )
         .join("")}
@@ -924,10 +939,10 @@ function displayVentesMulti(ventes, clientData) {
       <td style="padding: 8px; text-align: center;">${v.id}</td>
       <td style="padding: 8px; text-align: left;">${afficherProduitsListe(produitsListe)}</td>
       <td style="padding: 8px; text-align: center;">${quantiteTotale}</td>
-      <td style="padding: 8px; text-align: right;">${prixMoyen.toFixed(2)}€</td>
+      <td style="padding: 8px; text-align: right;">${formatNumberFC(prixMoyen)} FC</td>
       <td style="padding: 8px; text-align: right; font-weight: bold; color: #4CAF50;">
-        ${total.toFixed(2)}€
-      </td>
+        ${formatNumberFC(total)} FC
+       </td>
       <td style="padding: 8px;">${formatDate(v.date)}</td>
       <td style="padding: 8px; text-align: center;">
         <button id="${btnDetailsId}" style="background: #2196F3; color: white; border: none; padding: 5px 8px; cursor: pointer; border-radius: 3px; font-size: 11px;">
@@ -936,7 +951,7 @@ function displayVentesMulti(ventes, clientData) {
         <button id="${btnFactureId}" style="background: #4CAF50; color: white; border: none; padding: 5px 8px; cursor: pointer; border-radius: 3px; font-size: 11px; margin-left: 3px;">
           🧾 Facture
         </button>
-       </td>
+        </td>
     `;
 
     tbody.appendChild(tr);
@@ -963,7 +978,8 @@ function displayVentesMulti(ventes, clientData) {
   const totalPrixSpan = document.getElementById("totalPrix");
 
   if (totalQuantiteSpan) totalQuantiteSpan.textContent = totalQuantite;
-  if (totalPrixSpan) totalPrixSpan.textContent = totalPrix.toFixed(2) + "€";
+  if (totalPrixSpan)
+    totalPrixSpan.textContent = formatNumberFC(totalPrix) + " FC";
 
   historiqueTable.style.display = "table";
 
@@ -1018,7 +1034,7 @@ function appliquerFiltreMulti(ventesOriginales, clientData) {
     const totalQuantiteSpan = document.getElementById("totalQuantite");
     const totalPrixSpan = document.getElementById("totalPrix");
     if (totalQuantiteSpan) totalQuantiteSpan.textContent = "0";
-    if (totalPrixSpan) totalPrixSpan.textContent = "0€";
+    if (totalPrixSpan) totalPrixSpan.textContent = "0 FC";
     historiqueTable.style.display = "table";
     calculerTotalMensuelMulti([]);
   } else {
@@ -1087,7 +1103,7 @@ async function showVenteDetailsMulti(venteId) {
     let totalArticles = 0;
 
     produits.forEach((p) => {
-      produitsHtml += `<li>${escapeHtml(p.nom)} : ${p.quantite} x ${p.prix}€ = ${(p.prix * p.quantite).toFixed(2)}€</li>`;
+      produitsHtml += `<li>${escapeHtml(p.nom)} : ${p.quantite} x ${formatNumberFC(p.prix)} FC = ${formatNumberFC(p.prix * p.quantite)} FC</li>`;
       totalArticles += p.quantite;
     });
     produitsHtml += "</ul>";
@@ -1100,7 +1116,7 @@ async function showVenteDetailsMulti(venteId) {
         ${clientInfo}
         ${produitsHtml}
         <p><strong>📊 Nombre total d'articles :</strong> ${totalArticles}</p>
-        <p><strong>💰 Total :</strong> <strong style="color: #4CAF50;">${total.toFixed(2)}€</strong></p>
+        <p><strong>💰 Total :</strong> <strong style="color: #4CAF50;">${formatNumberFC(total)} FC</strong></p>
         <p><strong>📅 Date :</strong> ${formatDate(vente.date)}</p>
         <hr>
         <div style="display: flex; gap: 10px; justify-content: flex-end;">
@@ -1179,27 +1195,19 @@ function exportToCSV() {
 
   const clientId = historiqueClientId.value;
 
-  // Détection automatique du séparateur en fonction des paramètres régionaux
-  let separator = ";"; // Par défaut pour français
+  let separator = ";";
   const testNumber = 1.1;
   const testString = testNumber.toLocaleString();
 
-  // Si la virgule est utilisée comme séparateur décimal (format français)
   if (testString.indexOf(",") !== -1) {
-    separator = ";"; // Format français : utiliser point-virgule
+    separator = ";";
   } else {
-    separator = ","; // Format anglais : utiliser virgule
+    separator = ",";
   }
 
-  console.log(
-    `🌍 Séparateur détecté: "${separator}" (${testString} comme format décimal)`,
-  );
-
-  // Fonction pour échapper les champs
   function formatField(field) {
     if (field === undefined || field === null) return "";
     const stringField = String(field);
-    // Si le champ contient le séparateur, des guillemets ou des sauts de ligne
     if (
       stringField.includes(separator) ||
       stringField.includes('"') ||
@@ -1215,7 +1223,7 @@ function exportToCSV() {
     "ID Vente",
     "Produits",
     "Quantité totale",
-    "Total (€)",
+    "Total (FC)",
     "Date",
   ].map((h) => formatField(h));
 
@@ -1238,24 +1246,21 @@ function exportToCSV() {
       v.id,
       produitsListe,
       quantiteTotale,
-      venteNettoyee.total.toFixed(2),
+      formatNumberFC(venteNettoyee.total),
       formatDate(v.date),
     ].map((field) => formatField(field));
 
     return row;
   });
 
-  // Construction du CSV
   const csvContent = [headers, ...rows]
     .map((row) => row.join(separator))
     .join("\n");
 
-  // Ajout du BOM UTF-8 pour les caractères spéciaux (é, è, ç, etc.)
   const blob = new Blob(["\uFEFF" + csvContent], {
     type: "text/csv;charset=utf-8;",
   });
 
-  // Téléchargement
   const link = document.createElement("a");
   const url = URL.createObjectURL(blob);
   link.setAttribute("href", url);
@@ -1297,7 +1302,7 @@ function resetDisplay() {
   const totalPrixSpan = document.getElementById("totalPrix");
 
   if (totalQuantiteSpan) totalQuantiteSpan.textContent = "0";
-  if (totalPrixSpan) totalPrixSpan.textContent = "0€";
+  if (totalPrixSpan) totalPrixSpan.textContent = "0 FC";
 
   if (historiqueTable) historiqueTable.style.display = "none";
   if (historiqueMessage) historiqueMessage.innerHTML = "";
@@ -1412,15 +1417,15 @@ function updateOrCreateMonthlyTotalDisplay(
     <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
       <div style="flex: 1;">
         <strong>💰 Total mensuel :</strong> 
-        <span style="color: #666; font-size: 18px;">${totalMensuel.toFixed(2)}€</span>
+        <span style="color: #666; font-size: 18px;">${formatNumberFC(totalMensuel)} FC</span>
       </div>
       <div style="flex: 1;">
         <strong>🎁 Remise (5%) :</strong> 
-        <span style="color: #FF9800; font-size: 18px;">-${remise.toFixed(2)}€</span>
+        <span style="color: #FF9800; font-size: 18px;">-${formatNumberFC(remise)} FC</span>
       </div>
       <div style="flex: 1;">
         <strong>💵 Total à payer :</strong> 
-        <span style="color: #4CAF50; font-size: 20px; font-weight: bold;">${totalFinal.toFixed(2)}€</span>
+        <span style="color: #4CAF50; font-size: 20px; font-weight: bold;">${formatNumberFC(totalFinal)} FC</span>
       </div>
     </div>
     ${totalMensuel === 0 ? '<p style="color: #999; margin-top: 10px;">⚠️ Aucun achat ce mois-ci</p>' : ""}
@@ -1460,8 +1465,8 @@ function genererFacturePanier(vente, client) {
   doc.setFont("helvetica", "normal");
   doc.text("Votre Entreprise SARL", marginX, 35);
   doc.text("123 Avenue du Commerce", marginX, 40);
-  doc.text("75001 Paris, France", marginX, 45);
-  doc.text("Tél: 01 23 45 67 89", marginX, 50);
+  doc.text("Kinshasa, RDC", marginX, 45);
+  doc.text("Tél: +243 XXX XXX XXX", marginX, 50);
 
   doc.setFontSize(9);
   doc.text(`Facture N°: ${vente.id}`, rightX - 40, 35, { align: "right" });
@@ -1502,8 +1507,8 @@ function genererFacturePanier(vente, client) {
 
     doc.text(item.nom.substring(0, 25), marginX, yPosition);
     doc.text(item.quantite.toString(), 100, yPosition);
-    doc.text(`${Number(item.prix).toFixed(2)} €`, 130, yPosition);
-    doc.text(`${sousTotal.toFixed(2)} €`, 165, yPosition);
+    doc.text(`${formatNumberFC(item.prix)} FC`, 130, yPosition);
+    doc.text(`${formatNumberFC(sousTotal)} FC`, 165, yPosition);
 
     yPosition += 7;
 
@@ -1522,7 +1527,9 @@ function genererFacturePanier(vente, client) {
   doc.text("TOTAL À PAYER :", 130, yPosition);
   doc.setFontSize(14);
   doc.setTextColor(76, 175, 80);
-  doc.text(`${total.toFixed(2)} €`, rightX, yPosition, { align: "right" });
+  doc.text(`${formatNumberFC(total)} FC`, rightX, yPosition, {
+    align: "right",
+  });
 
   doc.setFontSize(8);
   doc.setTextColor(100, 100, 100);
@@ -1599,8 +1606,8 @@ function genererFactureMensuelleMulti(ventes, client) {
   doc.setFont("helvetica", "normal");
   doc.text("Votre Entreprise SARL", marginX, 35);
   doc.text("123 Avenue du Commerce", marginX, 40);
-  doc.text("75001 Paris, France", marginX, 45);
-  doc.text("Tél: 01 23 45 67 89", marginX, 50);
+  doc.text("Kinshasa, RDC", marginX, 45);
+  doc.text("Tél: +243 XXX XXX XXX", marginX, 50);
 
   doc.setFontSize(9);
   doc.text(`Période: ${moisTexte}`, rightX - 40, 35, { align: "right" });
@@ -1646,7 +1653,7 @@ function genererFactureMensuelleMulti(ventes, client) {
 
     doc.text(dateStr.substring(0, 10), marginX, yPosition);
     doc.text(produitsListe.substring(0, 45), 55, yPosition);
-    doc.text(`${venteNettoyee.total.toFixed(2)} €`, 160, yPosition);
+    doc.text(`${formatNumberFC(venteNettoyee.total)} FC`, 160, yPosition);
 
     yPosition += 7;
 
@@ -1663,11 +1670,15 @@ function genererFactureMensuelleMulti(ventes, client) {
   doc.setFont("helvetica", "normal");
   doc.setFontSize(10);
   doc.text("Sous-total:", 130, yPosition);
-  doc.text(`${total.toFixed(2)} €`, rightX, yPosition, { align: "right" });
+  doc.text(`${formatNumberFC(total)} FC`, rightX, yPosition, {
+    align: "right",
+  });
 
   yPosition += 7;
   doc.text("Remise (5%):", 130, yPosition);
-  doc.text(`-${remise.toFixed(2)} €`, rightX, yPosition, { align: "right" });
+  doc.text(`-${formatNumberFC(remise)} FC`, rightX, yPosition, {
+    align: "right",
+  });
 
   yPosition += 10;
   doc.setFont("helvetica", "bold");
@@ -1675,7 +1686,9 @@ function genererFactureMensuelleMulti(ventes, client) {
   doc.text("TOTAL À PAYER :", 130, yPosition);
   doc.setFontSize(14);
   doc.setTextColor(76, 175, 80);
-  doc.text(`${totalFinal.toFixed(2)} €`, rightX, yPosition, { align: "right" });
+  doc.text(`${formatNumberFC(totalFinal)} FC`, rightX, yPosition, {
+    align: "right",
+  });
 
   doc.setFontSize(8);
   doc.setTextColor(100, 100, 100);
@@ -1698,7 +1711,6 @@ function genererFactureMensuelleMulti(ventes, client) {
 
 const PRODUITS_STORAGE_KEY = "ventes_pro_produits";
 
-// Mettre à jour le sélecteur de produits
 function mettreAJourSelecteurProduits() {
   const selectProduit = document.getElementById("produit");
   if (!selectProduit) return;
@@ -1709,7 +1721,7 @@ function mettreAJourSelecteurProduits() {
   Object.entries(produits).forEach(([nom, data]) => {
     const option = document.createElement("option");
     option.value = nom;
-    option.textContent = `${nom} - ${data.prix}€`;
+    option.textContent = `${nom} - ${formatNumberFC(data.prix)} ${data.devise || "FC"}`;
     if (nom === selectedValue) option.selected = true;
     selectProduit.appendChild(option);
   });
@@ -1717,7 +1729,6 @@ function mettreAJourSelecteurProduits() {
   updatePrix();
 }
 
-// Afficher la liste des produits dans le tableau HTML
 function afficherListeProduits() {
   const tbody = document.getElementById("produitsTableBody");
   if (!tbody) return;
@@ -1728,7 +1739,7 @@ function afficherListeProduits() {
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td style="padding: 10px;">${escapeHtml(nom)}</td>
-      <td style="padding: 10px; text-align: right;">${data.prix.toLocaleString()} €</td>
+      <td style="padding: 10px; text-align: right;">${formatNumberFC(data.prix)} ${data.devise || "FC"}</td>
       <td style="padding: 10px; text-align: center;">
         <button class="btn-edit-produit" data-nom="${escapeHtml(nom)}" style="background:#2196F3; color:white; border:none; padding:6px 12px; border-radius:8px; cursor:pointer; margin-right:5px;">
           ✏️ Modifier
@@ -1741,7 +1752,6 @@ function afficherListeProduits() {
     tbody.appendChild(tr);
   });
 
-  // Ajouter les événements
   document.querySelectorAll(".btn-edit-produit").forEach((btn) => {
     btn.addEventListener("click", () => {
       const nom = btn.getAttribute("data-nom");
@@ -1757,11 +1767,10 @@ function afficherListeProduits() {
   });
 }
 
-// Modifier le prix d'un produit (avec prompt)
 function modifierPrixPrompt(nom) {
   const prixActuel = produits[nom]?.prix || 0;
   const nouveauPrix = prompt(
-    `Modifier le prix de "${nom}"\nPrix actuel : ${prixActuel.toLocaleString()} €\nNouveau prix (en €) :`,
+    `Modifier le prix de "${nom}"\nPrix actuel : ${formatNumberFC(prixActuel)} FC\nNouveau prix (en FC) :`,
     prixActuel,
   );
 
@@ -1783,7 +1792,6 @@ function modifierPrixPrompt(nom) {
   }
 }
 
-// Supprimer un produit (avec confirmation)
 function supprimerProduitPrompt(nom) {
   if (
     confirm(
@@ -1798,19 +1806,17 @@ function supprimerProduitPrompt(nom) {
     if (resultat.success) {
       mettreAJourSelecteurProduits();
       afficherListeProduits();
-      // Retirer le produit du panier s'il y est
       panier = panier.filter((item) => item.nom !== nom);
       afficherPanier();
     }
   }
 }
 
-// Ajouter un produit (avec prompt)
 function ajouterProduitPrompt() {
   const nom = prompt("Nom du nouveau produit :");
   if (!nom) return;
 
-  const prix = prompt(`Prix du produit "${nom}" en € :`);
+  const prix = prompt(`Prix du produit "${nom}" en FC :`);
   if (!prix) return;
 
   const prixNum = parseFloat(prix);
@@ -1830,8 +1836,7 @@ function ajouterProduitPrompt() {
   }
 }
 
-// Ajouter un produit
-function ajouterProduit(nom, prix, unite = "bouteille", devise = "€") {
+function ajouterProduit(nom, prix, unite = "bouteille", devise = "FC") {
   const nomPropre = nom.trim();
   if (!nomPropre) return { success: false, message: "Nom invalide" };
   if (prix <= 0) return { success: false, message: "Prix invalide" };
@@ -1846,7 +1851,6 @@ function ajouterProduit(nom, prix, unite = "bouteille", devise = "€") {
   };
 }
 
-// Modifier le prix d'un produit
 function modifierPrixProduit(nom, nouveauPrix) {
   const nomPropre = nom.trim();
   if (!produits[nomPropre])
@@ -1857,11 +1861,10 @@ function modifierPrixProduit(nom, nouveauPrix) {
   sauvegarderProduits();
   return {
     success: true,
-    message: `Prix de "${nomPropre}" mis à jour : ${nouveauPrix} €`,
+    message: `Prix de "${nomPropre}" mis à jour : ${formatNumberFC(nouveauPrix)} FC`,
   };
 }
 
-// Supprimer un produit
 function supprimerProduit(nom) {
   const nomPropre = nom.trim();
   if (!produits[nomPropre])
@@ -1872,7 +1875,6 @@ function supprimerProduit(nom) {
   return { success: true, message: `Produit "${nomPropre}" supprimé` };
 }
 
-// Charger les produits sauvegardés
 function chargerProduits() {
   const saved = localStorage.getItem(PRODUITS_STORAGE_KEY);
   if (saved) {
@@ -1889,19 +1891,16 @@ function chargerProduits() {
   return produits;
 }
 
-// Sauvegarder les produits
 function sauvegarderProduits() {
   localStorage.setItem(PRODUITS_STORAGE_KEY, JSON.stringify(produits));
   console.log("💾 Produits sauvegardés");
 }
 
-// Initialiser la gestion des produits
 function initGestionProduits() {
   chargerProduits();
   mettreAJourSelecteurProduits();
   afficherListeProduits();
 
-  // Ajouter le bouton d'ajout de produit
   const addProductBtn = document.getElementById("ajouterProduitBtn");
   if (addProductBtn) {
     addProductBtn.addEventListener("click", ajouterProduitPrompt);
@@ -1910,7 +1909,6 @@ function initGestionProduits() {
   console.log("🛠️ Gestion des produits initialisée");
 }
 
-// Exposer les fonctions dans la console pour debug
 window.gestionProduits = {
   lister: () => console.table(produits),
   ajouter: (nom, prix) => ajouterProduit(nom, prix),
@@ -1919,7 +1917,6 @@ window.gestionProduits = {
   produits: produits,
 };
 
-// Initialiser au chargement
 if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", initGestionProduits);
 } else {
