@@ -229,6 +229,11 @@
       "id": "89f6",
       "nom": "MAVINGA LUFUNDISU",
       "telephone": "+243 828 790 728"
+    },
+    {
+      "id": "37fd",
+      "nom": "HENRY",
+      "telephone": "+243 828 790 728"
     }
   ],
   "produits": [
@@ -886,6 +891,37 @@
       ],
       "total": 30000,
       "date": "2026-04-14T10:29:11.105Z"
+    },
+    {
+      "id": "7625",
+      "clientId": "1",
+      "produits": [
+        {
+          "nom": "XXL (30cl)",
+          "quantite": 3,
+          "prix": 30000
+        },
+        {
+          "nom": "CASSIER NKOY LIKOFI",
+          "quantite": 2,
+          "prix": 45000
+        }
+      ],
+      "total": 180000,
+      "date": "2026-04-14T14:57:48.104Z"
+    },
+    {
+      "id": "0139",
+      "clientId": "1",
+      "produits": [
+        {
+          "nom": "33 EXPORT (65cl)",
+          "quantite": 1,
+          "prix": 40000
+        }
+      ],
+      "total": 40000,
+      "date": "2026-04-19T11:59:10.386Z"
     }
   ],
   "$schema": "./node_modules/json-server/schema.json"

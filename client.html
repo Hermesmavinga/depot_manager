@@ -572,9 +572,9 @@
         <div class="stats-grid">
           <div class="stat-card">
             <div class="stat-icon primary">
-              <i class="fas fa-euro-sign"></i>
+              <i class="fas fa-coins"></i>
             </div>
-            <div class="stat-value" id="statCA">0 €</div>
+            <div class="stat-value" id="statCA">0 FC</div>
             <div class="stat-label">Chiffre d'affaires total</div>
           </div>
           <div class="stat-card">
@@ -602,7 +602,7 @@
             <div class="stat-icon danger">
               <i class="fas fa-ticket-alt"></i>
             </div>
-            <div class="stat-value" id="statTicketMoyen">0 €</div>
+            <div class="stat-value" id="statTicketMoyen">0 FC</div>
             <div class="stat-label">Ticket moyen</div>
           </div>
         </div>
@@ -654,7 +654,7 @@
                 type="tel"
                 id="telephone"
                 class="form-control"
-                placeholder="+33 6 12 34 56 78"
+                placeholder="+243 XXX XXX XXX"
               />
             </div>
             <button id="addClientBtn" class="btn btn-primary">
@@ -700,7 +700,7 @@
             <thead>
               <tr>
                 <th>Produit</th>
-                <th>Prix (€)</th>
+                <th>Prix (FC)</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -754,7 +754,7 @@
             />
           </div>
           <div class="form-group">
-            <label>Prix unitaire (€)</label>
+            <label>Prix unitaire (FC)</label>
             <input type="number" id="prix" class="form-control" readonly />
           </div>
           <div style="display: flex; align-items: flex-end">
@@ -831,7 +831,7 @@
                 <td colspan="2"><strong>Total général</strong></td>
                 <td id="totalQuantite">0</td>
                 <td></td>
-                <td id="totalPrix">0€</td>
+                <td id="totalPrix">0 FC</td>
                 <td colspan="2"></td>
               </tr>
             </tfoot>
@@ -939,7 +939,7 @@
       }
 
       // ============================================
-      // CHARGEMENT DES STATS DASHBOARD
+      // CHARGEMENT DES STATS DASHBOARD (CORRIGÉ EN FC)
       // ============================================
 
       async function loadDashboardStats() {
@@ -967,12 +967,13 @@
 
           const ticketMoyen = nbVentes > 0 ? ca / nbVentes : 0;
 
-          document.getElementById("statCA").textContent = ca.toFixed(2) + " €";
+          document.getElementById("statCA").textContent =
+            formatNumberFC(ca) + " FC";
           document.getElementById("statVentes").textContent = nbVentes;
           document.getElementById("statQuantite").textContent = quantiteTotale;
           document.getElementById("statClients").textContent = clients.length;
           document.getElementById("statTicketMoyen").textContent =
-            ticketMoyen.toFixed(2) + " €";
+            formatNumberFC(ticketMoyen) + " FC";
 
           // Top produits
           const produitsMap = new Map();
@@ -1015,7 +1016,7 @@
             }
           }
 
-          // Graphique mensuel
+          // Graphique mensuel (en FC)
           const ventesParMois = {};
           ventes.forEach((v) => {
             const date = new Date(v.date);
@@ -1031,13 +1032,16 @@
 
           const ctx = document.getElementById("monthlyChart");
           if (ctx) {
-            new Chart(ctx, {
+            if (window.monthlyChart) {
+              window.monthlyChart.destroy();
+            }
+            window.monthlyChart = new Chart(ctx, {
               type: "bar",
               data: {
                 labels: Object.keys(ventesParMois),
                 datasets: [
                   {
-                    label: "Chiffre d'affaires (€)",
+                    label: "Chiffre d'affaires (FC)",
                     data: Object.values(ventesParMois),
                     backgroundColor: "rgba(76, 175, 80, 0.7)",
                     borderRadius: 10,
@@ -1047,7 +1051,25 @@
               options: {
                 responsive: true,
                 maintainAspectRatio: true,
-                plugins: { legend: { position: "top" } },
+                plugins: {
+                  tooltip: {
+                    callbacks: {
+                      label: function (context) {
+                        return formatNumberFC(context.raw) + " FC";
+                      },
+                    },
+                  },
+                  legend: { position: "top" },
+                },
+                scales: {
+                  y: {
+                    ticks: {
+                      callback: function (value) {
+                        return formatNumberFC(value) + " FC";
+                      },
+                    },
+                  },
+                },
               },
             });
           }

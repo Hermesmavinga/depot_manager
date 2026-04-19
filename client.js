@@ -241,7 +241,7 @@ async function addClient() {
             <table style="width:100%; border-collapse:collapse;">
               <tr style="border-bottom:1px solid #ddd;"><td style="padding:8px 0;"><strong>👤 Nom :</strong> <td style="padding:8px 0;">${escapeHtml(nom)}</td>
               <tr style="border-bottom:1px solid #ddd;"><td style="padding:8px 0;"><strong>📞 Téléphone :</strong> <td style="padding:8px 0;">${escapeHtml(telephone)}</td>
-            </table>
+            <table>
             <div style="margin-top:15px; padding-top:10px; border-top:1px solid #ddd;">
               <button onclick="fillVenteFormWithId('${data.id}')" style="background:#4CAF50; color:white; border:none; padding:8px 15px; cursor:pointer; border-radius:5px; margin-right:10px;">🛒 Faire une vente</button>
               <button onclick="copyToClipboard('${data.id}')" style="background:#2196F3; color:white; border:none; padding:8px 15px; cursor:pointer; border-radius:5px;">📋 Copier l'ID</button>
