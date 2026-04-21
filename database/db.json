@@ -940,6 +940,20 @@
       ],
       "total": 120000,
       "date": "2026-04-19T17:43:43.836Z"
+    },
+    {
+      "id": "a4d4",
+      "clientId": "1",
+      "produits": [
+        {
+          "nom": "Fanta",
+          "quantite": 5,
+          "prix": 2500,
+          "type": "bouteille"
+        }
+      ],
+      "total": 12500,
+      "date": "2026-04-21T10:42:52.048Z"
     }
   ],
   "$schema": "./node_modules/json-server/schema.json"

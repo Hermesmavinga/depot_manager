@@ -1,4 +1,166 @@
 // ============================================
+// FONCTIONS UTILITAIRES
+// ============================================
+
+function showNotification(message, type = "success") {
+  const toast = document.createElement("div");
+  toast.className = "toast-notification";
+  toast.innerHTML = `
+    <i class="fas ${type === "success" ? "fa-check-circle" : "fa-exclamation-circle"}" style="color: ${type === "success" ? "#4CAF50" : "#f44336"}"></i>
+    <span>${message}</span>
+  `;
+  document.body.appendChild(toast);
+  setTimeout(() => {
+    toast.remove();
+  }, 3000);
+}
+
+function showTemporaryNotification(message, type = "success") {
+  showNotification(message, type);
+}
+
+function escapeHtml(text) {
+  if (!text) return "";
+  const div = document.createElement("div");
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+function formatNumberFC(number) {
+  if (number === undefined || number === null) return "0";
+  const num = Number(number);
+  if (isNaN(num)) return "0";
+  const str = Math.floor(num).toString();
+  return str.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+}
+
+function formatDate(dateString) {
+  if (!dateString) return "Date non disponible";
+  let date = new Date(dateString);
+  if (isNaN(date.getTime())) return dateString;
+  return (
+    date.toLocaleDateString("fr-FR") + " à " + date.toLocaleTimeString("fr-FR")
+  );
+}
+
+// ============================================
+// NAVIGATION
+// ============================================
+
+const navItems = document.querySelectorAll(".nav-item");
+const sections = {
+  dashboard: document.getElementById("dashboardSection"),
+  clients: document.getElementById("clientsSection"),
+  produits: document.getElementById("produitsSection"),
+  ventes: document.getElementById("ventesSection"),
+  historique: document.getElementById("historiqueSection"),
+};
+
+navItems.forEach((item) => {
+  item.addEventListener("click", () => {
+    const sectionId = item.dataset.section;
+
+    navItems.forEach((nav) => nav.classList.remove("active"));
+    item.classList.add("active");
+
+    Object.values(sections).forEach((section) => {
+      if (section) section.classList.remove("active-section");
+    });
+
+    if (sections[sectionId]) {
+      sections[sectionId].classList.add("active-section");
+    }
+
+    document.getElementById("currentPageTitle").textContent =
+      item.querySelector("span").textContent;
+  });
+});
+
+document.getElementById("currentDate").textContent =
+  new Date().toLocaleDateString("fr-FR", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+
+const mobileMenuBtn = document.getElementById("mobileMenuBtn");
+const sidebar = document.getElementById("sidebar");
+
+if (mobileMenuBtn) {
+  mobileMenuBtn.addEventListener("click", () => {
+    sidebar.classList.toggle("open");
+  });
+}
+
+// ============================================
+// DASHBOARD STATS
+// ============================================
+
+async function loadDashboardStats() {
+  try {
+    const ventesRes = await fetch("http://localhost:4000/ventes");
+    const ventes = await ventesRes.json();
+
+    const clientsRes = await fetch("http://localhost:4000/clients");
+    const clients = await clientsRes.json();
+
+    const nbVentes = ventes.length;
+
+    let quantiteTotale = 0;
+    ventes.forEach((v) => {
+      if (v.produits && Array.isArray(v.produits)) {
+        quantiteTotale += v.produits.reduce((s, p) => s + (p.quantite || 0), 0);
+      } else if (v.quantite) {
+        quantiteTotale += v.quantite;
+      }
+    });
+
+    document.getElementById("statVentes").textContent = nbVentes;
+    document.getElementById("statQuantite").textContent = quantiteTotale;
+    document.getElementById("statClients").textContent = clients.length;
+
+    // Top produits
+    const produitsMap = new Map();
+    ventes.forEach((v) => {
+      if (v.produits && Array.isArray(v.produits)) {
+        v.produits.forEach((p) => {
+          if (!produitsMap.has(p.nom)) {
+            produitsMap.set(p.nom, { nom: p.nom, quantite: 0 });
+          }
+          produitsMap.get(p.nom).quantite += p.quantite;
+        });
+      }
+    });
+
+    const topProduits = Array.from(produitsMap.values())
+      .sort((a, b) => b.quantite - a.quantite)
+      .slice(0, 5);
+
+    const topProduitsDiv = document.getElementById("topProduitsList");
+    if (topProduitsDiv) {
+      if (topProduits.length === 0) {
+        topProduitsDiv.innerHTML =
+          '<div class="empty-state"><i class="fas fa-chart-simple"></i><p>Aucune donnée</p></div>';
+      } else {
+        topProduitsDiv.innerHTML = topProduits
+          .map(
+            (p, i) => `
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #eee;">
+              <span><strong>${i + 1}.</strong> ${escapeHtml(p.nom)}</span>
+              <span style="background: #4CAF50; color: white; padding: 4px 12px; border-radius: 20px; font-weight: bold;">${p.quantite} unités</span>
+            </div>
+          `,
+          )
+          .join("");
+      }
+    }
+  } catch (error) {
+    console.error("Erreur chargement dashboard:", error);
+  }
+}
+
+// ============================================
 // MODULE 1: TROUVER UN CLIENT
 // ============================================
 
@@ -8,7 +170,7 @@ const button = document.getElementById("searchBtn");
 const clientIdInput = document.getElementById("clientId");
 const resultDiv = document.getElementById("result");
 
-button.addEventListener("click", searchClient);
+if (button) button.addEventListener("click", searchClient);
 
 async function searchClient() {
   const clientId = clientIdInput.value.trim();
@@ -111,15 +273,17 @@ function showTemporaryMessage(message, elementId) {
 }
 
 function clearResult() {
-  resultDiv.innerHTML = "";
+  if (resultDiv) resultDiv.innerHTML = "";
 }
 
-clientIdInput.addEventListener("keypress", function (e) {
-  if (e.key === "Enter") {
-    e.preventDefault();
-    searchClient();
-  }
-});
+if (clientIdInput) {
+  clientIdInput.addEventListener("keypress", function (e) {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      searchClient();
+    }
+  });
+}
 
 const clearButton = document.createElement("button");
 clearButton.textContent = "Effacer";
@@ -131,11 +295,11 @@ clearButton.style.padding = "5px 10px";
 clearButton.style.cursor = "pointer";
 clearButton.style.borderRadius = "5px";
 clearButton.addEventListener("click", () => {
-  clientIdInput.value = "";
-  resultDiv.innerHTML = "";
-  clientIdInput.focus();
+  if (clientIdInput) clientIdInput.value = "";
+  if (resultDiv) resultDiv.innerHTML = "";
+  if (clientIdInput) clientIdInput.focus();
 });
-button.insertAdjacentElement("afterend", clearButton);
+if (button) button.insertAdjacentElement("afterend", clearButton);
 
 let searchHistory = JSON.parse(
   localStorage.getItem("clientSearchHistory") || "[]",
@@ -150,13 +314,13 @@ function addToHistory(clientId) {
 }
 function updateHistoryDisplay() {
   let historyDiv = document.getElementById("searchHistory");
-  if (!historyDiv) {
+  if (!historyDiv && resultDiv) {
     historyDiv = document.createElement("div");
     historyDiv.id = "searchHistory";
     historyDiv.style.marginTop = "10px";
     resultDiv.insertAdjacentElement("afterend", historyDiv);
   }
-  if (searchHistory.length > 0) {
+  if (historyDiv && searchHistory.length > 0) {
     historyDiv.innerHTML = `<div style="margin-top:10px; padding:10px; background:#f5f5f5; border-radius:5px;"><strong>📜 Recherches récentes :</strong><br>${searchHistory.map((id) => `<button onclick="document.getElementById('clientId').value='${id}'; searchClient();" style="margin:5px; padding:5px 10px; background:#2196F3; color:white; border:none; border-radius:3px; cursor:pointer;">ID ${id}</button>`).join("")}</div>`;
   }
 }
@@ -176,19 +340,23 @@ const nomInput = document.getElementById("nom");
 const telephoneInput = document.getElementById("telephone");
 const messageDiv = document.getElementById("clientMessage");
 
-addBtn.addEventListener("click", addClient);
-nomInput.addEventListener("keypress", function (e) {
-  if (e.key === "Enter") {
-    e.preventDefault();
-    addClient();
-  }
-});
-telephoneInput.addEventListener("keypress", function (e) {
-  if (e.key === "Enter") {
-    e.preventDefault();
-    addClient();
-  }
-});
+if (addBtn) addBtn.addEventListener("click", addClient);
+if (nomInput) {
+  nomInput.addEventListener("keypress", function (e) {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      addClient();
+    }
+  });
+}
+if (telephoneInput) {
+  telephoneInput.addEventListener("keypress", function (e) {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      addClient();
+    }
+  });
+}
 
 async function addClient() {
   const nom = nomInput.value.trim();
@@ -353,25 +521,6 @@ function showCopyNotification(message, type = "success") {
   }, 3000);
 }
 
-function showTemporaryNotification(message) {
-  const notification = document.createElement("div");
-  notification.style.position = "fixed";
-  notification.style.bottom = "20px";
-  notification.style.right = "20px";
-  notification.style.backgroundColor = "#4CAF50";
-  notification.style.color = "white";
-  notification.style.padding = "12px 20px";
-  notification.style.borderRadius = "5px";
-  notification.style.zIndex = "9999";
-  notification.style.boxShadow = "0 2px 5px rgba(0,0,0,0.2)";
-  notification.innerHTML = message;
-  document.body.appendChild(notification);
-  setTimeout(() => {
-    notification.style.opacity = "0";
-    setTimeout(() => notification.remove(), 300);
-  }, 3000);
-}
-
 const testButton = document.createElement("button");
 testButton.textContent = "🔧 Téléphone test";
 testButton.style.marginLeft = "10px";
@@ -385,21 +534,9 @@ testButton.addEventListener("click", () => {
   const randomPhone = `06${Math.floor(Math.random() * 100000000)
     .toString()
     .padStart(8, "0")}`;
-  telephoneInput.value = randomPhone;
+  if (telephoneInput) telephoneInput.value = randomPhone;
 });
-addBtn.insertAdjacentElement("afterend", testButton);
-
-// ============================================
-// FONCTION DE FORMATAGE DES NOMBRES EN FC
-// ============================================
-
-function formatNumberFC(number) {
-  if (number === undefined || number === null) return "0";
-  const num = Number(number);
-  if (isNaN(num)) return "0";
-  const str = Math.floor(num).toString();
-  return str.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
-}
+if (addBtn) addBtn.insertAdjacentElement("afterend", testButton);
 
 // ============================================
 // MODULE 3: PANIER ET VENTE MULTI-PRODUITS
@@ -416,16 +553,7 @@ const quantiteInput = document.getElementById("quantite");
 const prixInput = document.getElementById("prix");
 const ajouterPanierBtn = document.getElementById("ajouterPanierBtn");
 
-function updatePrix() {
-  const produit = produitSelect.value;
-  if (typeof getProduitPrix === "function") {
-    prixInput.value = getProduitPrix(produit);
-  } else {
-    prixInput.value = "";
-  }
-}
-
-produitSelect.addEventListener("change", updatePrix);
+let updatePrixFunction = null;
 
 const totalDisplay = document.createElement("p");
 totalDisplay.id = "totalDisplay";
@@ -482,19 +610,22 @@ async function afficherClient() {
 }
 
 function ajouterAuPanier() {
-  const produit = produitSelect.value;
+  const produitValue = produitSelect.value;
   const quantite = Number(quantiteInput.value);
   const prix = Number(prixInput.value);
 
-  if (!produit || quantite <= 0 || prix <= 0) {
+  if (!produitValue || quantite <= 0 || prix <= 0) {
     showTemporaryNotification("❌ Données invalides");
     return;
   }
 
+  const produitNom = produitValue.split("|")[1] || produitValue;
+
   panier.push({
-    nom: produit,
+    nom: produitNom,
     quantite: quantite,
     prix: prix,
+    type: produitValue.split("|")[0] || "bouteille",
   });
 
   afficherPanier();
@@ -502,7 +633,7 @@ function ajouterAuPanier() {
   quantiteInput.value = "1";
   updateTotal();
 
-  showTemporaryNotification(`✅ ${produit} ajouté au panier !`);
+  showTemporaryNotification(`✅ ${produitNom} ajouté au panier !`);
 }
 
 function afficherPanier() {
@@ -531,10 +662,11 @@ function afficherPanier() {
   panier.forEach((item, index) => {
     const sousTotal = item.prix * item.quantite;
     total += sousTotal;
+    const typeLabel = item.type === "cassier" ? "📦 Cassier" : "🍾 Bouteille";
 
     html += `
       <div style="display:flex; justify-content:space-between; align-items:center; padding:5px; border-bottom:1px solid #eee;">
-        <span><strong>${escapeHtml(item.nom)}</strong> - ${item.quantite} x ${formatNumberFC(item.prix)} FC = ${formatNumberFC(sousTotal)} FC</span>
+        <span><span class="type-badge ${item.type === "cassier" ? "cassier" : "bouteille"}">${typeLabel}</span> <strong>${escapeHtml(item.nom)}</strong> - ${item.quantite} x ${formatNumberFC(item.prix)} FC = ${formatNumberFC(sousTotal)} FC</span>
         <button onclick="supprimerDuPanier(${index})" style="background:#ff4444; color:white; border:none; padding:3px 8px; cursor:pointer; border-radius:3px;">
           ❌
         </button>
@@ -1178,118 +1310,6 @@ async function showVenteDetailsMulti(venteId) {
   }
 }
 
-function formatDate(dateString) {
-  if (!dateString) return "Date non disponible";
-  if (dateString.includes("Invalid")) return "Date invalide";
-  let date = parseDate(dateString);
-  if (isNaN(date.getTime())) return dateString;
-
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const yesterday = new Date(today);
-  yesterday.setDate(yesterday.getDate() - 1);
-
-  if (date.toDateString() === today.toDateString())
-    return `Aujourd'hui à ${date.toLocaleTimeString()}`;
-  else if (date.toDateString() === yesterday.toDateString())
-    return `Hier à ${date.toLocaleTimeString()}`;
-  else return `${date.toLocaleDateString()} à ${date.toLocaleTimeString()}`;
-}
-
-// ============================================
-// MODULE EXPORT CSV - VERSION INTERNATIONALE
-// ============================================
-
-function exportToCSV() {
-  if (!ventesOriginales || ventesOriginales.length === 0) {
-    showMessage("Aucune donnée à exporter", "red");
-    return;
-  }
-
-  const clientId = historiqueClientId.value;
-
-  let separator = ";";
-  const testNumber = 1.1;
-  const testString = testNumber.toLocaleString();
-
-  if (testString.indexOf(",") !== -1) {
-    separator = ";";
-  } else {
-    separator = ",";
-  }
-
-  function formatField(field) {
-    if (field === undefined || field === null) return "";
-    const stringField = String(field);
-    if (
-      stringField.includes(separator) ||
-      stringField.includes('"') ||
-      stringField.includes("\n") ||
-      stringField.includes(",")
-    ) {
-      return `"${stringField.replace(/"/g, '""')}"`;
-    }
-    return stringField;
-  }
-
-  const headers = [
-    "ID Vente",
-    "Produits",
-    "Quantité totale",
-    "Total (FC)",
-    "Date",
-  ].map((h) => formatField(h));
-
-  const rows = ventesOriginales.map((v) => {
-    const venteNettoyee = nettoyerVente(v);
-    let produitsListe = "";
-    let quantiteTotale = 0;
-
-    if (venteNettoyee.produits.length > 0) {
-      produitsListe = venteNettoyee.produits
-        .map((p) => `${p.nom}(${p.quantite})`)
-        .join(", ");
-      quantiteTotale = venteNettoyee.produits.reduce(
-        (sum, p) => sum + p.quantite,
-        0,
-      );
-    }
-
-    const row = [
-      v.id,
-      produitsListe,
-      quantiteTotale,
-      formatNumberFC(venteNettoyee.total),
-      formatDate(v.date),
-    ].map((field) => formatField(field));
-
-    return row;
-  });
-
-  const csvContent = [headers, ...rows]
-    .map((row) => row.join(separator))
-    .join("\n");
-
-  const blob = new Blob(["\uFEFF" + csvContent], {
-    type: "text/csv;charset=utf-8;",
-  });
-
-  const link = document.createElement("a");
-  const url = URL.createObjectURL(blob);
-  link.setAttribute("href", url);
-  link.setAttribute(
-    "download",
-    `ventes_client_${clientId}_${new Date().toISOString().slice(0, 10)}.csv`,
-  );
-  link.style.display = "none";
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
-
-  showMessage("📥 Export CSV effectué !", "green");
-}
-
 function showMessage(msg, color) {
   if (historiqueMessage) {
     historiqueMessage.innerHTML = `<span style='color:${color};'>${msg}</span>`;
@@ -1329,13 +1349,6 @@ function resetDisplay() {
   const existingOverlay = document.getElementById("overlay");
   if (existingModal) existingModal.remove();
   if (existingOverlay) existingOverlay.remove();
-}
-
-function escapeHtml(text) {
-  if (!text) return "";
-  const div = document.createElement("div");
-  div.textContent = text;
-  return div.innerHTML;
 }
 
 // ============================================
@@ -1721,73 +1734,155 @@ function genererFactureMensuelleMulti(ventes, client) {
 }
 
 // ============================================
-// MODULE 7: GESTION DES PRODUITS AVEC CATÉGORIES
+// MODULE 7: GESTION DES PRODUITS AVEC CATÉGORIES ET TYPES
 // ============================================
 
-const PRODUITS_STORAGE_KEY = "ventes_pro_produits";
+const PRODUITS_STORAGE_KEY = "ventes_pro_produits_v2";
 
-// Structure des produits avec catégories
+// Structure des produits avec catégories et types
 let produits = {
   BRACONGO: {
-    "NGOK (33cl)": { prix: 25000, unite: "bouteille", devise: "FC" },
-    "NGOK (50cl)": { prix: 35000, unite: "bouteille", devise: "FC" },
-    "DOGMO (33cl)": { prix: 22000, unite: "bouteille", devise: "FC" },
-    "DOGMO (50cl)": { prix: 32000, unite: "bouteille", devise: "FC" },
-    "TURBO KING (33cl)": { prix: 28000, unite: "bouteille", devise: "FC" },
-    "BREEZE (33cl)": { prix: 20000, unite: "bouteille", devise: "FC" },
+    bouteille: {
+      "NGOK (33cl)": { prix: 25000, format: "33cl", unite: "bouteille" },
+      "NGOK (50cl)": { prix: 35000, format: "50cl", unite: "bouteille" },
+      "DOGMO (33cl)": { prix: 22000, format: "33cl", unite: "bouteille" },
+      "DOGMO (50cl)": { prix: 32000, format: "50cl", unite: "bouteille" },
+      "TURBO KING (33cl)": { prix: 28000, format: "33cl", unite: "bouteille" },
+      "BREEZE (33cl)": { prix: 20000, format: "33cl", unite: "bouteille" },
+    },
+    cassier: {
+      "NGOK (33cl)": {
+        prixCassier: 550000,
+        prixUnitaire: 22917,
+        format: "33cl",
+        quantite: 24,
+      },
+      "NGOK (50cl)": {
+        prixCassier: 780000,
+        prixUnitaire: 32500,
+        format: "50cl",
+        quantite: 24,
+      },
+      "DOGMO (33cl)": {
+        prixCassier: 480000,
+        prixUnitaire: 20000,
+        format: "33cl",
+        quantite: 24,
+      },
+      "DOGMO (50cl)": {
+        prixCassier: 700000,
+        prixUnitaire: 29167,
+        format: "50cl",
+        quantite: 24,
+      },
+    },
   },
   BRALIMA: {
-    "XXL (30cl)": { prix: 30000, unite: "bouteille", devise: "FC" },
-    "NKOY (65cl)": { prix: 37000, unite: "bouteille", devise: "FC" },
-    "33 EXPORT (65cl)": { prix: 40000, unite: "bouteille", devise: "FC" },
-    "TEMBO (65cl)": { prix: 47000, unite: "bouteille", devise: "FC" },
-    "CASTEL (50cl)": { prix: 53500, unite: "bouteille", devise: "FC" },
-    "Beaufort (50cl)": { prix: 53500, unite: "bouteille", devise: "FC" },
-    "Nkoy Black (50cl)": { prix: 44000, unite: "bouteille", devise: "FC" },
-    "Doppel (50cl)": { prix: 48000, unite: "bouteille", devise: "FC" },
+    bouteille: {
+      "XXL (30cl)": { prix: 30000, format: "30cl", unite: "bouteille" },
+      "NKOY (65cl)": { prix: 37000, format: "65cl", unite: "bouteille" },
+      "33 EXPORT (65cl)": { prix: 40000, format: "65cl", unite: "bouteille" },
+      "TEMBO (65cl)": { prix: 47000, format: "65cl", unite: "bouteille" },
+      "CASTEL (50cl)": { prix: 53500, format: "50cl", unite: "bouteille" },
+      "Beaufort (50cl)": { prix: 53500, format: "50cl", unite: "bouteille" },
+      "Nkoy Black (50cl)": { prix: 44000, format: "50cl", unite: "bouteille" },
+      "Doppel (50cl)": { prix: 48000, format: "50cl", unite: "bouteille" },
+    },
+    cassier: {
+      "XXL (30cl)": {
+        prixCassier: 650000,
+        prixUnitaire: 27083,
+        format: "30cl",
+        quantite: 24,
+      },
+      "NKOY (65cl)": {
+        prixCassier: 850000,
+        prixUnitaire: 35417,
+        format: "65cl",
+        quantite: 24,
+      },
+      "33 EXPORT (65cl)": {
+        prixCassier: 920000,
+        prixUnitaire: 38333,
+        format: "65cl",
+        quantite: 24,
+      },
+      "TEMBO (65cl)": {
+        prixCassier: 1080000,
+        prixUnitaire: 45000,
+        format: "65cl",
+        quantite: 24,
+      },
+    },
   },
 };
 
-let categorieActive = "BRACONGO";
+let currentFournisseur = "BRACONGO";
+let currentType = "bouteille";
 let produitEnEdition = null;
 
-// Éléments du DOM pour la gestion des catégories
+// Éléments du DOM
 const tabBracongo = document.getElementById("tabBracongo");
 const tabBralima = document.getElementById("tabBralima");
 const bracongoContainer = document.getElementById("bracongoContainer");
 const bralimaContainer = document.getElementById("bralimaContainer");
-const bracongoBody = document.getElementById("bracongoTableBody");
-const bralimaBody = document.getElementById("bralimaTableBody");
+
+// Éléments des sous-onglets BRACONGO
+const bracongoBouteilleTab = document.getElementById("bracongoBouteilleTab");
+const bracongoCassierTab = document.getElementById("bracongoCassierTab");
+const bracongoBouteilleContainer = document.getElementById(
+  "bracongoBouteilleContainer",
+);
+const bracongoCassierContainer = document.getElementById(
+  "bracongoCassierContainer",
+);
+const bracongoBouteilleBody = document.getElementById("bracongoBouteilleBody");
+const bracongoCassierBody = document.getElementById("bracongoCassierBody");
+
+// Éléments des sous-onglets BRALIMA
+const bralimaBouteilleTab = document.getElementById("bralimaBouteilleTab");
+const bralimaCassierTab = document.getElementById("bralimaCassierTab");
+const bralimaBouteilleContainer = document.getElementById(
+  "bralimaBouteilleContainer",
+);
+const bralimaCassierContainer = document.getElementById(
+  "bralimaCassierContainer",
+);
+const bralimaBouteilleBody = document.getElementById("bralimaBouteilleBody");
+const bralimaCassierBody = document.getElementById("bralimaCassierBody");
 
 // Éléments du modal
 const produitModal = document.getElementById("produitModal");
 const modalTitle = document.getElementById("modalTitle");
 const produitNomInput = document.getElementById("produitNom");
+const produitFormatInput = document.getElementById("produitFormat");
+const produitTypeSelect = document.getElementById("produitType");
 const produitPrixInput = document.getElementById("produitPrix");
+const produitPrixCassierInput = document.getElementById("produitPrixCassier");
+const prixBouteilleGroup = document.getElementById("prixBouteilleGroup");
+const prixCassierGroup = document.getElementById("prixCassierGroup");
 const produitFournisseurSelect = document.getElementById("produitFournisseur");
 const modalSaveBtn = document.getElementById("modalSaveBtn");
 const modalCancelBtn = document.getElementById("modalCancelBtn");
 
-// Initialiser les onglets
-function initCategoriesTabs() {
+// Initialiser les onglets fournisseurs
+function initFournisseurTabs() {
   if (tabBracongo) {
-    tabBracongo.addEventListener("click", () => {
-      setActiveCategorie("BRACONGO");
-    });
+    tabBracongo.addEventListener("click", () =>
+      setActiveFournisseur("BRACONGO"),
+    );
   }
   if (tabBralima) {
-    tabBralima.addEventListener("click", () => {
-      setActiveCategorie("BRALIMA");
-    });
+    tabBralima.addEventListener("click", () => setActiveFournisseur("BRALIMA"));
   }
 }
 
-function setActiveCategorie(categorie) {
-  categorieActive = categorie;
+function setActiveFournisseur(fournisseur) {
+  currentFournisseur = fournisseur;
 
   const tabs = document.querySelectorAll(".categorie-tab");
   tabs.forEach((tab) => {
-    if (tab.getAttribute("data-categorie") === categorie) {
+    if (tab.getAttribute("data-categorie") === fournisseur) {
       tab.classList.add("active");
       tab.style.borderBottom = "3px solid #4caf50";
       tab.style.color = "#4caf50";
@@ -1800,12 +1895,101 @@ function setActiveCategorie(categorie) {
 
   if (bracongoContainer && bralimaContainer) {
     bracongoContainer.style.display =
-      categorie === "BRACONGO" ? "block" : "none";
-    bralimaContainer.style.display = categorie === "BRALIMA" ? "block" : "none";
+      fournisseur === "BRACONGO" ? "block" : "none";
+    bralimaContainer.style.display =
+      fournisseur === "BRALIMA" ? "block" : "none";
+  }
+
+  setActiveType(currentType, fournisseur);
+}
+
+function initTypeTabs() {
+  if (bracongoBouteilleTab) {
+    bracongoBouteilleTab.addEventListener("click", () =>
+      setActiveType("bouteille", "BRACONGO"),
+    );
+  }
+  if (bracongoCassierTab) {
+    bracongoCassierTab.addEventListener("click", () =>
+      setActiveType("cassier", "BRACONGO"),
+    );
+  }
+  if (bralimaBouteilleTab) {
+    bralimaBouteilleTab.addEventListener("click", () =>
+      setActiveType("bouteille", "BRALIMA"),
+    );
+  }
+  if (bralimaCassierTab) {
+    bralimaCassierTab.addEventListener("click", () =>
+      setActiveType("cassier", "BRALIMA"),
+    );
   }
 }
 
-// Mettre à jour le sélecteur de produits dans la section ventes
+function setActiveType(type, fournisseur) {
+  currentType = type;
+
+  if (
+    fournisseur === "BRACONGO" &&
+    bracongoBouteilleTab &&
+    bracongoCassierTab
+  ) {
+    if (type === "bouteille") {
+      bracongoBouteilleTab.classList.add("active");
+      bracongoBouteilleTab.style.borderBottom = "2px solid #4caf50";
+      bracongoCassierTab.classList.remove("active");
+      bracongoCassierTab.style.borderBottom = "2px solid transparent";
+      if (bracongoBouteilleContainer)
+        bracongoBouteilleContainer.style.display = "block";
+      if (bracongoCassierContainer)
+        bracongoCassierContainer.style.display = "none";
+    } else {
+      bracongoCassierTab.classList.add("active");
+      bracongoCassierTab.style.borderBottom = "2px solid #4caf50";
+      bracongoBouteilleTab.classList.remove("active");
+      bracongoBouteilleTab.style.borderBottom = "2px solid transparent";
+      if (bracongoBouteilleContainer)
+        bracongoBouteilleContainer.style.display = "none";
+      if (bracongoCassierContainer)
+        bracongoCassierContainer.style.display = "block";
+    }
+  }
+
+  if (fournisseur === "BRALIMA" && bralimaBouteilleTab && bralimaCassierTab) {
+    if (type === "bouteille") {
+      bralimaBouteilleTab.classList.add("active");
+      bralimaBouteilleTab.style.borderBottom = "2px solid #4caf50";
+      bralimaCassierTab.classList.remove("active");
+      bralimaCassierTab.style.borderBottom = "2px solid transparent";
+      if (bralimaBouteilleContainer)
+        bralimaBouteilleContainer.style.display = "block";
+      if (bralimaCassierContainer)
+        bralimaCassierContainer.style.display = "none";
+    } else {
+      bralimaCassierTab.classList.add("active");
+      bralimaCassierTab.style.borderBottom = "2px solid #4caf50";
+      bralimaBouteilleTab.classList.remove("active");
+      bralimaBouteilleTab.style.borderBottom = "2px solid transparent";
+      if (bralimaBouteilleContainer)
+        bralimaBouteilleContainer.style.display = "none";
+      if (bralimaCassierContainer)
+        bralimaCassierContainer.style.display = "block";
+    }
+  }
+}
+
+function initTypeChangeListener() {
+  if (produitTypeSelect) {
+    produitTypeSelect.addEventListener("change", () => {
+      const isCassier = produitTypeSelect.value === "cassier";
+      if (prixBouteilleGroup)
+        prixBouteilleGroup.style.display = isCassier ? "none" : "block";
+      if (prixCassierGroup)
+        prixCassierGroup.style.display = isCassier ? "block" : "none";
+    });
+  }
+}
+
 function mettreAJourSelecteurProduits() {
   const selectProduit = document.getElementById("produit");
   if (!selectProduit) return;
@@ -1813,510 +1997,503 @@ function mettreAJourSelecteurProduits() {
   const selectedValue = selectProduit.value;
   selectProduit.innerHTML = "";
 
-  // Ajouter les produits BRACONGO
-  const bracongoGroup = document.createElement("optgroup");
-  bracongoGroup.label = "🍺 BRACONGO";
-  Object.entries(produits.BRACONGO).forEach(([nom, data]) => {
+  const bracongoBouteilleGroup = document.createElement("optgroup");
+  bracongoBouteilleGroup.label = "🍺 BRACONGO - Bouteilles";
+  Object.entries(produits.BRACONGO.bouteille).forEach(([nom, data]) => {
     const option = document.createElement("option");
-    option.value = nom;
-    option.textContent = `${nom} - ${formatNumberFC(data.prix)} ${data.devise || "FC"}`;
-    if (nom === selectedValue) option.selected = true;
-    bracongoGroup.appendChild(option);
+    option.value = `bouteille|${nom}`;
+    option.textContent = `${nom} (${data.format}) - ${formatNumberFC(data.prix)} FC`;
+    if (`bouteille|${nom}` === selectedValue) option.selected = true;
+    bracongoBouteilleGroup.appendChild(option);
   });
-  selectProduit.appendChild(bracongoGroup);
+  selectProduit.appendChild(bracongoBouteilleGroup);
 
-  // Ajouter les produits BRALIMA
-  const bralimaGroup = document.createElement("optgroup");
-  bralimaGroup.label = "🍻 BRALIMA";
-  Object.entries(produits.BRALIMA).forEach(([nom, data]) => {
+  const bracongoCassierGroup = document.createElement("optgroup");
+  bracongoCassierGroup.label = "🍺 BRACONGO - Cassiers (24 bouteilles)";
+  Object.entries(produits.BRACONGO.cassier).forEach(([nom, data]) => {
     const option = document.createElement("option");
-    option.value = nom;
-    option.textContent = `${nom} - ${formatNumberFC(data.prix)} ${data.devise || "FC"}`;
-    if (nom === selectedValue) option.selected = true;
-    bralimaGroup.appendChild(option);
+    option.value = `cassier|${nom}`;
+    option.textContent = `${nom} (${data.format}) - ${formatNumberFC(data.prixCassier)} FC le cassier`;
+    if (`cassier|${nom}` === selectedValue) option.selected = true;
+    bracongoCassierGroup.appendChild(option);
   });
-  selectProduit.appendChild(bralimaGroup);
+  selectProduit.appendChild(bracongoCassierGroup);
+
+  const bralimaBouteilleGroup = document.createElement("optgroup");
+  bralimaBouteilleGroup.label = "🍻 BRALIMA - Bouteilles";
+  Object.entries(produits.BRALIMA.bouteille).forEach(([nom, data]) => {
+    const option = document.createElement("option");
+    option.value = `bouteille|${nom}`;
+    option.textContent = `${nom} (${data.format}) - ${formatNumberFC(data.prix)} FC`;
+    if (`bouteille|${nom}` === selectedValue) option.selected = true;
+    bralimaBouteilleGroup.appendChild(option);
+  });
+  selectProduit.appendChild(bralimaBouteilleGroup);
+
+  const bralimaCassierGroup = document.createElement("optgroup");
+  bralimaCassierGroup.label = "🍻 BRALIMA - Cassiers (24 bouteilles)";
+  Object.entries(produits.BRALIMA.cassier).forEach(([nom, data]) => {
+    const option = document.createElement("option");
+    option.value = `cassier|${nom}`;
+    option.textContent = `${nom} (${data.format}) - ${formatNumberFC(data.prixCassier)} FC le cassier`;
+    if (`cassier|${nom}` === selectedValue) option.selected = true;
+    bralimaCassierGroup.appendChild(option);
+  });
+  selectProduit.appendChild(bralimaCassierGroup);
 
   updatePrix();
 }
 
-// Afficher la liste des produits par catégorie
+function updatePrix() {
+  const produitSelect = document.getElementById("produit");
+  const prixInput = document.getElementById("prix");
+  if (!produitSelect || !prixInput) return;
+
+  const value = produitSelect.value;
+  const [type, nom] = value.split("|");
+
+  if (type === "bouteille") {
+    if (produits.BRACONGO.bouteille[nom]) {
+      prixInput.value = produits.BRACONGO.bouteille[nom].prix;
+    } else if (produits.BRALIMA.bouteille[nom]) {
+      prixInput.value = produits.BRALIMA.bouteille[nom].prix;
+    } else {
+      prixInput.value = "";
+    }
+  } else if (type === "cassier") {
+    if (produits.BRACONGO.cassier[nom]) {
+      prixInput.value = produits.BRACONGO.cassier[nom].prixCassier;
+    } else if (produits.BRALIMA.cassier[nom]) {
+      prixInput.value = produits.BRALIMA.cassier[nom].prixCassier;
+    } else {
+      prixInput.value = "";
+    }
+  } else {
+    prixInput.value = "";
+  }
+
+  updateTotal();
+}
+
 function afficherListeProduits() {
-  if (bracongoBody) {
-    bracongoBody.innerHTML = "";
-    Object.entries(produits.BRACONGO).forEach(([nom, data]) => {
+  if (bracongoBouteilleBody) {
+    bracongoBouteilleBody.innerHTML = "";
+    Object.entries(produits.BRACONGO.bouteille).forEach(([nom, data]) => {
       const tr = document.createElement("tr");
       tr.innerHTML = `
         <td style="padding: 10px;">${escapeHtml(nom)}</td>
-        <td style="padding: 10px; text-align: right;">${formatNumberFC(data.prix)} ${data.devise || "FC"}</td>
+        <td style="padding: 10px;">${data.format}</td>
+        <td style="padding: 10px; text-align: right;">${formatNumberFC(data.prix)} FC</td>
+        <td style="padding: 10px; text-align: right;">-</td>
         <td style="padding: 10px; text-align: center;">
-          <button class="btn-edit-bracongo" data-nom="${escapeHtml(nom)}" style="background:#2196F3; color:white; border:none; padding:6px 12px; border-radius:8px; cursor:pointer; margin-right:5px;">
-            ✏️ Modifier
-          </button>
-          <button class="btn-delete-bracongo" data-nom="${escapeHtml(nom)}" style="background:#f44336; color:white; border:none; padding:6px 12px; border-radius:8px; cursor:pointer;">
-            🗑️ Supprimer
-          </button>
+          <button class="btn-edit-bracongo-bouteille" data-nom="${escapeHtml(nom)}" style="background:#2196F3; color:white; border:none; padding:6px 12px; border-radius:8px; cursor:pointer; margin-right:5px;">✏️ Modifier</button>
+          <button class="btn-delete-bracongo-bouteille" data-nom="${escapeHtml(nom)}" style="background:#f44336; color:white; border:none; padding:6px 12px; border-radius:8px; cursor:pointer;">🗑️ Supprimer</button>
         </td>
       `;
-      bracongoBody.appendChild(tr);
+      bracongoBouteilleBody.appendChild(tr);
     });
   }
 
-  if (bralimaBody) {
-    bralimaBody.innerHTML = "";
-    Object.entries(produits.BRALIMA).forEach(([nom, data]) => {
+  if (bracongoCassierBody) {
+    bracongoCassierBody.innerHTML = "";
+    Object.entries(produits.BRACONGO.cassier).forEach(([nom, data]) => {
       const tr = document.createElement("tr");
       tr.innerHTML = `
         <td style="padding: 10px;">${escapeHtml(nom)}</td>
-        <td style="padding: 10px; text-align: right;">${formatNumberFC(data.prix)} ${data.devise || "FC"}</td>
+        <td style="padding: 10px;">${data.format}</td>
+        <td style="padding: 10px; text-align: right;">${formatNumberFC(data.prixCassier)} FC</td>
+        <td style="padding: 10px; text-align: right;">${formatNumberFC(data.prixUnitaire)} FC</td>
         <td style="padding: 10px; text-align: center;">
-          <button class="btn-edit-bralima" data-nom="${escapeHtml(nom)}" style="background:#2196F3; color:white; border:none; padding:6px 12px; border-radius:8px; cursor:pointer; margin-right:5px;">
-            ✏️ Modifier
-          </button>
-          <button class="btn-delete-bralima" data-nom="${escapeHtml(nom)}" style="background:#f44336; color:white; border:none; padding:6px 12px; border-radius:8px; cursor:pointer;">
-            🗑️ Supprimer
-          </button>
+          <button class="btn-edit-bracongo-cassier" data-nom="${escapeHtml(nom)}" style="background:#2196F3; color:white; border:none; padding:6px 12px; border-radius:8px; cursor:pointer; margin-right:5px;">✏️ Modifier</button>
+          <button class="btn-delete-bracongo-cassier" data-nom="${escapeHtml(nom)}" style="background:#f44336; color:white; border:none; padding:6px 12px; border-radius:8px; cursor:pointer;">🗑️ Supprimer</button>
         </td>
       `;
-      bralimaBody.appendChild(tr);
+      bracongoCassierBody.appendChild(tr);
     });
   }
 
-  // Événements pour BRACONGO
-  document.querySelectorAll(".btn-edit-bracongo").forEach((btn) => {
-    btn.removeEventListener("click", handleBracongoEdit);
-    btn.addEventListener("click", handleBracongoEdit);
+  if (bralimaBouteilleBody) {
+    bralimaBouteilleBody.innerHTML = "";
+    Object.entries(produits.BRALIMA.bouteille).forEach(([nom, data]) => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td style="padding: 10px;">${escapeHtml(nom)}</td>
+        <td style="padding: 10px;">${data.format}</td>
+        <td style="padding: 10px; text-align: right;">${formatNumberFC(data.prix)} FC</td>
+        <td style="padding: 10px; text-align: right;">-</td>
+        <td style="padding: 10px; text-align: center;">
+          <button class="btn-edit-bralima-bouteille" data-nom="${escapeHtml(nom)}" style="background:#2196F3; color:white; border:none; padding:6px 12px; border-radius:8px; cursor:pointer; margin-right:5px;">✏️ Modifier</button>
+          <button class="btn-delete-bralima-bouteille" data-nom="${escapeHtml(nom)}" style="background:#f44336; color:white; border:none; padding:6px 12px; border-radius:8px; cursor:pointer;">🗑️ Supprimer</button>
+        </td>
+      `;
+      bralimaBouteilleBody.appendChild(tr);
+    });
+  }
+
+  if (bralimaCassierBody) {
+    bralimaCassierBody.innerHTML = "";
+    Object.entries(produits.BRALIMA.cassier).forEach(([nom, data]) => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td style="padding: 10px;">${escapeHtml(nom)}</td>
+        <td style="padding: 10px;">${data.format}</td>
+        <td style="padding: 10px; text-align: right;">${formatNumberFC(data.prixCassier)} FC</td>
+        <td style="padding: 10px; text-align: right;">${formatNumberFC(data.prixUnitaire)} FC</td>
+        <td style="padding: 10px; text-align: center;">
+          <button class="btn-edit-bralima-cassier" data-nom="${escapeHtml(nom)}" style="background:#2196F3; color:white; border:none; padding:6px 12px; border-radius:8px; cursor:pointer; margin-right:5px;">✏️ Modifier</button>
+          <button class="btn-delete-bralima-cassier" data-nom="${escapeHtml(nom)}" style="background:#f44336; color:white; border:none; padding:6px 12px; border-radius:8px; cursor:pointer;">🗑️ Supprimer</button>
+        </td>
+      `;
+      bralimaCassierBody.appendChild(tr);
+    });
+  }
+
+  document.querySelectorAll(".btn-edit-bracongo-bouteille").forEach((btn) => {
+    btn.removeEventListener("click", () =>
+      ouvrirModalEdition("BRACONGO", "bouteille", btn.dataset.nom),
+    );
+    btn.addEventListener("click", () =>
+      ouvrirModalEdition("BRACONGO", "bouteille", btn.dataset.nom),
+    );
   });
-  document.querySelectorAll(".btn-delete-bracongo").forEach((btn) => {
-    btn.removeEventListener("click", handleBracongoDelete);
-    btn.addEventListener("click", handleBracongoDelete);
+  document.querySelectorAll(".btn-delete-bracongo-bouteille").forEach((btn) => {
+    btn.removeEventListener("click", () =>
+      supprimerProduit("BRACONGO", "bouteille", btn.dataset.nom),
+    );
+    btn.addEventListener("click", () =>
+      supprimerProduit("BRACONGO", "bouteille", btn.dataset.nom),
+    );
   });
-
-  // Événements pour BRALIMA
-  document.querySelectorAll(".btn-edit-bralima").forEach((btn) => {
-    btn.removeEventListener("click", handleBralimaEdit);
-    btn.addEventListener("click", handleBralimaEdit);
+  document.querySelectorAll(".btn-edit-bracongo-cassier").forEach((btn) => {
+    btn.removeEventListener("click", () =>
+      ouvrirModalEdition("BRACONGO", "cassier", btn.dataset.nom),
+    );
+    btn.addEventListener("click", () =>
+      ouvrirModalEdition("BRACONGO", "cassier", btn.dataset.nom),
+    );
   });
-  document.querySelectorAll(".btn-delete-bralima").forEach((btn) => {
-    btn.removeEventListener("click", handleBralimaDelete);
-    btn.addEventListener("click", handleBralimaDelete);
+  document.querySelectorAll(".btn-delete-bracongo-cassier").forEach((btn) => {
+    btn.removeEventListener("click", () =>
+      supprimerProduit("BRACONGO", "cassier", btn.dataset.nom),
+    );
+    btn.addEventListener("click", () =>
+      supprimerProduit("BRACONGO", "cassier", btn.dataset.nom),
+    );
+  });
+  document.querySelectorAll(".btn-edit-bralima-bouteille").forEach((btn) => {
+    btn.removeEventListener("click", () =>
+      ouvrirModalEdition("BRALIMA", "bouteille", btn.dataset.nom),
+    );
+    btn.addEventListener("click", () =>
+      ouvrirModalEdition("BRALIMA", "bouteille", btn.dataset.nom),
+    );
+  });
+  document.querySelectorAll(".btn-delete-bralima-bouteille").forEach((btn) => {
+    btn.removeEventListener("click", () =>
+      supprimerProduit("BRALIMA", "bouteille", btn.dataset.nom),
+    );
+    btn.addEventListener("click", () =>
+      supprimerProduit("BRALIMA", "bouteille", btn.dataset.nom),
+    );
+  });
+  document.querySelectorAll(".btn-edit-bralima-cassier").forEach((btn) => {
+    btn.removeEventListener("click", () =>
+      ouvrirModalEdition("BRALIMA", "cassier", btn.dataset.nom),
+    );
+    btn.addEventListener("click", () =>
+      ouvrirModalEdition("BRALIMA", "cassier", btn.dataset.nom),
+    );
+  });
+  document.querySelectorAll(".btn-delete-bralima-cassier").forEach((btn) => {
+    btn.removeEventListener("click", () =>
+      supprimerProduit("BRALIMA", "cassier", btn.dataset.nom),
+    );
+    btn.addEventListener("click", () =>
+      supprimerProduit("BRALIMA", "cassier", btn.dataset.nom),
+    );
   });
 }
 
-function handleBracongoEdit(e) {
-  const nom = e.currentTarget.getAttribute("data-nom");
-  ouvrirModalEdition("BRACONGO", nom);
-}
-
-function handleBracongoDelete(e) {
-  const nom = e.currentTarget.getAttribute("data-nom");
-  supprimerProduitPrompt("BRACONGO", nom);
-}
-
-function handleBralimaEdit(e) {
-  const nom = e.currentTarget.getAttribute("data-nom");
-  ouvrirModalEdition("BRALIMA", nom);
-}
-
-function handleBralimaDelete(e) {
-  const nom = e.currentTarget.getAttribute("data-nom");
-  supprimerProduitPrompt("BRALIMA", nom);
-}
-
-// Ouvrir le modal pour ajouter un produit
 function ouvrirModalAjout() {
   produitEnEdition = null;
   modalTitle.textContent = "Ajouter un produit";
   produitNomInput.value = "";
+  produitFormatInput.value = "";
+  produitTypeSelect.value = "bouteille";
   produitPrixInput.value = "";
-  produitFournisseurSelect.value = categorieActive;
+  produitPrixCassierInput.value = "";
+  produitFournisseurSelect.value = currentFournisseur;
+
+  prixBouteilleGroup.style.display = "block";
+  prixCassierGroup.style.display = "none";
+
   produitModal.style.display = "flex";
 }
 
-// Ouvrir le modal pour modifier un produit
-function ouvrirModalEdition(categorie, nom) {
-  produitEnEdition = { categorie, nom };
+function ouvrirModalEdition(fournisseur, type, nom) {
+  produitEnEdition = { fournisseur, type, nom };
   modalTitle.textContent = `Modifier : ${nom}`;
   produitNomInput.value = nom;
-  produitPrixInput.value = produits[categorie][nom].prix;
-  produitFournisseurSelect.value = categorie;
+  produitTypeSelect.value = type;
+  produitFournisseurSelect.value = fournisseur;
+
+  if (type === "bouteille") {
+    const data = produits[fournisseur].bouteille[nom];
+    produitFormatInput.value = data.format || "";
+    produitPrixInput.value = data.prix;
+    prixBouteilleGroup.style.display = "block";
+    prixCassierGroup.style.display = "none";
+  } else {
+    const data = produits[fournisseur].cassier[nom];
+    produitFormatInput.value = data.format || "";
+    produitPrixCassierInput.value = data.prixCassier;
+    prixBouteilleGroup.style.display = "none";
+    prixCassierGroup.style.display = "block";
+  }
+
   produitModal.style.display = "flex";
 }
 
-// Fermer le modal
 function fermerModal() {
   produitModal.style.display = "none";
   produitEnEdition = null;
 }
 
-// Sauvegarder le produit (ajout ou modification)
 function sauvegarderProduit() {
   const nom = produitNomInput.value.trim();
-  const prix = parseFloat(produitPrixInput.value);
+  const format = produitFormatInput.value.trim();
+  const type = produitTypeSelect.value;
   const fournisseur = produitFournisseurSelect.value;
 
   if (!nom) {
-    showTemporaryNotification("❌ Veuillez entrer un nom de produit", "error");
-    return;
-  }
-
-  if (isNaN(prix) || prix <= 0) {
-    showTemporaryNotification("❌ Veuillez entrer un prix valide", "error");
+    showTemporaryNotification("❌ Veuillez entrer un nom", "error");
     return;
   }
 
   if (produitEnEdition) {
-    // Mode édition
-    const { categorie, nom: ancienNom } = produitEnEdition;
+    const {
+      fournisseur: oldFournisseur,
+      type: oldType,
+      nom: oldNom,
+    } = produitEnEdition;
 
-    if (ancienNom !== nom && produits[fournisseur][nom]) {
-      showTemporaryNotification(
-        `❌ Un produit "${nom}" existe déjà chez ${fournisseur}`,
-        "error",
-      );
-      return;
+    delete produits[oldFournisseur][oldType][oldNom];
+
+    if (type === "bouteille") {
+      const prix = parseFloat(produitPrixInput.value);
+      if (isNaN(prix) || prix <= 0) {
+        showTemporaryNotification("❌ Prix invalide", "error");
+        return;
+      }
+      produits[fournisseur].bouteille[nom] = {
+        prix: prix,
+        format: format,
+        unite: "bouteille",
+      };
+    } else {
+      const prixCassier = parseFloat(produitPrixCassierInput.value);
+      if (isNaN(prixCassier) || prixCassier <= 0) {
+        showTemporaryNotification("❌ Prix invalide", "error");
+        return;
+      }
+      const prixUnitaire = Math.round(prixCassier / 24);
+      produits[fournisseur].cassier[nom] = {
+        prixCassier: prixCassier,
+        prixUnitaire: prixUnitaire,
+        format: format,
+        quantite: 24,
+      };
     }
-
-    // Supprimer l'ancien produit
-    delete produits[categorie][ancienNom];
-
-    // Ajouter le nouveau/modifié
-    produits[fournisseur][nom] = {
-      prix: prix,
-      unite: "bouteille",
-      devise: "FC",
-    };
-
-    sauvegarderProduits();
-    mettreAJourSelecteurProduits();
-    afficherListeProduits();
-    fermerModal();
-    showTemporaryNotification(`✅ Produit "${nom}" modifié avec succès !`);
   } else {
-    // Mode ajout
-    if (produits[fournisseur][nom]) {
-      showTemporaryNotification(
-        `❌ Le produit "${nom}" existe déjà chez ${fournisseur}`,
-        "error",
-      );
-      return;
+    if (type === "bouteille") {
+      const prix = parseFloat(produitPrixInput.value);
+      if (isNaN(prix) || prix <= 0) {
+        showTemporaryNotification("❌ Prix invalide", "error");
+        return;
+      }
+      if (produits[fournisseur].bouteille[nom]) {
+        showTemporaryNotification(`❌ "${nom}" existe déjà`, "error");
+        return;
+      }
+      produits[fournisseur].bouteille[nom] = {
+        prix: prix,
+        format: format,
+        unite: "bouteille",
+      };
+    } else {
+      const prixCassier = parseFloat(produitPrixCassierInput.value);
+      if (isNaN(prixCassier) || prixCassier <= 0) {
+        showTemporaryNotification("❌ Prix invalide", "error");
+        return;
+      }
+      if (produits[fournisseur].cassier[nom]) {
+        showTemporaryNotification(`❌ "${nom}" existe déjà`, "error");
+        return;
+      }
+      const prixUnitaire = Math.round(prixCassier / 24);
+      produits[fournisseur].cassier[nom] = {
+        prixCassier: prixCassier,
+        prixUnitaire: prixUnitaire,
+        format: format,
+        quantite: 24,
+      };
     }
+  }
 
-    produits[fournisseur][nom] = {
-      prix: prix,
-      unite: "bouteille",
-      devise: "FC",
-    };
+  sauvegarderProduits();
+  mettreAJourSelecteurProduits();
+  afficherListeProduits();
+  fermerModal();
+  showTemporaryNotification(`✅ Produit "${nom}" sauvegardé !`);
+}
 
+function supprimerProduit(fournisseur, type, nom) {
+  if (confirm(`⚠️ Supprimer "${nom}" ?`)) {
+    delete produits[fournisseur][type][nom];
     sauvegarderProduits();
     mettreAJourSelecteurProduits();
     afficherListeProduits();
-    fermerModal();
-    showTemporaryNotification(
-      `✅ Produit "${nom}" ajouté avec succès chez ${fournisseur} !`,
-    );
+    showTemporaryNotification(`✅ "${nom}" supprimé`);
   }
 }
 
-// Supprimer un produit
-function supprimerProduitPrompt(categorie, nom) {
-  if (
-    confirm(
-      `⚠️ Êtes-vous sûr de vouloir supprimer le produit "${nom}" de ${categorie} ?\nCette action est irréversible.`,
-    )
-  ) {
-    delete produits[categorie][nom];
-    sauvegarderProduits();
-    mettreAJourSelecteurProduits();
-    afficherListeProduits();
-
-    // Supprimer du panier si présent
-    panier = panier.filter((item) => item.nom !== nom);
-    afficherPanier();
-
-    showTemporaryNotification(`✅ Produit "${nom}" supprimé avec succès !`);
-  }
-}
-
-// Sauvegarder dans localStorage
 function sauvegarderProduits() {
   localStorage.setItem(PRODUITS_STORAGE_KEY, JSON.stringify(produits));
-  console.log("💾 Produits sauvegardés");
 }
 
-// Charger depuis localStorage
 function chargerProduits() {
   const saved = localStorage.getItem(PRODUITS_STORAGE_KEY);
   if (saved) {
     try {
       const savedProduits = JSON.parse(saved);
-      if (savedProduits.BRACONGO && savedProduits.BRALIMA) {
+      if (savedProduits.BRACONGO && savedProduits.BRACONGO.bouteille) {
         produits = savedProduits;
-      } else {
-        // Format ancien - migration
-        const anciensProduits = savedProduits;
-        produits = { BRACONGO: {}, BRALIMA: {} };
-
-        // Déterminer la catégorie de chaque produit
-        const bracongoNoms = ["NGOK", "DOGMO", "TURBO KING", "BREEZE"];
-        Object.entries(anciensProduits).forEach(([nom, data]) => {
-          const estBracongo = bracongoNoms.some((bn) => nom.includes(bn));
-          if (estBracongo) {
-            produits.BRACONGO[nom] = data;
-          } else {
-            produits.BRALIMA[nom] = data;
-          }
-        });
-
-        // Ajouter les produits par défaut manquants
-        if (Object.keys(produits.BRACONGO).length === 0) {
-          produits.BRACONGO = {
-            "NGOK (33cl)": { prix: 25000, unite: "bouteille", devise: "FC" },
-            "NGOK (50cl)": { prix: 35000, unite: "bouteille", devise: "FC" },
-            "DOGMO (33cl)": { prix: 22000, unite: "bouteille", devise: "FC" },
-            "DOGMO (50cl)": { prix: 32000, unite: "bouteille", devise: "FC" },
-          };
-        }
-        if (Object.keys(produits.BRALIMA).length === 0) {
-          produits.BRALIMA = {
-            "XXL (30cl)": { prix: 30000, unite: "bouteille", devise: "FC" },
-            "NKOY (65cl)": { prix: 37000, unite: "bouteille", devise: "FC" },
-            "33 EXPORT (65cl)": {
-              prix: 40000,
-              unite: "bouteille",
-              devise: "FC",
-            },
-          };
-        }
-
-        sauvegarderProduits();
       }
-      console.log("✅ Produits chargés depuis localStorage");
-    } catch (e) {
-      console.error("Erreur chargement produits:", e);
-    }
+    } catch (e) {}
   }
 }
 
-// Fonction pour obtenir le prix d'un produit
-function getProduitPrix(nom) {
-  if (produits.BRACONGO[nom]) return produits.BRACONGO[nom].prix;
-  if (produits.BRALIMA[nom]) return produits.BRALIMA[nom].prix;
+function getProduitPrix(produitKey) {
+  const [type, nom] = produitKey.split("|");
+  if (type === "bouteille") {
+    if (produits.BRACONGO.bouteille[nom])
+      return produits.BRACONGO.bouteille[nom].prix;
+    if (produits.BRALIMA.bouteille[nom])
+      return produits.BRALIMA.bouteille[nom].prix;
+  } else if (type === "cassier") {
+    if (produits.BRACONGO.cassier[nom])
+      return produits.BRACONGO.cassier[nom].prixCassier;
+    if (produits.BRALIMA.cassier[nom])
+      return produits.BRALIMA.cassier[nom].prixCassier;
+  }
   return 0;
 }
 
-// Initialisation
 function initGestionProduits() {
   chargerProduits();
-  initCategoriesTabs();
+  initFournisseurTabs();
+  initTypeTabs();
+  initTypeChangeListener();
   mettreAJourSelecteurProduits();
   afficherListeProduits();
 
   const addProductBtn = document.getElementById("ajouterProduitBtn");
-  if (addProductBtn) {
-    addProductBtn.addEventListener("click", ouvrirModalAjout);
-  }
+  if (addProductBtn) addProductBtn.addEventListener("click", ouvrirModalAjout);
 
-  // Événements du modal
-  if (modalSaveBtn) {
-    modalSaveBtn.addEventListener("click", sauvegarderProduit);
-  }
-  if (modalCancelBtn) {
-    modalCancelBtn.addEventListener("click", fermerModal);
-  }
-
-  // Fermer le modal en cliquant à l'extérieur
+  if (modalSaveBtn) modalSaveBtn.addEventListener("click", sauvegarderProduit);
+  if (modalCancelBtn) modalCancelBtn.addEventListener("click", fermerModal);
   if (produitModal) {
     produitModal.addEventListener("click", (e) => {
       if (e.target === produitModal) fermerModal();
     });
   }
-
-  console.log("🛠️ Gestion des produits par catégorie initialisée");
 }
 
 // ============================================
-// DASHBOARD STATS
+// MODULE EXPORT CSV
 // ============================================
 
-async function loadDashboardStats() {
-  try {
-    const ventesRes = await fetch("http://localhost:4000/ventes");
-    const ventes = await ventesRes.json();
-
-    const clientsRes = await fetch("http://localhost:4000/clients");
-    const clients = await clientsRes.json();
-
-    const ca = ventes.reduce((sum, v) => sum + (v.total || 0), 0);
-    const nbVentes = ventes.length;
-
-    let quantiteTotale = 0;
-    ventes.forEach((v) => {
-      if (v.produits && Array.isArray(v.produits)) {
-        quantiteTotale += v.produits.reduce((s, p) => s + (p.quantite || 0), 0);
-      } else if (v.quantite) {
-        quantiteTotale += v.quantite;
-      }
-    });
-
-    const ticketMoyen = nbVentes > 0 ? ca / nbVentes : 0;
-
-    document.getElementById("statCA").textContent = formatNumberFC(ca) + " FC";
-    document.getElementById("statVentes").textContent = nbVentes;
-    document.getElementById("statQuantite").textContent = quantiteTotale;
-    document.getElementById("statClients").textContent = clients.length;
-    document.getElementById("statTicketMoyen").textContent =
-      formatNumberFC(ticketMoyen) + " FC";
-
-    // Top produits
-    const produitsMap = new Map();
-    ventes.forEach((v) => {
-      if (v.produits && Array.isArray(v.produits)) {
-        v.produits.forEach((p) => {
-          if (!produitsMap.has(p.nom)) {
-            produitsMap.set(p.nom, { nom: p.nom, quantite: 0 });
-          }
-          produitsMap.get(p.nom).quantite += p.quantite;
-        });
-      }
-    });
-
-    const topProduits = Array.from(produitsMap.values())
-      .sort((a, b) => b.quantite - a.quantite)
-      .slice(0, 5);
-
-    const topProduitsDiv = document.getElementById("topProduitsList");
-    if (topProduitsDiv) {
-      if (topProduits.length === 0) {
-        topProduitsDiv.innerHTML =
-          '<div class="empty-state"><i class="fas fa-chart-simple"></i><p>Aucune donnée</p></div>';
-      } else {
-        topProduitsDiv.innerHTML = topProduits
-          .map(
-            (p, i) => `
-            <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #eee;">
-              <span><strong>${i + 1}.</strong> ${escapeHtml(p.nom)}</span>
-              <span style="color: #4CAF50; font-weight: bold;">${p.quantite} unités</span>
-            </div>
-          `,
-          )
-          .join("");
-      }
-    }
-
-    // Graphique mensuel
-    const ventesParMois = {};
-    ventes.forEach((v) => {
-      const date = new Date(v.date);
-      if (!isNaN(date.getTime())) {
-        const mois = date.toLocaleString("fr-FR", {
-          month: "short",
-          year: "numeric",
-        });
-        if (!ventesParMois[mois]) ventesParMois[mois] = 0;
-        ventesParMois[mois] += v.total || 0;
-      }
-    });
-
-    const ctx = document.getElementById("monthlyChart");
-    if (ctx) {
-      if (window.monthlyChart) {
-        window.monthlyChart.destroy();
-      }
-      window.monthlyChart = new Chart(ctx, {
-        type: "bar",
-        data: {
-          labels: Object.keys(ventesParMois),
-          datasets: [
-            {
-              label: "Chiffre d'affaires (FC)",
-              data: Object.values(ventesParMois),
-              backgroundColor: "rgba(76, 175, 80, 0.7)",
-              borderRadius: 10,
-            },
-          ],
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: true,
-          plugins: {
-            tooltip: {
-              callbacks: {
-                label: function (context) {
-                  return formatNumberFC(context.raw) + " FC";
-                },
-              },
-            },
-          },
-          scales: {
-            y: {
-              ticks: {
-                callback: function (value) {
-                  return formatNumberFC(value) + " FC";
-                },
-              },
-            },
-          },
-        },
-      });
-    }
-  } catch (error) {
-    console.error("Erreur chargement dashboard:", error);
+function exportToCSV() {
+  if (!ventesOriginales || ventesOriginales.length === 0) {
+    showMessage("Aucune donnée à exporter", "red");
+    return;
   }
-}
 
-// ============================================
-// NAVIGATION
-// ============================================
+  const clientId = historiqueClientId.value;
 
-const navItems = document.querySelectorAll(".nav-item");
-const sections = {
-  dashboard: document.getElementById("dashboardSection"),
-  clients: document.getElementById("clientsSection"),
-  produits: document.getElementById("produitsSection"),
-  ventes: document.getElementById("ventesSection"),
-  historique: document.getElementById("historiqueSection"),
-  factures: document.getElementById("facturesSection"),
-};
+  let separator = ";";
 
-navItems.forEach((item) => {
-  item.addEventListener("click", () => {
-    const sectionId = item.dataset.section;
+  function formatField(field) {
+    if (field === undefined || field === null) return "";
+    const stringField = String(field);
+    if (
+      stringField.includes(separator) ||
+      stringField.includes('"') ||
+      stringField.includes("\n")
+    ) {
+      return `"${stringField.replace(/"/g, '""')}"`;
+    }
+    return stringField;
+  }
 
-    navItems.forEach((nav) => nav.classList.remove("active"));
-    item.classList.add("active");
+  const headers = [
+    "ID Vente",
+    "Produits",
+    "Quantité totale",
+    "Total (FC)",
+    "Date",
+  ].map((h) => formatField(h));
 
-    Object.values(sections).forEach((section) => {
-      if (section) section.classList.remove("active-section");
-    });
+  const rows = ventesOriginales.map((v) => {
+    const venteNettoyee = nettoyerVente(v);
+    let produitsListe = "";
+    let quantiteTotale = 0;
 
-    if (sections[sectionId]) {
-      sections[sectionId].classList.add("active-section");
+    if (venteNettoyee.produits.length > 0) {
+      produitsListe = venteNettoyee.produits
+        .map((p) => `${p.nom}(${p.quantite})`)
+        .join(", ");
+      quantiteTotale = venteNettoyee.produits.reduce(
+        (sum, p) => sum + p.quantite,
+        0,
+      );
     }
 
-    document.getElementById("currentPageTitle").textContent =
-      item.querySelector("span").textContent;
-  });
-});
+    const row = [
+      v.id,
+      produitsListe,
+      quantiteTotale,
+      formatNumberFC(venteNettoyee.total),
+      formatDate(v.date),
+    ].map((field) => formatField(field));
 
-document.getElementById("currentDate").textContent =
-  new Date().toLocaleDateString("fr-FR", {
-    weekday: "long",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
+    return row;
   });
 
-const mobileMenuBtn = document.getElementById("mobileMenuBtn");
-const sidebar = document.getElementById("sidebar");
+  const csvContent = [headers, ...rows]
+    .map((row) => row.join(separator))
+    .join("\n");
 
-if (mobileMenuBtn) {
-  mobileMenuBtn.addEventListener("click", () => {
-    sidebar.classList.toggle("open");
+  const blob = new Blob(["\uFEFF" + csvContent], {
+    type: "text/csv;charset=utf-8;",
   });
+  const link = document.createElement("a");
+  const url = URL.createObjectURL(blob);
+  link.setAttribute("href", url);
+  link.setAttribute(
+    "download",
+    `ventes_client_${clientId}_${new Date().toISOString().slice(0, 10)}.csv`,
+  );
+  link.style.display = "none";
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+
+  showMessage("📥 Export CSV effectué !", "green");
 }
 
-// Initialisation
+// Initialisation globale
 loadDashboardStats();
 initGestionProduits();
 

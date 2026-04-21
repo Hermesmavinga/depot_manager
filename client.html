@@ -14,9 +14,6 @@
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
     />
 
-    <!-- Chart.js pour graphiques -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
     <!-- jsPDF pour factures -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
@@ -167,10 +164,6 @@
         margin-bottom: 15px;
       }
 
-      .stat-icon.primary {
-        background: linear-gradient(135deg, #667eea, #764ba2);
-        color: white;
-      }
       .stat-icon.success {
         background: linear-gradient(135deg, #4caf50, #45a049);
         color: white;
@@ -181,10 +174,6 @@
       }
       .stat-icon.info {
         background: linear-gradient(135deg, #2196f3, #1976d2);
-        color: white;
-      }
-      .stat-icon.danger {
-        background: linear-gradient(135deg, #f44336, #d32f2f);
         color: white;
       }
 
@@ -537,6 +526,46 @@
         border-bottom-color: #4caf50 !important;
         color: #4caf50 !important;
       }
+
+      /* Styles pour les sous-onglets */
+      .type-tab {
+        transition: all 0.3s ease;
+        background: none;
+        border: none;
+        padding: 8px 16px;
+        font-size: 0.9rem;
+        font-weight: 600;
+        cursor: pointer;
+        border-bottom: 2px solid transparent;
+      }
+
+      .type-tab:hover {
+        background: #f5f5f5;
+        border-radius: 8px 8px 0 0;
+      }
+
+      .type-tab.active {
+        border-bottom-color: #4caf50 !important;
+      }
+
+      /* Badge pour les types */
+      .type-badge {
+        display: inline-block;
+        padding: 4px 8px;
+        border-radius: 20px;
+        font-size: 0.7rem;
+        font-weight: 600;
+      }
+
+      .type-badge.bouteille {
+        background: #e3f2fd;
+        color: #1976d2;
+      }
+
+      .type-badge.cassier {
+        background: #fff3e0;
+        color: #f57c00;
+      }
     </style>
   </head>
   <body>
@@ -571,10 +600,6 @@
         <i class="fas fa-history"></i>
         <span>Historique</span>
       </div>
-      <div class="nav-item" data-section="factures">
-        <i class="fas fa-file-invoice"></i>
-        <span>Factures</span>
-      </div>
     </div>
 
     <!-- Main Content -->
@@ -593,13 +618,6 @@
       <!-- SECTION DASHBOARD -->
       <div id="dashboardSection" class="section active-section">
         <div class="stats-grid">
-          <div class="stat-card">
-            <div class="stat-icon primary">
-              <i class="fas fa-coins"></i>
-            </div>
-            <div class="stat-value" id="statCA">0 FC</div>
-            <div class="stat-label">Chiffre d'affaires total</div>
-          </div>
           <div class="stat-card">
             <div class="stat-icon success">
               <i class="fas fa-receipt"></i>
@@ -621,30 +639,12 @@
             <div class="stat-value" id="statClients">0</div>
             <div class="stat-label">Clients</div>
           </div>
-          <div class="stat-card">
-            <div class="stat-icon danger">
-              <i class="fas fa-ticket-alt"></i>
-            </div>
-            <div class="stat-value" id="statTicketMoyen">0 FC</div>
-            <div class="stat-label">Ticket moyen</div>
-          </div>
         </div>
 
-        <div
-          style="
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-            gap: 20px;
-          "
-        >
-          <div class="cart-container">
-            <h3><i class="fas fa-chart-bar"></i> Ventes par mois</h3>
-            <canvas id="monthlyChart" height="200"></canvas>
-          </div>
-          <div class="cart-container">
-            <h3><i class="fas fa-trophy"></i> Top produits</h3>
-            <div id="topProduitsList"></div>
-          </div>
+        <!-- Top produits -->
+        <div class="cart-container">
+          <h3><i class="fas fa-trophy"></i> Top produits</h3>
+          <div id="topProduitsList"></div>
         </div>
       </div>
 
@@ -705,7 +705,7 @@
         </div>
       </div>
 
-      <!-- SECTION PRODUITS AVEC CATÉGORIES -->
+      <!-- SECTION PRODUITS AVEC CATÉGORIES ET TYPES -->
       <div id="produitsSection" class="section">
         <div class="section-title">
           <i class="fas fa-boxes"></i>
@@ -718,7 +718,7 @@
           </button>
         </div>
 
-        <!-- Onglets pour les catégories -->
+        <!-- Onglets pour les fournisseurs -->
         <div
           style="
             display: flex;
@@ -731,16 +731,6 @@
             id="tabBracongo"
             class="categorie-tab active"
             data-categorie="BRACONGO"
-            style="
-              background: none;
-              border: none;
-              padding: 10px 20px;
-              font-size: 1rem;
-              font-weight: 600;
-              cursor: pointer;
-              color: #4caf50;
-              border-bottom: 3px solid #4caf50;
-            "
           >
             🍺 BRACONGO
           </button>
@@ -748,56 +738,152 @@
             id="tabBralima"
             class="categorie-tab"
             data-categorie="BRALIMA"
-            style="
-              background: none;
-              border: none;
-              padding: 10px 20px;
-              font-size: 1rem;
-              font-weight: 600;
-              cursor: pointer;
-              color: #1a1a2e;
-              border-bottom: 3px solid transparent;
-            "
           >
             🍻 BRALIMA
           </button>
         </div>
 
-        <!-- Tableau BRACONGO -->
+        <!-- Contenu BRACONGO -->
         <div id="bracongoContainer" style="display: block">
-          <h3 style="margin-bottom: 15px; color: #2e7d32">
-            <i class="fas fa-beer"></i> Produits BRACONGO
-          </h3>
-          <div style="overflow-x: auto">
-            <table class="modern-table">
-              <thead>
-                <tr>
-                  <th>Produit</th>
-                  <th>Prix (FC)</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody id="bracongoTableBody"></tbody>
-            </table>
+          <!-- Sous-onglets pour BRACONGO -->
+          <div
+            style="
+              display: flex;
+              gap: 10px;
+              margin-bottom: 20px;
+              border-bottom: 1px solid #e0e0e0;
+            "
+          >
+            <button
+              id="bracongoBouteilleTab"
+              class="type-tab active"
+              data-type="bouteille"
+              data-fournisseur="BRACONGO"
+            >
+              🍾 BOUTEILLES
+            </button>
+            <button
+              id="bracongoCassierTab"
+              class="type-tab"
+              data-type="cassier"
+              data-fournisseur="BRACONGO"
+            >
+              📦 CASSIERS (24 bouteilles)
+            </button>
+          </div>
+
+          <!-- Tableau Bouteilles BRACONGO -->
+          <div id="bracongoBouteilleContainer" style="display: block">
+            <h3 style="margin-bottom: 15px; color: #2e7d32">
+              <i class="fas fa-wine-bottle"></i> Bouteilles BRACONGO
+            </h3>
+            <div style="overflow-x: auto">
+              <table class="modern-table">
+                <thead>
+                  <tr>
+                    <th>Produit</th>
+                    <th>Format</th>
+                    <th>Prix unitaire (FC)</th>
+                    <th>Prix cassier (FC)</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="bracongoBouteilleBody"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Tableau Cassiers BRACONGO -->
+          <div id="bracongoCassierContainer" style="display: none">
+            <h3 style="margin-bottom: 15px; color: #2e7d32">
+              <i class="fas fa-box"></i> Cassiers BRACONGO (24 bouteilles)
+            </h3>
+            <div style="overflow-x: auto">
+              <table class="modern-table">
+                <thead>
+                  <tr>
+                    <th>Produit</th>
+                    <th>Format</th>
+                    <th>Prix cassier (FC)</th>
+                    <th>Prix par bouteille (FC)</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="bracongoCassierBody"></tbody>
+              </table>
+            </div>
           </div>
         </div>
 
-        <!-- Tableau BRALIMA -->
+        <!-- Contenu BRALIMA -->
         <div id="bralimaContainer" style="display: none">
-          <h3 style="margin-bottom: 15px; color: #f57c00">
-            <i class="fas fa-beer"></i> Produits BRALIMA
-          </h3>
-          <div style="overflow-x: auto">
-            <table class="modern-table">
-              <thead>
-                <tr>
-                  <th>Produit</th>
-                  <th>Prix (FC)</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody id="bralimaTableBody"></tbody>
-            </table>
+          <!-- Sous-onglets pour BRALIMA -->
+          <div
+            style="
+              display: flex;
+              gap: 10px;
+              margin-bottom: 20px;
+              border-bottom: 1px solid #e0e0e0;
+            "
+          >
+            <button
+              id="bralimaBouteilleTab"
+              class="type-tab"
+              data-type="bouteille"
+              data-fournisseur="BRALIMA"
+            >
+              🍾 BOUTEILLES
+            </button>
+            <button
+              id="bralimaCassierTab"
+              class="type-tab"
+              data-type="cassier"
+              data-fournisseur="BRALIMA"
+            >
+              📦 CASSIERS (24 bouteilles)
+            </button>
+          </div>
+
+          <!-- Tableau Bouteilles BRALIMA -->
+          <div id="bralimaBouteilleContainer" style="display: block">
+            <h3 style="margin-bottom: 15px; color: #f57c00">
+              <i class="fas fa-wine-bottle"></i> Bouteilles BRALIMA
+            </h3>
+            <div style="overflow-x: auto">
+              <table class="modern-table">
+                <thead>
+                  <tr>
+                    <th>Produit</th>
+                    <th>Format</th>
+                    <th>Prix unitaire (FC)</th>
+                    <th>Prix cassier (FC)</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="bralimaBouteilleBody"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Tableau Cassiers BRALIMA -->
+          <div id="bralimaCassierContainer" style="display: none">
+            <h3 style="margin-bottom: 15px; color: #f57c00">
+              <i class="fas fa-box"></i> Cassiers BRALIMA (24 bouteilles)
+            </h3>
+            <div style="overflow-x: auto">
+              <table class="modern-table">
+                <thead>
+                  <tr>
+                    <th>Produit</th>
+                    <th>Format</th>
+                    <th>Prix cassier (FC)</th>
+                    <th>Prix par bouteille (FC)</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="bralimaCassierBody"></tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>
@@ -931,24 +1017,6 @@
 
         <div id="filterContainer" style="display: none; margin-top: 20px"></div>
       </div>
-
-      <!-- SECTION FACTURES -->
-      <div id="facturesSection" class="section">
-        <div class="section-title">
-          <i class="fas fa-file-invoice-dollar"></i>
-          <span>Gestion des factures</span>
-        </div>
-        <div style="text-align: center; padding: 40px">
-          <i
-            class="fas fa-file-pdf"
-            style="font-size: 4rem; color: #4caf50; margin-bottom: 20px"
-          ></i>
-          <p>Les factures sont générées automatiquement lors des ventes.</p>
-          <p style="color: #666; margin-top: 10px">
-            Consultez l'historique pour retrouver vos factures.
-          </p>
-        </div>
-      </div>
     </div>
 
     <!-- Modal pour ajouter/modifier un produit -->
@@ -972,7 +1040,7 @@
           background: white;
           border-radius: 20px;
           padding: 30px;
-          max-width: 500px;
+          max-width: 550px;
           width: 90%;
           margin: auto;
           position: relative;
@@ -987,16 +1055,41 @@
             type="text"
             id="produitNom"
             class="form-control"
-            placeholder="Ex: NGOK"
+            placeholder="Ex: NGOK, CASTEL"
           />
         </div>
         <div class="form-group">
-          <label>Prix (FC)</label>
+          <label>Format / Contenance</label>
+          <input
+            type="text"
+            id="produitFormat"
+            class="form-control"
+            placeholder="Ex: 33cl, 50cl, 65cl"
+          />
+        </div>
+        <div class="form-group">
+          <label>Type d'emballage</label>
+          <select id="produitType" class="form-control">
+            <option value="bouteille">🍾 Bouteille (unité)</option>
+            <option value="cassier">📦 Cassier (24 bouteilles)</option>
+          </select>
+        </div>
+        <div class="form-group" id="prixBouteilleGroup">
+          <label>Prix unitaire (FC)</label>
           <input
             type="number"
             id="produitPrix"
             class="form-control"
             placeholder="Ex: 30000"
+          />
+        </div>
+        <div class="form-group" id="prixCassierGroup" style="display: none">
+          <label>Prix du cassier (FC) - 24 bouteilles</label>
+          <input
+            type="number"
+            id="produitPrixCassier"
+            class="form-control"
+            placeholder="Ex: 600000"
           />
         </div>
         <div class="form-group">
