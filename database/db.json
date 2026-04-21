@@ -234,6 +234,11 @@
       "id": "37fd",
       "nom": "HENRY",
       "telephone": "+243 828 790 728"
+    },
+    {
+      "id": "1f14",
+      "nom": "roberto",
+      "telephone": "+243 828 790 728"
     }
   ],
   "produits": [
@@ -922,6 +927,19 @@
       ],
       "total": 40000,
       "date": "2026-04-19T11:59:10.386Z"
+    },
+    {
+      "id": "dc59",
+      "clientId": "1",
+      "produits": [
+        {
+          "nom": "nkoy",
+          "quantite": 3,
+          "prix": 40000
+        }
+      ],
+      "total": 120000,
+      "date": "2026-04-19T17:43:43.836Z"
     }
   ],
   "$schema": "./node_modules/json-server/schema.json"

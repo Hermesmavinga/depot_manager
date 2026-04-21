@@ -514,6 +514,29 @@
         background: #4caf50;
         border-radius: 4px;
       }
+
+      /* Styles pour les onglets de catégories */
+      .categorie-tab {
+        transition: all 0.3s ease;
+        background: none;
+        border: none;
+        padding: 10px 20px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        color: #1a1a2e;
+        border-bottom: 3px solid transparent;
+      }
+
+      .categorie-tab:hover {
+        background: #f5f5f5;
+        border-radius: 8px 8px 0 0;
+      }
+
+      .categorie-tab.active {
+        border-bottom-color: #4caf50 !important;
+        color: #4caf50 !important;
+      }
     </style>
   </head>
   <body>
@@ -682,7 +705,7 @@
         </div>
       </div>
 
-      <!-- SECTION PRODUITS -->
+      <!-- SECTION PRODUITS AVEC CATÉGORIES -->
       <div id="produitsSection" class="section">
         <div class="section-title">
           <i class="fas fa-boxes"></i>
@@ -695,19 +718,87 @@
           </button>
         </div>
 
-        <div style="overflow-x: auto">
-          <table class="modern-table">
-            <thead>
-              <tr>
-                <th>Produit</th>
-                <th>Prix (FC)</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody id="produitsTableBody">
-              <!-- Les produits seront chargés dynamiquement par JS -->
-            </tbody>
-          </table>
+        <!-- Onglets pour les catégories -->
+        <div
+          style="
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e0e0e0;
+          "
+        >
+          <button
+            id="tabBracongo"
+            class="categorie-tab active"
+            data-categorie="BRACONGO"
+            style="
+              background: none;
+              border: none;
+              padding: 10px 20px;
+              font-size: 1rem;
+              font-weight: 600;
+              cursor: pointer;
+              color: #4caf50;
+              border-bottom: 3px solid #4caf50;
+            "
+          >
+            🍺 BRACONGO
+          </button>
+          <button
+            id="tabBralima"
+            class="categorie-tab"
+            data-categorie="BRALIMA"
+            style="
+              background: none;
+              border: none;
+              padding: 10px 20px;
+              font-size: 1rem;
+              font-weight: 600;
+              cursor: pointer;
+              color: #1a1a2e;
+              border-bottom: 3px solid transparent;
+            "
+          >
+            🍻 BRALIMA
+          </button>
+        </div>
+
+        <!-- Tableau BRACONGO -->
+        <div id="bracongoContainer" style="display: block">
+          <h3 style="margin-bottom: 15px; color: #2e7d32">
+            <i class="fas fa-beer"></i> Produits BRACONGO
+          </h3>
+          <div style="overflow-x: auto">
+            <table class="modern-table">
+              <thead>
+                <tr>
+                  <th>Produit</th>
+                  <th>Prix (FC)</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="bracongoTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Tableau BRALIMA -->
+        <div id="bralimaContainer" style="display: none">
+          <h3 style="margin-bottom: 15px; color: #f57c00">
+            <i class="fas fa-beer"></i> Produits BRALIMA
+          </h3>
+          <div style="overflow-x: auto">
+            <table class="modern-table">
+              <thead>
+                <tr>
+                  <th>Produit</th>
+                  <th>Prix (FC)</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="bralimaTableBody"></tbody>
+            </table>
+          </div>
         </div>
       </div>
 
@@ -860,304 +951,75 @@
       </div>
     </div>
 
-    <script>
-      // ============================================
-      // NAVIGATION
-      // ============================================
+    <!-- Modal pour ajouter/modifier un produit -->
+    <div
+      id="produitModal"
+      style="
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 1000;
+        align-items: center;
+        justify-content: center;
+      "
+    >
+      <div
+        style="
+          background: white;
+          border-radius: 20px;
+          padding: 30px;
+          max-width: 500px;
+          width: 90%;
+          margin: auto;
+          position: relative;
+          top: 50%;
+          transform: translateY(-50%);
+        "
+      >
+        <h3 id="modalTitle" style="margin-bottom: 20px">Ajouter un produit</h3>
+        <div class="form-group">
+          <label>Nom du produit</label>
+          <input
+            type="text"
+            id="produitNom"
+            class="form-control"
+            placeholder="Ex: NGOK"
+          />
+        </div>
+        <div class="form-group">
+          <label>Prix (FC)</label>
+          <input
+            type="number"
+            id="produitPrix"
+            class="form-control"
+            placeholder="Ex: 30000"
+          />
+        </div>
+        <div class="form-group">
+          <label>Fournisseur</label>
+          <select id="produitFournisseur" class="form-control">
+            <option value="BRACONGO">🍺 BRACONGO</option>
+            <option value="BRALIMA">🍻 BRALIMA</option>
+          </select>
+        </div>
+        <div
+          style="
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 20px;
+          "
+        >
+          <button id="modalCancelBtn" class="btn btn-outline">Annuler</button>
+          <button id="modalSaveBtn" class="btn btn-primary">Enregistrer</button>
+        </div>
+      </div>
+    </div>
 
-      const navItems = document.querySelectorAll(".nav-item");
-      const sections = {
-        dashboard: document.getElementById("dashboardSection"),
-        clients: document.getElementById("clientsSection"),
-        produits: document.getElementById("produitsSection"),
-        ventes: document.getElementById("ventesSection"),
-        historique: document.getElementById("historiqueSection"),
-        factures: document.getElementById("facturesSection"),
-      };
-
-      navItems.forEach((item) => {
-        item.addEventListener("click", () => {
-          const sectionId = item.dataset.section;
-
-          navItems.forEach((nav) => nav.classList.remove("active"));
-          item.classList.add("active");
-
-          Object.values(sections).forEach((section) => {
-            if (section) section.classList.remove("active-section");
-          });
-
-          if (sections[sectionId]) {
-            sections[sectionId].classList.add("active-section");
-          }
-
-          document.getElementById("currentPageTitle").textContent =
-            item.querySelector("span").textContent;
-        });
-      });
-
-      // Date actuelle
-      document.getElementById("currentDate").textContent =
-        new Date().toLocaleDateString("fr-FR", {
-          weekday: "long",
-          year: "numeric",
-          month: "long",
-          day: "numeric",
-        });
-
-      // Mobile menu
-      const mobileMenuBtn = document.getElementById("mobileMenuBtn");
-      const sidebar = document.getElementById("sidebar");
-
-      if (mobileMenuBtn) {
-        mobileMenuBtn.addEventListener("click", () => {
-          sidebar.classList.toggle("open");
-        });
-      }
-
-      // ============================================
-      // FONCTIONS UTILITAIRES
-      // ============================================
-
-      function showNotification(message, type = "success") {
-        const toast = document.createElement("div");
-        toast.className = "toast-notification";
-        toast.innerHTML = `
-          <i class="fas ${type === "success" ? "fa-check-circle" : "fa-exclamation-circle"}" style="color: ${type === "success" ? "#4CAF50" : "#f44336"}"></i>
-          <span>${message}</span>
-        `;
-        document.body.appendChild(toast);
-        setTimeout(() => {
-          toast.remove();
-        }, 3000);
-      }
-
-      function escapeHtml(text) {
-        if (!text) return "";
-        const div = document.createElement("div");
-        div.textContent = text;
-        return div.innerHTML;
-      }
-
-      // ============================================
-      // CHARGEMENT DES STATS DASHBOARD (CORRIGÉ EN FC)
-      // ============================================
-
-      async function loadDashboardStats() {
-        try {
-          const ventesRes = await fetch("http://localhost:4000/ventes");
-          const ventes = await ventesRes.json();
-
-          const clientsRes = await fetch("http://localhost:4000/clients");
-          const clients = await clientsRes.json();
-
-          const ca = ventes.reduce((sum, v) => sum + (v.total || 0), 0);
-          const nbVentes = ventes.length;
-
-          let quantiteTotale = 0;
-          ventes.forEach((v) => {
-            if (v.produits && Array.isArray(v.produits)) {
-              quantiteTotale += v.produits.reduce(
-                (s, p) => s + (p.quantite || 0),
-                0,
-              );
-            } else if (v.quantite) {
-              quantiteTotale += v.quantite;
-            }
-          });
-
-          const ticketMoyen = nbVentes > 0 ? ca / nbVentes : 0;
-
-          document.getElementById("statCA").textContent =
-            formatNumberFC(ca) + " FC";
-          document.getElementById("statVentes").textContent = nbVentes;
-          document.getElementById("statQuantite").textContent = quantiteTotale;
-          document.getElementById("statClients").textContent = clients.length;
-          document.getElementById("statTicketMoyen").textContent =
-            formatNumberFC(ticketMoyen) + " FC";
-
-          // Top produits
-          const produitsMap = new Map();
-          ventes.forEach((v) => {
-            if (v.produits && Array.isArray(v.produits)) {
-              v.produits.forEach((p) => {
-                if (!produitsMap.has(p.nom)) {
-                  produitsMap.set(p.nom, { nom: p.nom, quantite: 0 });
-                }
-                produitsMap.get(p.nom).quantite += p.quantite;
-              });
-            } else if (v.produit) {
-              if (!produitsMap.has(v.produit)) {
-                produitsMap.set(v.produit, { nom: v.produit, quantite: 0 });
-              }
-              produitsMap.get(v.produit).quantite += v.quantite || 0;
-            }
-          });
-
-          const topProduits = Array.from(produitsMap.values())
-            .sort((a, b) => b.quantite - a.quantite)
-            .slice(0, 5);
-
-          const topProduitsDiv = document.getElementById("topProduitsList");
-          if (topProduitsDiv) {
-            if (topProduits.length === 0) {
-              topProduitsDiv.innerHTML =
-                '<div class="empty-state"><i class="fas fa-chart-simple"></i><p>Aucune donnée</p></div>';
-            } else {
-              topProduitsDiv.innerHTML = topProduits
-                .map(
-                  (p, i) => `
-                <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #eee;">
-                  <span><strong>${i + 1}.</strong> ${escapeHtml(p.nom)}</span>
-                  <span style="color: #4CAF50; font-weight: bold;">${p.quantite} unités</span>
-                </div>
-              `,
-                )
-                .join("");
-            }
-          }
-
-          // Graphique mensuel (en FC)
-          const ventesParMois = {};
-          ventes.forEach((v) => {
-            const date = new Date(v.date);
-            if (!isNaN(date.getTime())) {
-              const mois = date.toLocaleString("fr-FR", {
-                month: "short",
-                year: "numeric",
-              });
-              if (!ventesParMois[mois]) ventesParMois[mois] = 0;
-              ventesParMois[mois] += v.total || 0;
-            }
-          });
-
-          const ctx = document.getElementById("monthlyChart");
-          if (ctx) {
-            if (window.monthlyChart) {
-              window.monthlyChart.destroy();
-            }
-            window.monthlyChart = new Chart(ctx, {
-              type: "bar",
-              data: {
-                labels: Object.keys(ventesParMois),
-                datasets: [
-                  {
-                    label: "Chiffre d'affaires (FC)",
-                    data: Object.values(ventesParMois),
-                    backgroundColor: "rgba(76, 175, 80, 0.7)",
-                    borderRadius: 10,
-                  },
-                ],
-              },
-              options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                plugins: {
-                  tooltip: {
-                    callbacks: {
-                      label: function (context) {
-                        return formatNumberFC(context.raw) + " FC";
-                      },
-                    },
-                  },
-                  legend: { position: "top" },
-                },
-                scales: {
-                  y: {
-                    ticks: {
-                      callback: function (value) {
-                        return formatNumberFC(value) + " FC";
-                      },
-                    },
-                  },
-                },
-              },
-            });
-          }
-        } catch (error) {
-          console.error("Erreur chargement dashboard:", error);
-        }
-      }
-
-      loadDashboardStats();
-
-      // ============================================
-      // RECHERCHE CLIENT
-      // ============================================
-
-      document
-        .getElementById("searchBtn")
-        ?.addEventListener("click", async () => {
-          const clientId = document.getElementById("clientId").value.trim();
-          if (!clientId) {
-            showNotification("Entrez un ID client", "error");
-            return;
-          }
-
-          try {
-            const res = await fetch(
-              `http://localhost:4000/clients/${String(clientId)}`,
-            );
-            if (!res.ok) throw new Error("Client non trouvé");
-            const client = await res.json();
-
-            document.getElementById("result").innerHTML = `
-            <div style="background: #e8f5e9; padding: 15px; border-radius: 12px; margin-top: 15px;">
-              <p><strong>✅ Client trouvé</strong></p>
-              <p>ID: ${client.id}<br>Nom: ${escapeHtml(client.nom)}<br>Tél: ${escapeHtml(client.telephone)}</p>
-              <button onclick="document.getElementById('venteClientId').value='${client.id}'; showNotification('ID client pré-rempli')" class="btn btn-primary" style="margin-top: 10px;">
-                🛒 Faire une vente
-              </button>
-            </div>
-          `;
-          } catch (error) {
-            document.getElementById("result").innerHTML =
-              `<div style="color: red; margin-top: 15px;">❌ Client non trouvé</div>`;
-          }
-        });
-
-      // ============================================
-      // CRÉATION CLIENT
-      // ============================================
-
-      document
-        .getElementById("addClientBtn")
-        ?.addEventListener("click", async () => {
-          const nom = document.getElementById("nom").value.trim();
-          const telephone = document.getElementById("telephone").value.trim();
-
-          if (!nom || !telephone) {
-            showNotification("Veuillez remplir tous les champs", "error");
-            return;
-          }
-
-          try {
-            const res = await fetch("http://localhost:4000/clients", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ nom, telephone }),
-            });
-
-            if (!res.ok) throw new Error("Erreur création");
-            const data = await res.json();
-
-            document.getElementById("clientMessage").innerHTML = `
-            <div style="background: #e8f5e9; padding: 12px; border-radius: 10px;">
-              ✅ Client créé avec succès ! ID: <strong>${data.id}</strong>
-            </div>
-          `;
-            document.getElementById("nom").value = "";
-            document.getElementById("telephone").value = "";
-            showNotification("Client créé avec succès !");
-            loadDashboardStats();
-          } catch (error) {
-            showNotification("Erreur lors de la création", "error");
-          }
-        });
-
-      showNotification("Bienvenue sur VentesPro !", "success");
-    </script>
-
-    <!-- Ton script principal -->
     <script src="client.js"></script>
   </body>
 </html>
