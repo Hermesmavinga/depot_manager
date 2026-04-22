@@ -4,9 +4,11 @@
 
 function showNotification(message, type = "success") {
   const toast = document.createElement("div");
-  toast.className = "toast-notification";
+  toast.className = `toast-notification fixed bottom-5 right-5 z-50 px-4 py-3 rounded-lg shadow-lg flex items-center gap-3 ${
+    type === "success" ? "bg-emerald-600 text-white" : "bg-red-600 text-white"
+  }`;
   toast.innerHTML = `
-    <i class="fas ${type === "success" ? "fa-check-circle" : "fa-exclamation-circle"}" style="color: ${type === "success" ? "#4CAF50" : "#f44336"}"></i>
+    <i class="fas ${type === "success" ? "fa-check-circle" : "fa-exclamation-circle"}"></i>
     <span>${message}</span>
   `;
   document.body.appendChild(toast);
@@ -43,6 +45,76 @@ function formatDate(dateString) {
   );
 }
 
+function parseDate(dateString) {
+  if (!dateString) return new Date(0);
+  let date = new Date(dateString);
+  if (isNaN(date.getTime())) {
+    const parts = dateString.match(
+      /(\d{1,2})\/(\d{1,2})\/(\d{4})\s?(\d{1,2})?:?(\d{2})?:?(\d{2})?/,
+    );
+    if (parts) {
+      const [_, day, month, year, hour = 0, minute = 0, second = 0] = parts;
+      date = new Date(year, month - 1, day, hour, minute, second);
+    }
+  }
+  return date;
+}
+
+function nettoyerVente(vente) {
+  let produitsListe = [];
+  let total = Number(vente.total) || 0;
+
+  if (
+    vente.produits &&
+    Array.isArray(vente.produits) &&
+    vente.produits.length > 0
+  ) {
+    produitsListe = vente.produits
+      .filter(
+        (p) =>
+          p &&
+          p.nom &&
+          typeof p.quantite === "number" &&
+          typeof p.prix === "number" &&
+          !isNaN(p.prix) &&
+          p.prix > 0,
+      )
+      .map((p) => ({ nom: p.nom, quantite: p.quantite, prix: p.prix }));
+    if (produitsListe.length > 0)
+      total = produitsListe.reduce((sum, p) => sum + p.prix * p.quantite, 0);
+  } else if (
+    vente.produit &&
+    vente.quantite &&
+    vente.prix &&
+    !isNaN(vente.prix) &&
+    vente.prix > 0
+  ) {
+    produitsListe = [
+      {
+        nom: vente.produit,
+        quantite: Number(vente.quantite),
+        prix: Number(vente.prix),
+      },
+    ];
+    total = vente.prix * vente.quantite;
+  } else if (total > 0 && !produitsListe.length) {
+    produitsListe = [
+      { nom: "Produit (données manquantes)", quantite: 1, prix: total },
+    ];
+  }
+  return { produits: produitsListe, total: total };
+}
+
+function afficherProduitsListe(produits) {
+  if (!produits || produits.length === 0) return "Aucun produit";
+  return produits
+    .map(
+      (p) =>
+        `<div class="text-sm">${escapeHtml(p.nom)} - ${p.quantite} x ${formatNumberFC(p.prix)} FC</div>`,
+    )
+    .join("");
+}
+
 // ============================================
 // NAVIGATION
 // ============================================
@@ -56,23 +128,57 @@ const sections = {
   historique: document.getElementById("historiqueSection"),
 };
 
+const sidebar = document.getElementById("sidebar");
+const mobileMenuBtn = document.getElementById("mobileMenuBtn");
+const overlay = document.getElementById("overlay");
+
+function closeMobileMenu() {
+  if (sidebar && window.innerWidth < 768) {
+    sidebar.classList.add("-translate-x-full");
+    if (overlay) overlay.classList.remove("active");
+  }
+}
+
+function openMobileMenu() {
+  if (sidebar && window.innerWidth < 768) {
+    sidebar.classList.remove("-translate-x-full");
+    if (overlay) overlay.classList.add("active");
+  }
+}
+
+if (mobileMenuBtn) {
+  mobileMenuBtn.addEventListener("click", openMobileMenu);
+}
+
+if (overlay) {
+  overlay.addEventListener("click", closeMobileMenu);
+}
+
 navItems.forEach((item) => {
   item.addEventListener("click", () => {
     const sectionId = item.dataset.section;
 
-    navItems.forEach((nav) => nav.classList.remove("active"));
-    item.classList.add("active");
+    navItems.forEach((nav) => {
+      nav.classList.remove("bg-emerald-600", "text-white");
+      nav.classList.add("text-gray-300");
+    });
+    item.classList.add("bg-emerald-600", "text-white");
+    item.classList.remove("text-gray-300");
 
     Object.values(sections).forEach((section) => {
-      if (section) section.classList.remove("active-section");
+      if (section) section.classList.add("hidden");
     });
 
     if (sections[sectionId]) {
-      sections[sectionId].classList.add("active-section");
+      sections[sectionId].classList.remove("hidden");
     }
 
-    document.getElementById("currentPageTitle").textContent =
-      item.querySelector("span").textContent;
+    const pageTitle = document.getElementById("currentPageTitle");
+    if (pageTitle) {
+      pageTitle.textContent = item.querySelector("span").textContent;
+    }
+
+    closeMobileMenu();
   });
 });
 
@@ -83,15 +189,6 @@ document.getElementById("currentDate").textContent =
     month: "long",
     day: "numeric",
   });
-
-const mobileMenuBtn = document.getElementById("mobileMenuBtn");
-const sidebar = document.getElementById("sidebar");
-
-if (mobileMenuBtn) {
-  mobileMenuBtn.addEventListener("click", () => {
-    sidebar.classList.toggle("open");
-  });
-}
 
 // ============================================
 // DASHBOARD STATS
@@ -120,7 +217,6 @@ async function loadDashboardStats() {
     document.getElementById("statQuantite").textContent = quantiteTotale;
     document.getElementById("statClients").textContent = clients.length;
 
-    // Top produits
     const produitsMap = new Map();
     ventes.forEach((v) => {
       if (v.produits && Array.isArray(v.produits)) {
@@ -141,16 +237,16 @@ async function loadDashboardStats() {
     if (topProduitsDiv) {
       if (topProduits.length === 0) {
         topProduitsDiv.innerHTML =
-          '<div class="empty-state"><i class="fas fa-chart-simple"></i><p>Aucune donnée</p></div>';
+          '<div class="px-6 py-8 text-center text-gray-400"><i class="fas fa-chart-simple text-3xl mb-2 block"></i><p>Aucune donnée</p></div>';
       } else {
         topProduitsDiv.innerHTML = topProduits
           .map(
             (p, i) => `
-            <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #eee;">
-              <span><strong>${i + 1}.</strong> ${escapeHtml(p.nom)}</span>
-              <span style="background: #4CAF50; color: white; padding: 4px 12px; border-radius: 20px; font-weight: bold;">${p.quantite} unités</span>
-            </div>
-          `,
+          <div class="flex justify-between items-center px-6 py-3 hover:bg-gray-50">
+            <span class="font-medium text-gray-700"><span class="text-emerald-600 font-bold mr-2">${i + 1}.</span> ${escapeHtml(p.nom)}</span>
+            <span class="bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full text-sm font-semibold">${p.quantite} unités</span>
+          </div>
+        `,
           )
           .join("");
       }
@@ -203,34 +299,19 @@ async function searchClient() {
 
 function displayClient(client) {
   resultDiv.innerHTML = `
-    <div style="border:2px solid #4CAF50; padding:15px; margin-top:10px; border-radius:8px; background:#f9f9f9;">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-        <h3 style="margin:0; color:#4CAF50;">✅ Client trouvé</h3>
-        <button onclick="clearResult()" 
-                style="background:#ff4444; color:white; border:none; padding:5px 10px; cursor:pointer; border-radius:5px;">
-          ✕
-        </button>
+    <div class="border-2 border-emerald-500 rounded-lg p-4 mt-3 bg-emerald-50">
+      <div class="flex justify-between items-center mb-3">
+        <h3 class="font-bold text-emerald-700">✅ Client trouvé</h3>
+        <button onclick="clearResult()" class="bg-red-500 text-white px-2 py-1 rounded text-sm hover:bg-red-600 transition">✕</button>
       </div>
-      <table style="width:100%; border-collapse:collapse;">
-        <tr style="border-bottom:1px solid #eee;">
-          <td style="padding:10px 0;"><strong>🆔 ID :</strong> <td style="padding:10px 0;">${client.id}
-        </tr>
-        <tr style="border-bottom:1px solid #eee;">
-          <td style="padding:10px 0;"><strong>👤 Nom :</strong> <td style="padding:10px 0;">${escapeHtml(client.nom)}
-        </tr>
-        <tr style="border-bottom:1px solid #eee;">
-          <td style="padding:10px 0;"><strong>📞 Téléphone :</strong> <td style="padding:10px 0;">${escapeHtml(client.telephone)}
-        </tr>
-      </table>
-      <div style="margin-top:15px; padding-top:10px; border-top:1px solid #eee;">
-        <button onclick="fillVenteForm('${client.id}')" 
-                style="background:#4CAF50; color:white; border:none; padding:8px 15px; cursor:pointer; border-radius:5px;">
-          🛒 Faire une vente
-        </button>
-        <button onclick="copyToClipboard('${client.id}')" 
-                style="background:#2196F3; color:white; border:none; padding:8px 15px; cursor:pointer; border-radius:5px; margin-left:10px;">
-          📋 Copier l'ID
-        </button>
+      <div class="space-y-1 text-sm">
+        <p><strong>🆔 ID :</strong> ${client.id}</p>
+        <p><strong>👤 Nom :</strong> ${escapeHtml(client.nom)}</p>
+        <p><strong>📞 Téléphone :</strong> ${escapeHtml(client.telephone)}</p>
+      </div>
+      <div class="flex gap-2 mt-3">
+        <button onclick="fillVenteForm('${client.id}')" class="bg-emerald-600 text-white px-3 py-1 rounded text-sm hover:bg-emerald-700 transition">🛒 Faire une vente</button>
+        <button onclick="copyToClipboard('${client.id}')" class="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700 transition">📋 Copier l'ID</button>
       </div>
     </div>
   `;
@@ -242,19 +323,16 @@ function fillVenteForm(clientId) {
     venteClientInput.value = clientId;
     const event = new Event("input", { bubbles: true });
     venteClientInput.dispatchEvent(event);
-    document
-      .querySelector("h2:last-of-type")
-      ?.scrollIntoView({ behavior: "smooth" });
     showTemporaryMessage("✅ ID client pré-rempli !", "venteMessage");
   }
 }
 
 function showLoading(container) {
-  container.innerHTML = `<div style="border:1px solid #2196F3; padding:10px; margin-top:10px; border-radius:5px; background:#e3f2fd;"><span style="color:#2196F3;">⏳ Recherche en cours...</span></div>`;
+  container.innerHTML = `<div class="border border-blue-500 p-3 mt-3 rounded bg-blue-50 text-blue-600">⏳ Recherche en cours...</div>`;
 }
 
 function showError(message, container) {
-  container.innerHTML = `<div style="border:1px solid #ff4444; padding:10px; margin-top:10px; border-radius:5px; background:#ffebee;"><span style="color:#ff4444;">❌ ${message}</span></div>`;
+  container.innerHTML = `<div class="border border-red-500 p-3 mt-3 rounded bg-red-50 text-red-600">❌ ${message}</div>`;
   setTimeout(() => {
     if (container.innerHTML.includes(message)) container.innerHTML = "";
   }, 5000);
@@ -264,9 +342,11 @@ function showTemporaryMessage(message, elementId) {
   const element = document.getElementById(elementId);
   if (element) {
     const originalContent = element.innerHTML;
-    element.innerHTML = `<span style="color:green;">${message}</span>`;
+    element.innerHTML = `<span class="text-emerald-600">${message}</span>`;
     setTimeout(() => {
-      if (element.innerHTML === `<span style="color:green;">${message}</span>`)
+      if (
+        element.innerHTML === `<span class="text-emerald-600">${message}</span>`
+      )
         element.innerHTML = originalContent;
     }, 3000);
   }
@@ -287,49 +367,14 @@ if (clientIdInput) {
 
 const clearButton = document.createElement("button");
 clearButton.textContent = "Effacer";
-clearButton.style.marginLeft = "10px";
-clearButton.style.background = "#666";
-clearButton.style.color = "white";
-clearButton.style.border = "none";
-clearButton.style.padding = "5px 10px";
-clearButton.style.cursor = "pointer";
-clearButton.style.borderRadius = "5px";
+clearButton.className =
+  "bg-gray-500 hover:bg-gray-600 text-white px-3 py-2 rounded-lg transition ml-2";
 clearButton.addEventListener("click", () => {
   if (clientIdInput) clientIdInput.value = "";
   if (resultDiv) resultDiv.innerHTML = "";
   if (clientIdInput) clientIdInput.focus();
 });
 if (button) button.insertAdjacentElement("afterend", clearButton);
-
-let searchHistory = JSON.parse(
-  localStorage.getItem("clientSearchHistory") || "[]",
-);
-function addToHistory(clientId) {
-  if (!searchHistory.includes(clientId) && clientId) {
-    searchHistory.unshift(clientId);
-    searchHistory = searchHistory.slice(0, 5);
-    localStorage.setItem("clientSearchHistory", JSON.stringify(searchHistory));
-    updateHistoryDisplay();
-  }
-}
-function updateHistoryDisplay() {
-  let historyDiv = document.getElementById("searchHistory");
-  if (!historyDiv && resultDiv) {
-    historyDiv = document.createElement("div");
-    historyDiv.id = "searchHistory";
-    historyDiv.style.marginTop = "10px";
-    resultDiv.insertAdjacentElement("afterend", historyDiv);
-  }
-  if (historyDiv && searchHistory.length > 0) {
-    historyDiv.innerHTML = `<div style="margin-top:10px; padding:10px; background:#f5f5f5; border-radius:5px;"><strong>📜 Recherches récentes :</strong><br>${searchHistory.map((id) => `<button onclick="document.getElementById('clientId').value='${id}'; searchClient();" style="margin:5px; padding:5px 10px; background:#2196F3; color:white; border:none; border-radius:3px; cursor:pointer;">ID ${id}</button>`).join("")}</div>`;
-  }
-}
-const originalDisplayClient = displayClient;
-displayClient = function (client) {
-  originalDisplayClient(client);
-  addToHistory(client.id);
-};
-updateHistoryDisplay();
 
 // ============================================
 // MODULE 2: CRÉER UN CLIENT
@@ -396,26 +441,23 @@ async function addClient() {
     }
 
     const data = await response.json();
-    const messageId = "successClient_" + Date.now();
 
     messageDiv.innerHTML = `
-      <div id="${messageId}" style="color:green; border:2px solid #4CAF50; padding:15px; background:#f0fff0; border-radius:8px; margin-top:10px;">
-        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-          <div style="flex:1;">
-            <strong style="font-size:16px;">✅ Client ajouté avec succès !</strong><br><br>
-            <div style="background:#e8f5e9; padding:10px; border-radius:5px; margin:10px 0;">
-              <strong>🆔 ID du client :</strong> <span style="font-size:20px; font-weight:bold; color:#4CAF50;">${data.id}</span>
+      <div class="bg-emerald-50 border border-emerald-500 rounded-lg p-4">
+        <div class="flex justify-between items-start">
+          <div>
+            <strong class="text-emerald-700">✅ Client ajouté avec succès !</strong>
+            <div class="bg-emerald-100 rounded p-2 my-2">
+              <strong>🆔 ID du client :</strong> <span class="font-bold text-emerald-700 text-lg">${data.id}</span>
             </div>
-            <table style="width:100%; border-collapse:collapse;">
-              <tr style="border-bottom:1px solid #ddd;"><td style="padding:8px 0;"><strong>👤 Nom :</strong> <td style="padding:8px 0;">${escapeHtml(nom)}</td></tr>
-              <tr style="border-bottom:1px solid #ddd;"><td style="padding:8px 0;"><strong>📞 Téléphone :</strong> <td style="padding:8px 0;">${escapeHtml(telephone)}</td></tr>
-             </table>
-            <div style="margin-top:15px; padding-top:10px; border-top:1px solid #ddd;">
-              <button onclick="fillVenteFormWithId('${data.id}')" style="background:#4CAF50; color:white; border:none; padding:8px 15px; cursor:pointer; border-radius:5px; margin-right:10px;">🛒 Faire une vente</button>
-              <button onclick="copyToClipboard('${data.id}')" style="background:#2196F3; color:white; border:none; padding:8px 15px; cursor:pointer; border-radius:5px;">📋 Copier l'ID</button>
+            <p><strong>👤 Nom :</strong> ${escapeHtml(nom)}</p>
+            <p><strong>📞 Téléphone :</strong> ${escapeHtml(telephone)}</p>
+            <div class="flex gap-2 mt-3">
+              <button onclick="fillVenteFormWithId('${data.id}')" class="bg-emerald-600 text-white px-3 py-1 rounded text-sm hover:bg-emerald-700 transition">🛒 Faire une vente</button>
+              <button onclick="copyToClipboard('${data.id}')" class="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700 transition">📋 Copier l'ID</button>
             </div>
           </div>
-          <button onclick="document.getElementById('${messageId}').remove()" style="background:#ff4444; color:white; border:none; padding:5px 10px; cursor:pointer; border-radius:5px; font-size:16px;">✕</button>
+          <button onclick="this.parentElement.parentElement.remove()" class="text-gray-400 hover:text-gray-600">✕</button>
         </div>
       </div>
     `;
@@ -426,15 +468,6 @@ async function addClient() {
 
     showTemporaryNotification("✅ Client créé avec succès !");
     loadDashboardStats();
-
-    setTimeout(() => {
-      const clientsNavItem = document.querySelector(
-        '.nav-item[data-section="clients"]',
-      );
-      if (clientsNavItem) {
-        clientsNavItem.click();
-      }
-    }, 100);
   } catch (error) {
     console.error("Erreur création client:", error);
     showErrorMessage(`Erreur lors de l'ajout : ${error.message}`, messageDiv);
@@ -442,16 +475,14 @@ async function addClient() {
 }
 
 function showErrorMessage(message, container) {
-  const errorId = "error_" + Date.now();
-  container.innerHTML = `<div id="${errorId}" style="color:red; border:2px solid #ff4444; padding:10px; background:#ffebee; border-radius:5px; margin-top:10px;"><div style="display:flex; justify-content:space-between; align-items:center;"><span>❌ ${message}</span><button onclick="document.getElementById('${errorId}').remove()" style="background:#ff4444; color:white; border:none; padding:3px 8px; cursor:pointer; border-radius:3px;">✕</button></div></div>`;
+  container.innerHTML = `<div class="bg-red-50 border border-red-500 rounded-lg p-3 text-red-600">❌ ${message}<button onclick="this.parentElement.remove()" class="float-right text-red-400">✕</button></div>`;
   setTimeout(() => {
-    const errorElement = document.getElementById(errorId);
-    if (errorElement) errorElement.remove();
+    if (container.innerHTML.includes(message)) container.innerHTML = "";
   }, 5000);
 }
 
 function showLoadingMessage(container) {
-  container.innerHTML = `<div style="color:blue; border:1px solid #2196F3; padding:10px; background:#e3f2fd; border-radius:5px; margin-top:10px;">⏳ Création en cours...</div>`;
+  container.innerHTML = `<div class="bg-blue-50 border border-blue-500 rounded-lg p-3 text-blue-600">⏳ Création en cours...</div>`;
 }
 
 function fillVenteFormWithId(clientId) {
@@ -460,8 +491,6 @@ function fillVenteFormWithId(clientId) {
     venteClientInput.value = clientId;
     const event = new Event("input", { bubbles: true });
     venteClientInput.dispatchEvent(event);
-    const venteSection = document.querySelector("h2:last-of-type");
-    if (venteSection) venteSection.scrollIntoView({ behavior: "smooth" });
     showTemporaryNotification("✅ ID client pré-rempli !");
   }
 }
@@ -473,73 +502,23 @@ function fillVenteFormWithId(clientId) {
 async function copyToClipboard(text) {
   try {
     await navigator.clipboard.writeText(text.toString());
-    showCopyNotification("✅ ID copié dans le presse-papier !");
+    showCopyNotification("✅ ID copié !");
   } catch (err) {
-    console.error("Erreur de copie (méthode moderne):", err);
-
-    try {
-      const textarea = document.createElement("textarea");
-      textarea.value = text;
-      textarea.style.position = "fixed";
-      textarea.style.left = "-9999px";
-      textarea.style.top = "-9999px";
-      document.body.appendChild(textarea);
-      textarea.select();
-      document.execCommand("copy");
-      document.body.removeChild(textarea);
-      showCopyNotification("✅ ID copié !");
-    } catch (err2) {
-      console.error("Erreur de copie (méthode secours):", err2);
-      showCopyNotification("❌ Impossible de copier l'ID", "error");
-    }
+    console.error("Erreur de copie:", err);
+    showCopyNotification("❌ Impossible de copier l'ID", "error");
   }
 }
 
 function showCopyNotification(message, type = "success") {
   const notification = document.createElement("div");
-  notification.style.position = "fixed";
-  notification.style.bottom = "20px";
-  notification.style.right = "20px";
-  notification.style.backgroundColor =
-    type === "success" ? "#4CAF50" : "#ff4444";
-  notification.style.color = "white";
-  notification.style.padding = "12px 20px";
-  notification.style.borderRadius = "5px";
-  notification.style.zIndex = "9999";
-  notification.style.boxShadow = "0 2px 10px rgba(0,0,0,0.2)";
-  notification.style.fontSize = "14px";
-  notification.style.fontWeight = "bold";
+  notification.className = `fixed bottom-5 right-5 z-50 px-4 py-2 rounded-lg shadow-lg text-white ${type === "success" ? "bg-emerald-600" : "bg-red-600"}`;
   notification.innerHTML = message;
-
   document.body.appendChild(notification);
-
-  setTimeout(() => {
-    notification.style.opacity = "0";
-    notification.style.transform = "translateX(100px)";
-    notification.style.transition = "all 0.3s ease";
-    setTimeout(() => notification.remove(), 300);
-  }, 3000);
+  setTimeout(() => notification.remove(), 2000);
 }
 
-const testButton = document.createElement("button");
-testButton.textContent = "🔧 Téléphone test";
-testButton.style.marginLeft = "10px";
-testButton.style.background = "#FF9800";
-testButton.style.color = "white";
-testButton.style.border = "none";
-testButton.style.padding = "5px 10px";
-testButton.style.cursor = "pointer";
-testButton.style.borderRadius = "5px";
-testButton.addEventListener("click", () => {
-  const randomPhone = `06${Math.floor(Math.random() * 100000000)
-    .toString()
-    .padStart(8, "0")}`;
-  if (telephoneInput) telephoneInput.value = randomPhone;
-});
-if (addBtn) addBtn.insertAdjacentElement("afterend", testButton);
-
 // ============================================
-// MODULE 3: PANIER ET VENTE MULTI-PRODUITS
+// MODULE 3: PANIER ET VENTE
 // ============================================
 
 let panier = [];
@@ -553,27 +532,31 @@ const quantiteInput = document.getElementById("quantite");
 const prixInput = document.getElementById("prix");
 const ajouterPanierBtn = document.getElementById("ajouterPanierBtn");
 
-let updatePrixFunction = null;
+let totalDisplay = null;
 
-const totalDisplay = document.createElement("p");
-totalDisplay.id = "totalDisplay";
-totalDisplay.style.marginTop = "10px";
-totalDisplay.style.fontWeight = "bold";
-if (prixInput) prixInput.insertAdjacentElement("afterend", totalDisplay);
+function initTotalDisplay() {
+  totalDisplay = document.createElement("p");
+  totalDisplay.id = "totalDisplay";
+  totalDisplay.className = "mt-3 text-right font-bold text-emerald-600";
+  if (prixInput) prixInput.insertAdjacentElement("afterend", totalDisplay);
+}
 
 function updateTotal() {
-  const quantite = parseFloat(quantiteInput.value) || 0;
-  const prix = parseFloat(prixInput.value) || 0;
+  const quantite = parseFloat(quantiteInput?.value) || 0;
+  const prix = parseFloat(prixInput?.value) || 0;
   const total = quantite * prix;
   if (totalDisplay) {
-    if (quantite > 0 && prix > 0)
-      totalDisplay.innerHTML = `<span style="color: #4CAF50;">💰 Total : ${formatNumberFC(total)} FC</span>`;
-    else totalDisplay.innerHTML = "";
+    if (quantite > 0 && prix > 0) {
+      totalDisplay.innerHTML = `💰 Total : ${formatNumberFC(total)} FC`;
+    } else {
+      totalDisplay.innerHTML = "";
+    }
   }
 }
 
 if (quantiteInput) quantiteInput.addEventListener("input", updateTotal);
 if (prixInput) prixInput.addEventListener("input", updateTotal);
+initTotalDisplay();
 
 let debounceTimeout;
 if (clientInput) {
@@ -595,17 +578,16 @@ async function afficherClient() {
     );
     if (!response.ok) {
       if (clientInfoDiv)
-        clientInfoDiv.innerHTML = `<span style="color:red; background:#ffebee; padding:5px 10px; border-radius:5px; display:inline-block;">❌ Client introuvable (ID: ${clientId})</span>`;
+        clientInfoDiv.innerHTML = `<span class="text-red-600 text-sm">❌ Client introuvable</span>`;
       return;
     }
     const data = await response.json();
     if (clientInfoDiv) {
-      clientInfoDiv.innerHTML = `<div style="color:green; background:#e8f5e9; padding:8px 12px; border-radius:5px; border-left:4px solid #4CAF50;">✅ <strong>Client trouvé !</strong><br>👤 Nom : <strong>${data.nom}</strong><br>📞 Téléphone : ${data.telephone || "Non renseigné"}<br>🆔 ID : ${data.id}</div>`;
+      clientInfoDiv.innerHTML = `<div class="bg-emerald-50 text-emerald-700 p-3 rounded-lg text-sm">✅ <strong>${escapeHtml(data.nom)}</strong><br>📞 ${data.telephone || "N/A"}<br>🆔 ${data.id}</div>`;
     }
   } catch (error) {
     if (clientInfoDiv)
-      clientInfoDiv.innerHTML = `<span style="color:red; background:#ffebee; padding:5px 10px; border-radius:5px;">❌ Erreur de connexion au serveur</span>`;
-    console.error("Erreur recherche client:", error);
+      clientInfoDiv.innerHTML = `<span class="text-red-600 text-sm">❌ Erreur connexion</span>`;
   }
 }
 
@@ -620,65 +602,54 @@ function ajouterAuPanier() {
   }
 
   const produitNom = produitValue.split("|")[1] || produitValue;
+  const type = produitValue.split("|")[0] || "bouteille";
 
-  panier.push({
-    nom: produitNom,
-    quantite: quantite,
-    prix: prix,
-    type: produitValue.split("|")[0] || "bouteille",
-  });
-
+  panier.push({ nom: produitNom, quantite: quantite, prix: prix, type: type });
   afficherPanier();
 
   quantiteInput.value = "1";
   updateTotal();
-
   showTemporaryNotification(`✅ ${produitNom} ajouté au panier !`);
 }
 
 function afficherPanier() {
   let panierDiv = document.getElementById("panier");
-
-  if (!panierDiv) {
-    panierDiv = document.createElement("div");
-    panierDiv.id = "panier";
-    panierDiv.style.marginTop = "15px";
-    panierDiv.style.padding = "10px";
-    panierDiv.style.border = "1px solid #ddd";
-    panierDiv.style.borderRadius = "5px";
-    panierDiv.style.backgroundColor = "#f9f9f9";
-    if (prixInput) prixInput.insertAdjacentElement("afterend", panierDiv);
-  }
+  if (!panierDiv) return;
 
   if (panier.length === 0) {
-    panierDiv.innerHTML = "";
+    panierDiv.innerHTML =
+      '<div class="text-center text-gray-400 py-4"><i class="fas fa-shopping-cart text-3xl mb-2 block"></i>Panier vide</div>';
     return;
   }
 
   let total = 0;
-  let html = "<h4 style='margin:0 0 10px 0;'>🛒 Panier :</h4>";
-  html += "<div style='max-height:200px; overflow-y:auto;'>";
+  let html = '<div class="space-y-2">';
 
   panier.forEach((item, index) => {
     const sousTotal = item.prix * item.quantite;
     total += sousTotal;
     const typeLabel = item.type === "cassier" ? "📦 Cassier" : "🍾 Bouteille";
+    const typeClass =
+      item.type === "cassier"
+        ? "bg-orange-100 text-orange-700"
+        : "bg-blue-100 text-blue-700";
 
     html += `
-      <div style="display:flex; justify-content:space-between; align-items:center; padding:5px; border-bottom:1px solid #eee;">
-        <span><span class="type-badge ${item.type === "cassier" ? "cassier" : "bouteille"}">${typeLabel}</span> <strong>${escapeHtml(item.nom)}</strong> - ${item.quantite} x ${formatNumberFC(item.prix)} FC = ${formatNumberFC(sousTotal)} FC</span>
-        <button onclick="supprimerDuPanier(${index})" style="background:#ff4444; color:white; border:none; padding:3px 8px; cursor:pointer; border-radius:3px;">
-          ❌
-        </button>
+      <div class="flex justify-between items-center p-3 bg-white rounded-lg border border-gray-100">
+        <div class="flex-1">
+          <span class="inline-block px-2 py-0.5 rounded text-xs font-medium ${typeClass} mr-2">${typeLabel}</span>
+          <span class="font-medium">${escapeHtml(item.nom)}</span>
+          <div class="text-sm text-gray-500">${item.quantite} x ${formatNumberFC(item.prix)} FC</div>
+        </div>
+        <div class="text-right">
+          <div class="font-bold text-emerald-600">${formatNumberFC(sousTotal)} FC</div>
+          <button onclick="supprimerDuPanier(${index})" class="text-red-500 hover:text-red-700 text-sm mt-1">❌ Supprimer</button>
+        </div>
       </div>
     `;
   });
 
-  html += "</div>";
-  html += `<div style="margin-top:10px; padding-top:10px; border-top:2px solid #ddd; text-align:right;">
-            <strong>Total panier : ${formatNumberFC(total)} FC</strong>
-           </div>`;
-
+  html += `</div><div class="mt-4 pt-3 border-t text-right"><strong class="text-lg">Total : ${formatNumberFC(total)} FC</strong></div>`;
   panierDiv.innerHTML = html;
 }
 
@@ -702,21 +673,24 @@ async function addVente() {
     return;
   }
 
-  message.innerHTML = `<div style="color:blue; border:1px solid blue; padding:10px; background:#e3f2fd; border-radius:5px;">⏳ Enregistrement en cours...</div>`;
+  message.innerHTML =
+    '<div class="bg-blue-50 text-blue-600 p-3 rounded-lg">⏳ Enregistrement en cours...</div>';
 
   try {
     const clientResponse = await fetch(
       `http://localhost:4000/clients/${String(clientId)}`,
     );
     if (!clientResponse.ok) {
-      message.innerHTML = `<div style="color:red; border:1px solid red; padding:10px; background:#ffebee; border-radius:5px;">❌ Client introuvable (ID: ${clientId})</div>`;
+      message.innerHTML =
+        '<div class="bg-red-50 text-red-600 p-3 rounded-lg">❌ Client introuvable</div>';
       return;
     }
     const clientData = await clientResponse.json();
 
-    const total = panier.reduce((sum, item) => {
-      return sum + item.prix * item.quantite;
-    }, 0);
+    const total = panier.reduce(
+      (sum, item) => sum + item.prix * item.quantite,
+      0,
+    );
 
     const response = await fetch("http://localhost:4000/ventes", {
       method: "POST",
@@ -730,38 +704,21 @@ async function addVente() {
     });
 
     const data = await response.json();
-
     genererFacturePanier(data, clientData);
 
     panier = [];
     afficherPanier();
 
-    const messageId = "successVente_" + Date.now();
-    const dateAffichage = new Date(data.date).toLocaleString();
-
-    message.innerHTML = `<div id="${messageId}" style="color:green; border:2px solid green; padding:15px; background:#f0fff0; border-radius:8px; margin-top:10px;">
-      <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-        <div style="flex:1;">
-          <strong style="font-size:18px;">✅ Vente enregistrée avec succès !</strong><br><br>
-          <strong>🧾 ID Vente :</strong> ${data.id}<br>
-          <strong>👤 Client :</strong> ${clientData.nom} (ID: ${clientData.id})<br>
-          <strong>📦 Produits :</strong><br>
-          ${afficherProduitsHtml(data.produits)}
-          <strong>💰 Total :</strong> <strong style="color:#4CAF50;">${formatNumberFC(total)} FC</strong><br>
-          <strong>🕒 Date :</strong> ${dateAffichage}
-        </div>
-        <button onclick="document.getElementById('${messageId}').remove()" 
-                style="background:#ff4444; color:white; border:none; padding:8px 12px; cursor:pointer; border-radius:5px; font-size:16px;">
-          ✕
-        </button>
-      </div>
-    </div>`;
-
+    message.innerHTML = `<div class="bg-emerald-50 text-emerald-700 p-4 rounded-lg">✅ Vente enregistrée ! ID: ${data.id}<br>💰 Total: ${formatNumberFC(total)} FC</div>`;
     clientInput.focus();
     loadDashboardStats();
+
+    setTimeout(() => {
+      if (message.innerHTML.includes("Vente enregistrée"))
+        message.innerHTML = "";
+    }, 5000);
   } catch (error) {
-    message.innerHTML = `<div style="color:red; border:1px solid red; padding:10px; background:#ffebee; border-radius:5px;">❌ Erreur lors de la vente : ${error.message}</div>`;
-    console.error("Erreur vente:", error);
+    message.innerHTML = `<div class="bg-red-50 text-red-600 p-3 rounded-lg">❌ Erreur: ${error.message}</div>`;
   }
 }
 
@@ -775,11 +732,9 @@ function afficherProduitsHtml(produits) {
     .join("");
 }
 
-if (ajouterPanierBtn) {
+if (ajouterPanierBtn)
   ajouterPanierBtn.addEventListener("click", ajouterAuPanier);
-}
 if (venteBtn) venteBtn.addEventListener("click", addVente);
-
 if (clientInput) {
   clientInput.addEventListener("keypress", function (e) {
     if (e.key === "Enter") {
@@ -790,80 +745,21 @@ if (clientInput) {
 }
 
 // ============================================
-// MODULE 4: HISTORIQUE DES VENTES
+// MODULE 4: HISTORIQUE
 // ============================================
 
 const showHistoriqueBtn = document.getElementById("showHistoriqueBtn");
 const historiqueClientId = document.getElementById("historiqueClientId");
 const historiqueMessage = document.getElementById("historiqueMessage");
 const historiqueTable = document.getElementById("historiqueTable");
-let tbody = historiqueTable ? historiqueTable.querySelector("tbody") : null;
-
-if (historiqueTable && !tbody) {
-  tbody = document.createElement("tbody");
-  historiqueTable.appendChild(tbody);
-}
+const historiqueTableBody = document.getElementById("historiqueTableBody");
 
 let currentClientId = null;
 let ventesOriginales = [];
-
-const filterContainer = document.createElement("div");
-filterContainer.style.marginTop = "10px";
-filterContainer.style.marginBottom = "10px";
-filterContainer.style.padding = "10px";
-filterContainer.style.backgroundColor = "#f5f5f5";
-filterContainer.style.borderRadius = "5px";
-filterContainer.style.display = "none";
-filterContainer.id = "filterContainer";
-filterContainer.innerHTML = `
-  <strong>🔍 Filtrer les ventes :</strong><br>
-  <label style="margin-right: 10px;"><input type="radio" name="filterType" value="all" checked> Toutes</label>
-  <label style="margin-right: 10px;"><input type="radio" name="filterType" value="today"> Aujourd'hui</label>
-  <label style="margin-right: 10px;"><input type="radio" name="filterType" value="week"> Cette semaine</label>
-  <label style="margin-right: 10px;"><input type="radio" name="filterType" value="month"> Ce mois</label>
-  <button id="applyFilterBtn" style="margin-left: 10px; padding: 5px 10px; background: #2196F3; color: white; border: none; border-radius: 3px; cursor: pointer;">Appliquer</button>
-`;
-if (historiqueTable)
-  historiqueTable.insertAdjacentElement("afterend", filterContainer);
-
-const exportBtn = document.createElement("button");
-exportBtn.textContent = "📥 Exporter en CSV";
-exportBtn.style.marginLeft = "10px";
-exportBtn.style.background = "#FF9800";
-exportBtn.style.color = "white";
-exportBtn.style.border = "none";
-exportBtn.style.padding = "8px 15px";
-exportBtn.style.cursor = "pointer";
-exportBtn.style.borderRadius = "5px";
-if (showHistoriqueBtn)
-  showHistoriqueBtn.insertAdjacentElement("afterend", exportBtn);
-
-const factureMensuelleBtn = document.createElement("button");
-factureMensuelleBtn.textContent = "🧾 Facture mensuelle";
-factureMensuelleBtn.style.marginLeft = "10px";
-factureMensuelleBtn.style.background = "#9C27B0";
-factureMensuelleBtn.style.color = "white";
-factureMensuelleBtn.style.border = "none";
-factureMensuelleBtn.style.padding = "8px 15px";
-factureMensuelleBtn.style.cursor = "pointer";
-factureMensuelleBtn.style.borderRadius = "5px";
-factureMensuelleBtn.addEventListener("click", () => {
-  if (ventesOriginales && ventesOriginales.length > 0 && currentClientId) {
-    fetch(`http://localhost:4000/clients/${currentClientId}`)
-      .then((res) => res.json())
-      .then((client) => {
-        genererFactureMensuelleMulti(ventesOriginales, client);
-      });
-  } else {
-    showTemporaryNotification("❌ Aucune vente trouvée pour ce client");
-  }
-});
-if (showHistoriqueBtn)
-  showHistoriqueBtn.insertAdjacentElement("afterend", factureMensuelleBtn);
+let currentClientData = null;
 
 if (showHistoriqueBtn)
   showHistoriqueBtn.addEventListener("click", afficherHistorique);
-if (exportBtn) exportBtn.addEventListener("click", exportToCSV);
 if (historiqueClientId) {
   historiqueClientId.addEventListener("keypress", function (e) {
     if (e.key === "Enter") {
@@ -873,96 +769,44 @@ if (historiqueClientId) {
   });
 }
 
-function parseDate(dateString) {
-  if (!dateString) return new Date(0);
-  let date = new Date(dateString);
-  if (isNaN(date.getTime())) {
-    const parts = dateString.match(
-      /(\d{1,2})\/(\d{1,2})\/(\d{4})\s?(\d{1,2})?:?(\d{2})?:?(\d{2})?/,
-    );
-    if (parts) {
-      const [_, day, month, year, hour = 0, minute = 0, second = 0] = parts;
-      date = new Date(year, month - 1, day, hour, minute, second);
-    }
+function showClientInfo(clientData) {
+  let infoDiv = document.getElementById("clientInfoHistorique");
+  if (!infoDiv) {
+    infoDiv = document.createElement("div");
+    infoDiv.id = "clientInfoHistorique";
+    infoDiv.className = "bg-emerald-50 p-3 rounded-lg mb-4";
+    if (historiqueMessage)
+      historiqueMessage.insertAdjacentElement("afterend", infoDiv);
   }
-  return date;
+  infoDiv.innerHTML = `<strong>👤 Client :</strong> ${escapeHtml(clientData.nom)} (ID: ${clientData.id})<br>📞 ${escapeHtml(clientData.telephone)}`;
 }
 
-function nettoyerVente(vente) {
-  let produitsListe = [];
-  let total = Number(vente.total) || 0;
-
-  if (
-    vente.produits &&
-    Array.isArray(vente.produits) &&
-    vente.produits.length > 0
-  ) {
-    produitsListe = vente.produits
-      .filter((p) => {
-        return (
-          p &&
-          p.nom &&
-          typeof p.quantite === "number" &&
-          typeof p.prix === "number" &&
-          !isNaN(p.prix) &&
-          p.prix > 0
-        );
-      })
-      .map((p) => ({
-        nom: p.nom,
-        quantite: p.quantite,
-        prix: p.prix,
-      }));
-
-    if (produitsListe.length > 0) {
-      total = produitsListe.reduce((sum, p) => sum + p.prix * p.quantite, 0);
-    }
-  } else if (
-    vente.produit &&
-    vente.quantite &&
-    vente.prix &&
-    !isNaN(vente.prix) &&
-    vente.prix > 0
-  ) {
-    produitsListe = [
-      {
-        nom: vente.produit,
-        quantite: Number(vente.quantite),
-        prix: Number(vente.prix),
-      },
-    ];
-    total = vente.prix * vente.quantite;
-  } else if (total > 0 && !produitsListe.length) {
-    produitsListe = [
-      {
-        nom: "Produit (données manquantes)",
-        quantite: 1,
-        prix: total,
-      },
-    ];
+function showMessage(msg, color) {
+  if (historiqueMessage) {
+    const colorClass =
+      color === "red"
+        ? "text-red-600"
+        : color === "green"
+          ? "text-emerald-600"
+          : "text-blue-600";
+    historiqueMessage.innerHTML = `<span class="${colorClass}">${msg}</span>`;
   }
-
-  return { produits: produitsListe, total: total };
 }
 
-function afficherProduitsListe(produits) {
-  if (!produits || produits.length === 0) return "Aucun produit";
-  return `
-    <ul style="margin: 0; padding-left: 20px; text-align: left;">
-      ${produits
-        .map(
-          (p) => `
-        <li style="margin: 2px 0;">${escapeHtml(p.nom)} - ${p.quantite} x ${formatNumberFC(p.prix)} FC</li>
-      `,
-        )
-        .join("")}
-    </ul>
-  `;
+function resetDisplay() {
+  if (historiqueTableBody) historiqueTableBody.innerHTML = "";
+  if (historiqueTable) historiqueTable.classList.add("hidden");
+  if (historiqueMessage) historiqueMessage.innerHTML = "";
+  const infoDiv = document.getElementById("clientInfoHistorique");
+  if (infoDiv) infoDiv.remove();
+  const filterContainer = document.getElementById("filterContainer");
+  if (filterContainer) filterContainer.remove();
+  const actionButtons = document.querySelector(".action-buttons-container");
+  if (actionButtons) actionButtons.remove();
 }
 
 async function afficherHistorique() {
   const clientId = historiqueClientId.value.trim();
-
   resetDisplay();
 
   if (!clientId) {
@@ -970,169 +814,156 @@ async function afficherHistorique() {
     return;
   }
 
-  showMessage("⏳ Chargement de l'historique...", "blue");
+  showMessage("⏳ Chargement...", "blue");
 
   try {
-    const clientIdStr = String(clientId);
-
     const clientResponse = await fetch(
-      `http://localhost:4000/clients/${clientIdStr}`,
+      `http://localhost:4000/clients/${String(clientId)}`,
     );
-
     if (!clientResponse.ok) {
-      if (clientResponse.status === 404) {
-        showMessage(`❌ Client avec l'ID ${clientId} non trouvé`, "red");
-      } else {
-        showMessage(`❌ Erreur serveur (${clientResponse.status})`, "red");
-      }
+      showMessage(`❌ Client avec l'ID ${clientId} non trouvé`, "red");
       return;
     }
 
     const clientData = await clientResponse.json();
     currentClientId = clientId;
-
+    currentClientData = clientData;
     showClientInfo(clientData);
 
-    let ventes = [];
-
-    try {
-      const allVentesResponse = await fetch(`http://localhost:4000/ventes`);
-      const allVentes = await allVentesResponse.json();
-
-      ventes = allVentes.filter((v) => String(v.clientId) === clientIdStr);
-    } catch (error) {
-      console.error("Erreur lors de la récupération des ventes:", error);
-      ventes = [];
-    }
+    const allVentesResponse = await fetch(`http://localhost:4000/ventes`);
+    const allVentes = await allVentesResponse.json();
+    const ventes = allVentes.filter(
+      (v) => String(v.clientId) === String(clientId),
+    );
 
     if (ventes.length === 0) {
-      showMessage(
-        `📭 Aucune vente trouvée pour ${clientData.nom} (ID: ${clientId})`,
-        "blue",
-      );
-      filterContainer.style.display = "none";
-      calculerTotalMensuelMulti(ventes);
+      showMessage(`📭 Aucune vente pour ${clientData.nom}`, "blue");
       return;
     }
 
     ventesOriginales = ventes;
-
     displayVentesMulti(ventes, clientData);
-    filterContainer.style.display = "block";
-
-    const applyFilterBtn = document.getElementById("applyFilterBtn");
-    if (applyFilterBtn) {
-      const newBtn = applyFilterBtn.cloneNode(true);
-      applyFilterBtn.parentNode.replaceChild(newBtn, applyFilterBtn);
-      newBtn.addEventListener("click", () =>
-        appliquerFiltreMulti(ventes, clientData),
-      );
-    }
+    showMessage(`✅ ${ventes.length} vente(s) trouvée(s)`, "green");
   } catch (error) {
-    console.error("Erreur historique:", error);
-    showMessage(
-      "❌ Erreur lors de la récupération des ventes. Vérifiez votre connexion.",
-      "red",
-    );
-    filterContainer.style.display = "none";
+    showMessage("❌ Erreur de connexion", "red");
   }
 }
 
 function displayVentesMulti(ventes, clientData) {
-  if (!tbody && historiqueTable) {
-    tbody = historiqueTable.querySelector("tbody");
-    if (!tbody) {
-      tbody = document.createElement("tbody");
-      historiqueTable.appendChild(tbody);
-    }
-  }
+  if (!historiqueTableBody) return;
 
-  if (tbody) tbody.innerHTML = "";
+  historiqueTableBody.innerHTML = "";
   let totalQuantite = 0;
   let totalPrix = 0;
 
-  const ventesTriees = [...ventes].sort(
-    (a, b) => parseDate(b.date) - parseDate(a.date),
-  );
+  ventes
+    .sort((a, b) => parseDate(b.date) - parseDate(a.date))
+    .forEach((v, index) => {
+      const venteNettoyee = nettoyerVente(v);
+      const produitsListe = venteNettoyee.produits;
+      const total = venteNettoyee.total;
+      let quantiteTotale = produitsListe.reduce(
+        (sum, p) => sum + p.quantite,
+        0,
+      );
+      const prixMoyen = quantiteTotale > 0 ? total / quantiteTotale : 0;
 
-  ventesTriees.forEach((v, index) => {
-    const venteNettoyee = nettoyerVente(v);
-    const produitsListe = venteNettoyee.produits;
-    const total = venteNettoyee.total;
+      if (isNaN(total) || !isFinite(total)) return;
 
-    let quantiteTotale = produitsListe.reduce((sum, p) => sum + p.quantite, 0);
-    const prixMoyen = quantiteTotale > 0 ? total / quantiteTotale : 0;
+      const row = document.createElement("tr");
+      row.className = index % 2 === 0 ? "bg-gray-50" : "";
 
-    if (isNaN(total) || !isFinite(total)) {
-      console.warn(`Vente ${v.id} a un total invalide, ignorée`);
-      return;
-    }
-
-    const tr = document.createElement("tr");
-    tr.style.borderBottom = "1px solid #ddd";
-
-    if (index % 2 === 0) tr.style.backgroundColor = "#f9f9f9";
-
-    const btnDetailsId = `details_btn_${v.id}_${Date.now()}_${index}`;
-    const btnFactureId = `facture_btn_${v.id}_${Date.now()}_${index}`;
-
-    tr.innerHTML = `
-      <td style="padding: 8px; text-align: center;">${v.id}</td>
-      <td style="padding: 8px; text-align: left;">${afficherProduitsListe(produitsListe)}</td>
-      <td style="padding: 8px; text-align: center;">${quantiteTotale}</td>
-      <td style="padding: 8px; text-align: right;">${formatNumberFC(prixMoyen)} FC</td>
-      <td style="padding: 8px; text-align: right; font-weight: bold; color: #4CAF50;">
-        ${formatNumberFC(total)} FC
-       </td>
-      <td style="padding: 8px;">${formatDate(v.date)}</td>
-      <td style="padding: 8px; text-align: center;">
-        <button id="${btnDetailsId}" style="background: #2196F3; color: white; border: none; padding: 5px 8px; cursor: pointer; border-radius: 3px; font-size: 11px;">
-          📄 Détails
-        </button>
-        <button id="${btnFactureId}" style="background: #4CAF50; color: white; border: none; padding: 5px 8px; cursor: pointer; border-radius: 3px; font-size: 11px; margin-left: 3px;">
-          🧾 Facture
-        </button>
-        </td>
+      row.innerHTML = `
+      <td class="px-4 py-3 text-sm">${v.id}</td>
+      <td class="px-4 py-3 text-sm">${afficherProduitsListe(produitsListe)}</td>
+      <td class="px-4 py-3 text-sm text-center">${quantiteTotale}</td>
+      <td class="px-4 py-3 text-sm text-right">${formatNumberFC(prixMoyen)} FC</td>
+      <td class="px-4 py-3 text-sm text-right font-bold text-emerald-600">${formatNumberFC(total)} FC</td>
+      <td class="px-4 py-3 text-sm">${formatDate(v.date)}</td>
+      <td class="px-4 py-3 text-sm text-center">
+        <button onclick="showVenteDetails(${v.id})" class="bg-blue-600 text-white px-2 py-1 rounded text-xs hover:bg-blue-700 transition mr-1">📄 Détails</button>
+        <button onclick="genererFacturePanier(venteNettoyee, clientData)" class="bg-emerald-600 text-white px-2 py-1 rounded text-xs hover:bg-emerald-700 transition">🧾 Facture</button>
+      </td>
     `;
+      historiqueTableBody.appendChild(row);
 
-    if (tbody) tbody.appendChild(tr);
+      totalQuantite += quantiteTotale;
+      totalPrix += total;
+    });
 
-    const detailsBtn = document.getElementById(btnDetailsId);
-    if (detailsBtn) {
-      detailsBtn.addEventListener("click", () => {
-        showVenteDetailsMulti(v.id);
-      });
-    }
+  document.getElementById("totalQuantite").textContent = totalQuantite;
+  document.getElementById("totalPrix").textContent =
+    formatNumberFC(totalPrix) + " FC";
+  historiqueTable.classList.remove("hidden");
 
-    const factureBtn = document.getElementById(btnFactureId);
-    if (factureBtn) {
-      factureBtn.addEventListener("click", () => {
-        genererFacturePanier(venteNettoyee, clientData);
-      });
-    }
+  // Ajouter les filtres
+  let filterContainer = document.getElementById("filterContainer");
+  if (!filterContainer) {
+    filterContainer = document.createElement("div");
+    filterContainer.id = "filterContainer";
+    filterContainer.className =
+      "mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200";
+    filterContainer.innerHTML = `
+      <strong class="text-gray-700">🔍 Filtrer les ventes :</strong>
+      <div class="flex flex-wrap gap-3 mt-2">
+        <label class="inline-flex items-center gap-2">
+          <input type="radio" name="filterType" value="all" checked class="text-emerald-600"> Toutes
+        </label>
+        <label class="inline-flex items-center gap-2">
+          <input type="radio" name="filterType" value="today" class="text-emerald-600"> Aujourd'hui
+        </label>
+        <label class="inline-flex items-center gap-2">
+          <input type="radio" name="filterType" value="week" class="text-emerald-600"> Cette semaine
+        </label>
+        <label class="inline-flex items-center gap-2">
+          <input type="radio" name="filterType" value="month" class="text-emerald-600"> Ce mois
+        </label>
+        <button id="applyFilterBtn" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-1 rounded-lg transition text-sm">Appliquer</button>
+      </div>
+    `;
+    const historiqueContainer =
+      document.getElementById("historiqueTable").parentElement;
+    historiqueContainer.appendChild(filterContainer);
+  }
 
-    totalQuantite += quantiteTotale;
-    totalPrix += total;
-  });
+  const applyFilterBtn = document.getElementById("applyFilterBtn");
+  if (applyFilterBtn) {
+    const newBtn = applyFilterBtn.cloneNode(true);
+    applyFilterBtn.parentNode.replaceChild(newBtn, applyFilterBtn);
+    newBtn.addEventListener("click", () => appliquerFiltre(ventes, clientData));
+  }
 
-  const totalQuantiteSpan = document.getElementById("totalQuantite");
-  const totalPrixSpan = document.getElementById("totalPrix");
+  // Ajouter les boutons CSV et Facture mensuelle
+  const existingButtons = document.querySelector(".action-buttons-container");
+  if (existingButtons) existingButtons.remove();
 
-  if (totalQuantiteSpan) totalQuantiteSpan.textContent = totalQuantite;
-  if (totalPrixSpan)
-    totalPrixSpan.textContent = formatNumberFC(totalPrix) + " FC";
+  const actionButtons = document.createElement("div");
+  actionButtons.className =
+    "action-buttons-container flex gap-3 mt-4 justify-end";
 
-  if (historiqueTable) historiqueTable.style.display = "table";
+  const csvBtn = document.createElement("button");
+  csvBtn.className =
+    "bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg transition flex items-center gap-2";
+  csvBtn.innerHTML = '<i class="fas fa-download"></i> Exporter CSV';
+  csvBtn.onclick = () => exportToCSV(ventes, clientData);
 
-  calculerTotalMensuelMulti(ventes);
+  const factureMensuelleBtn = document.createElement("button");
+  factureMensuelleBtn.className =
+    "bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg transition flex items-center gap-2";
+  factureMensuelleBtn.innerHTML =
+    '<i class="fas fa-file-invoice"></i> Facture mensuelle';
+  factureMensuelleBtn.onclick = () =>
+    genererFactureMensuelleMulti(ventes, clientData);
 
-  showMessage(
-    `✅ ${ventes.length} vente(s) trouvée(s) pour <strong>${escapeHtml(clientData.nom)}</strong>`,
-    "green",
-  );
+  actionButtons.appendChild(csvBtn);
+  actionButtons.appendChild(factureMensuelleBtn);
+
+  const historiqueContainer =
+    document.getElementById("historiqueTable").parentElement;
+  historiqueContainer.appendChild(actionButtons);
 }
 
-function appliquerFiltreMulti(ventesOriginales, clientData) {
+function appliquerFiltre(ventesOriginales, clientData) {
   const filterType = document.querySelector(
     'input[name="filterType"]:checked',
   ).value;
@@ -1141,9 +972,10 @@ function appliquerFiltreMulti(ventesOriginales, clientData) {
 
   switch (filterType) {
     case "today":
-      ventesFiltrees = ventesOriginales.filter(
-        (v) => parseDate(v.date).toDateString() === now.toDateString(),
-      );
+      ventesFiltrees = ventesOriginales.filter((v) => {
+        const dateVente = parseDate(v.date);
+        return dateVente.toDateString() === now.toDateString();
+      });
       break;
     case "week":
       const weekAgo = new Date();
@@ -1157,11 +989,11 @@ function appliquerFiltreMulti(ventesOriginales, clientData) {
       const currentYear = now.getFullYear();
       const currentMonth = now.getMonth();
       ventesFiltrees = ventesOriginales.filter((v) => {
-        const vDate = parseDate(v.date);
-        if (isNaN(vDate.getTime())) return false;
+        const dateVente = parseDate(v.date);
+        if (isNaN(dateVente.getTime())) return false;
         return (
-          vDate.getMonth() === currentMonth &&
-          vDate.getFullYear() === currentYear
+          dateVente.getMonth() === currentMonth &&
+          dateVente.getFullYear() === currentYear
         );
       });
       break;
@@ -1171,15 +1003,51 @@ function appliquerFiltreMulti(ventesOriginales, clientData) {
 
   if (ventesFiltrees.length === 0) {
     showMessage(`📭 Aucune vente trouvée pour cette période`, "blue");
-    if (tbody) tbody.innerHTML = "";
-    const totalQuantiteSpan = document.getElementById("totalQuantite");
-    const totalPrixSpan = document.getElementById("totalPrix");
-    if (totalQuantiteSpan) totalQuantiteSpan.textContent = "0";
-    if (totalPrixSpan) totalPrixSpan.textContent = "0 FC";
-    if (historiqueTable) historiqueTable.style.display = "table";
-    calculerTotalMensuelMulti([]);
+    if (historiqueTableBody) historiqueTableBody.innerHTML = "";
+    document.getElementById("totalQuantite").textContent = "0";
+    document.getElementById("totalPrix").textContent = "0 FC";
   } else {
-    displayVentesMulti(ventesFiltrees, clientData);
+    historiqueTableBody.innerHTML = "";
+    let totalQuantite = 0;
+    let totalPrix = 0;
+
+    ventesFiltrees
+      .sort((a, b) => parseDate(b.date) - parseDate(a.date))
+      .forEach((v, index) => {
+        const venteNettoyee = nettoyerVente(v);
+        const produitsListe = venteNettoyee.produits;
+        const total = venteNettoyee.total;
+        let quantiteTotale = produitsListe.reduce(
+          (sum, p) => sum + p.quantite,
+          0,
+        );
+        const prixMoyen = quantiteTotale > 0 ? total / quantiteTotale : 0;
+
+        if (isNaN(total) || !isFinite(total)) return;
+
+        const row = document.createElement("tr");
+        row.className = index % 2 === 0 ? "bg-gray-50" : "";
+        row.innerHTML = `
+        <td class="px-4 py-3 text-sm">${v.id}</td>
+        <td class="px-4 py-3 text-sm">${afficherProduitsListe(produitsListe)}</td>
+        <td class="px-4 py-3 text-sm text-center">${quantiteTotale}</td>
+        <td class="px-4 py-3 text-sm text-right">${formatNumberFC(prixMoyen)} FC</td>
+        <td class="px-4 py-3 text-sm text-right font-bold text-emerald-600">${formatNumberFC(total)} FC</td>
+        <td class="px-4 py-3 text-sm">${formatDate(v.date)}</td>
+        <td class="px-4 py-3 text-sm text-center">
+          <button onclick="showVenteDetails(${v.id})" class="bg-blue-600 text-white px-2 py-1 rounded text-xs hover:bg-blue-700 transition mr-1">📄 Détails</button>
+          <button onclick="genererFacturePanier(venteNettoyee, clientData)" class="bg-emerald-600 text-white px-2 py-1 rounded text-xs hover:bg-emerald-700 transition">🧾 Facture</button>
+        </td>
+      `;
+        historiqueTableBody.appendChild(row);
+
+        totalQuantite += quantiteTotale;
+        totalPrix += total;
+      });
+
+    document.getElementById("totalQuantite").textContent = totalQuantite;
+    document.getElementById("totalPrix").textContent =
+      formatNumberFC(totalPrix) + " FC";
     showMessage(
       `✅ ${ventesFiltrees.length} vente(s) trouvée(s) pour cette période`,
       "green",
@@ -1187,403 +1055,142 @@ function appliquerFiltreMulti(ventesOriginales, clientData) {
   }
 }
 
-function showClientInfo(clientData) {
-  let infoDiv = document.getElementById("clientInfoHistorique");
-
-  if (!infoDiv) {
-    infoDiv = document.createElement("div");
-    infoDiv.id = "clientInfoHistorique";
-    infoDiv.style.marginTop = "10px";
-    infoDiv.style.marginBottom = "10px";
-    infoDiv.style.padding = "10px";
-    infoDiv.style.backgroundColor = "#e8f5e9";
-    infoDiv.style.borderRadius = "5px";
-    infoDiv.style.borderLeft = "4px solid #4CAF50";
-    if (historiqueMessage)
-      historiqueMessage.insertAdjacentElement("afterend", infoDiv);
-  }
-
-  infoDiv.innerHTML = `
-    <strong>👤 Client sélectionné :</strong><br>
-    🆔 ID: ${clientData.id}<br>
-    📛 Nom: ${escapeHtml(clientData.nom)}<br>
-    📞 Téléphone: ${escapeHtml(clientData.telephone)}
-  `;
-}
-
-async function showVenteDetailsMulti(venteId) {
+async function showVenteDetails(venteId) {
   try {
-    showMessage("⏳ Chargement des détails...", "blue");
     const response = await fetch(`http://localhost:4000/ventes/${venteId}`);
     if (!response.ok) throw new Error("Vente non trouvée");
     const vente = await response.json();
 
-    const existingModal = document.getElementById("venteDetails");
-    const existingOverlay = document.getElementById("overlay");
-    if (existingModal) existingModal.remove();
-    if (existingOverlay) existingOverlay.remove();
-
-    let clientInfo = "";
-    try {
-      const clientResponse = await fetch(
-        `http://localhost:4000/clients/${String(vente.clientId)}`,
-      );
-      if (clientResponse.ok) {
-        const client = await clientResponse.json();
-        clientInfo = `<p><strong>👤 Client :</strong> ${escapeHtml(client.nom)} (ID: ${client.id})</p>`;
-      }
-    } catch (e) {
-      console.error("Erreur récupération client:", e);
-    }
+    const clientResponse = await fetch(
+      `http://localhost:4000/clients/${String(vente.clientId)}`,
+    );
+    const client = clientResponse.ok ? await clientResponse.json() : null;
 
     const venteNettoyee = nettoyerVente(vente);
     const produits = venteNettoyee.produits;
     const total = venteNettoyee.total;
 
-    let produitsHtml =
-      "<p><strong>📦 Produits :</strong></p><ul style='margin-top: 0;'>";
-    let totalArticles = 0;
+    let produitsHtml = produits
+      .map(
+        (p) =>
+          `<li>${escapeHtml(p.nom)} : ${p.quantite} x ${formatNumberFC(p.prix)} FC = ${formatNumberFC(p.prix * p.quantite)} FC</li>`,
+      )
+      .join("");
+    let totalArticles = produits.reduce((sum, p) => sum + p.quantite, 0);
 
-    produits.forEach((p) => {
-      produitsHtml += `<li>${escapeHtml(p.nom)} : ${p.quantite} x ${formatNumberFC(p.prix)} FC = ${formatNumberFC(p.prix * p.quantite)} FC</li>`;
-      totalArticles += p.quantite;
-    });
-    produitsHtml += "</ul>";
-
-    const detailsHtml = `
-      <div id="venteDetails" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 25px; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); z-index: 1000; max-width: 500px; width: 90%;">
-        <h3 style="margin-top: 0; color: #4CAF50;">📋 Détails de la vente</h3>
-        <hr>
-        <p><strong>🆔 ID Vente :</strong> ${vente.id}</p>
-        ${clientInfo}
-        ${produitsHtml}
-        <p><strong>📊 Nombre total d'articles :</strong> ${totalArticles}</p>
-        <p><strong>💰 Total :</strong> <strong style="color: #4CAF50;">${formatNumberFC(total)} FC</strong></p>
-        <p><strong>📅 Date :</strong> ${formatDate(vente.date)}</p>
-        <hr>
-        <div style="display: flex; gap: 10px; justify-content: flex-end;">
-          <button id="closeDetailsBtn" style="background: #4CAF50; color: white; border: none; padding: 8px 20px; cursor: pointer; border-radius: 5px;">Fermer</button>
+    const modal = document.createElement("div");
+    modal.className =
+      "fixed inset-0 bg-black/50 z-50 flex items-center justify-center";
+    modal.innerHTML = `
+      <div class="bg-white rounded-xl shadow-xl max-w-md w-full mx-4">
+        <div class="px-6 py-4 border-b">
+          <h3 class="text-lg font-semibold">📋 Détails de la vente</h3>
+        </div>
+        <div class="p-6 space-y-2 text-sm">
+          <p><strong>🆔 ID Vente :</strong> ${vente.id}</p>
+          ${client ? `<p><strong>👤 Client :</strong> ${escapeHtml(client.nom)} (ID: ${client.id})</p>` : ""}
+          <p><strong>📦 Produits :</strong></p>
+          <ul class="list-disc pl-5">${produitsHtml}</ul>
+          <p><strong>📊 Total articles :</strong> ${totalArticles}</p>
+          <p><strong>💰 Total :</strong> <span class="font-bold text-emerald-600">${formatNumberFC(total)} FC</span></p>
+          <p><strong>📅 Date :</strong> ${formatDate(vente.date)}</p>
+        </div>
+        <div class="px-6 py-4 border-t flex justify-end">
+          <button onclick="this.closest('.fixed').remove()" class="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition">Fermer</button>
         </div>
       </div>
-      <div id="overlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 999;"></div>
     `;
-    document.body.insertAdjacentHTML("beforeend", detailsHtml);
-
-    const overlay = document.getElementById("overlay");
-    if (overlay) {
-      overlay.addEventListener("click", function () {
-        const modal = document.getElementById("venteDetails");
-        if (modal) modal.remove();
-        overlay.remove();
-      });
-    }
-
-    const closeBtn = document.getElementById("closeDetailsBtn");
-    if (closeBtn) {
-      closeBtn.addEventListener("click", function () {
-        const modal = document.getElementById("venteDetails");
-        const overlayElem = document.getElementById("overlay");
-        if (modal) modal.remove();
-        if (overlayElem) overlayElem.remove();
-      });
-    }
-
-    const escapeHandler = function (e) {
-      if (e.key === "Escape") {
-        const modal = document.getElementById("venteDetails");
-        const overlayElem = document.getElementById("overlay");
-        if (modal) modal.remove();
-        if (overlayElem) overlayElem.remove();
-        document.removeEventListener("keydown", escapeHandler);
-      }
-    };
-    document.addEventListener("keydown", escapeHandler);
-
-    if (
-      historiqueMessage &&
-      historiqueMessage.innerHTML.includes("Chargement des détails")
-    )
-      historiqueMessage.innerHTML = "";
+    document.body.appendChild(modal);
   } catch (error) {
-    console.error("Erreur chargement détails:", error);
-    showMessage("❌ Erreur lors du chargement des détails de la vente", "red");
+    showTemporaryNotification("❌ Erreur chargement détails", "error");
   }
 }
 
-function showMessage(msg, color) {
-  if (historiqueMessage) {
-    historiqueMessage.innerHTML = `<span style='color:${color};'>${msg}</span>`;
-    if (
-      !msg.includes("✅") &&
-      !msg.includes("❌") &&
-      !msg.includes("📭") &&
-      !msg.includes("Chargement")
-    ) {
-      setTimeout(() => {
-        if (
-          historiqueMessage.innerHTML ===
-          `<span style='color:${color};'>${msg}</span>`
-        )
-          historiqueMessage.innerHTML = "";
-      }, 5000);
-    }
-  }
-}
-
-function resetDisplay() {
-  if (tbody) tbody.innerHTML = "";
-
-  const totalQuantiteSpan = document.getElementById("totalQuantite");
-  const totalPrixSpan = document.getElementById("totalPrix");
-
-  if (totalQuantiteSpan) totalQuantiteSpan.textContent = "0";
-  if (totalPrixSpan) totalPrixSpan.textContent = "0 FC";
-
-  if (historiqueTable) historiqueTable.style.display = "none";
-  if (historiqueMessage) historiqueMessage.innerHTML = "";
-
-  const existingInfo = document.getElementById("clientInfoHistorique");
-  if (existingInfo) existingInfo.remove();
-
-  const existingModal = document.getElementById("venteDetails");
-  const existingOverlay = document.getElementById("overlay");
-  if (existingModal) existingModal.remove();
-  if (existingOverlay) existingOverlay.remove();
-}
-
 // ============================================
-// MODULE 5: TOTAL MENSUEL
+// EXPORT CSV
 // ============================================
 
-function calculerTotalMensuelMulti(ventes) {
-  console.log("Calcul du total mensuel avec", ventes.length, "ventes");
-
+function exportToCSV(ventes, client) {
   if (!ventes || ventes.length === 0) {
-    updateOrCreateMonthlyTotalDisplay(0, 0, 0, new Date());
-    return { totalMensuel: 0, remise: 0, totalFinal: 0 };
-  }
-
-  const datesVentes = ventes
-    .map((v) => parseDate(v.date))
-    .filter((d) => !isNaN(d.getTime()));
-
-  if (datesVentes.length === 0) {
-    updateOrCreateMonthlyTotalDisplay(0, 0, 0, new Date());
-    return { totalMensuel: 0, remise: 0, totalFinal: 0 };
-  }
-
-  datesVentes.sort((a, b) => b - a);
-  const moisReference = datesVentes[0];
-
-  const ventesDuMois = ventes.filter((vente) => {
-    if (!vente.date) return false;
-    const dateVente = parseDate(vente.date);
-    if (isNaN(dateVente.getTime())) return false;
-    return (
-      dateVente.getMonth() === moisReference.getMonth() &&
-      dateVente.getFullYear() === moisReference.getFullYear()
-    );
-  });
-
-  const totalMensuel = ventesDuMois.reduce((sum, vente) => {
-    const venteNettoyee = nettoyerVente(vente);
-    return sum + venteNettoyee.total;
-  }, 0);
-
-  const remise = totalMensuel * 0.05;
-  const totalFinal = totalMensuel - remise;
-
-  updateOrCreateMonthlyTotalDisplay(
-    totalMensuel,
-    remise,
-    totalFinal,
-    moisReference,
-  );
-
-  return { totalMensuel, remise, totalFinal };
-}
-
-function updateOrCreateMonthlyTotalDisplay(
-  totalMensuel,
-  remise,
-  totalFinal,
-  dateReference,
-) {
-  let monthlyTotalContainer = document.getElementById("monthlyTotalContainer");
-
-  let moisTexte = "";
-  if (dateReference && !isNaN(dateReference.getTime())) {
-    moisTexte = dateReference.toLocaleString("fr-FR", {
-      month: "long",
-      year: "numeric",
-    });
-  } else {
-    moisTexte = new Date().toLocaleString("fr-FR", {
-      month: "long",
-      year: "numeric",
-    });
-  }
-
-  if (!monthlyTotalContainer) {
-    monthlyTotalContainer = document.createElement("div");
-    monthlyTotalContainer.id = "monthlyTotalContainer";
-    monthlyTotalContainer.style.marginTop = "20px";
-    monthlyTotalContainer.style.padding = "15px";
-    monthlyTotalContainer.style.backgroundColor = "#f0f8ff";
-    monthlyTotalContainer.style.borderRadius = "8px";
-    monthlyTotalContainer.style.border = "1px solid #ddd";
-    monthlyTotalContainer.style.borderLeft = "4px solid #4CAF50";
-
-    const historiqueTable = document.getElementById("historiqueTable");
-    if (historiqueTable) {
-      historiqueTable.insertAdjacentElement("afterend", monthlyTotalContainer);
-    }
-  }
-
-  monthlyTotalContainer.innerHTML = `
-    <h4 style="margin: 0 0 10px 0; color: #333;">📊 Total mensuel (${moisTexte})</h4>
-    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-      <div style="flex: 1;">
-        <strong>💰 Total mensuel :</strong> 
-        <span style="color: #666; font-size: 18px;">${formatNumberFC(totalMensuel)} FC</span>
-      </div>
-      <div style="flex: 1;">
-        <strong>🎁 Remise (5%) :</strong> 
-        <span style="color: #FF9800; font-size: 18px;">-${formatNumberFC(remise)} FC</span>
-      </div>
-      <div style="flex: 1;">
-        <strong>💵 Total à payer :</strong> 
-        <span style="color: #4CAF50; font-size: 20px; font-weight: bold;">${formatNumberFC(totalFinal)} FC</span>
-      </div>
-    </div>
-    ${totalMensuel === 0 ? '<p style="color: #999; margin-top: 10px;">⚠️ Aucun achat ce mois-ci</p>' : ""}
-  `;
-}
-
-// ============================================
-// MODULE 6.1: FACTURE PANIER
-// ============================================
-
-function genererFacturePanier(vente, client) {
-  if (typeof window.jspdf === "undefined") {
-    console.error("jsPDF n'est pas chargé !");
-    showTemporaryNotification(
-      "❌ Erreur: La bibliothèque PDF n'est pas chargée",
-    );
+    showTemporaryNotification("Aucune donnée à exporter", "error");
     return;
   }
 
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF();
+  let separator = ";";
 
-  const pageWidth = doc.internal.pageSize.getWidth();
-  const marginX = 20;
-  const rightX = pageWidth - marginX;
-
-  const venteNettoyee = nettoyerVente(vente);
-  const total = venteNettoyee.total;
-  const produits = venteNettoyee.produits;
-  const dateFacture = new Date().toLocaleString("fr-FR");
-
-  doc.setFontSize(22);
-  doc.setFont("helvetica", "bold");
-  doc.text("FACTURE", pageWidth / 2, 20, { align: "center" });
-
-  doc.setFontSize(9);
-  doc.setFont("helvetica", "normal");
-  doc.text("Votre Entreprise SARL", marginX, 35);
-  doc.text("123 Avenue du Commerce", marginX, 40);
-  doc.text("Kinshasa, RDC", marginX, 45);
-  doc.text("Tél: +243 XXX XXX XXX", marginX, 50);
-
-  doc.setFontSize(9);
-  doc.text(`Facture N°: ${vente.id}`, rightX - 40, 35, { align: "right" });
-  doc.text(`Date: ${dateFacture}`, rightX - 40, 40, { align: "right" });
-
-  doc.line(marginX, 55, rightX, 55);
-
-  doc.setFontSize(11);
-  doc.setFont("helvetica", "bold");
-  doc.text("Client :", marginX, 68);
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(10);
-  doc.text(`${client.nom}`, marginX + 30, 68);
-  doc.text(`Téléphone: ${client.telephone}`, marginX, 75);
-  doc.text(`ID Client: ${client.id}`, marginX, 82);
-
-  doc.line(marginX, 88, rightX, 88);
-
-  doc.setFontSize(11);
-  doc.setFont("helvetica", "bold");
-  doc.text("Détails des produits", marginX, 98);
-
-  doc.setFontSize(9);
-  doc.setFont("helvetica", "bold");
-  doc.text("Produit", marginX, 108);
-  doc.text("Quantité", 100, 108);
-  doc.text("Prix unitaire", 130, 108);
-  doc.text("Total", 165, 108);
-
-  doc.line(marginX, 110, rightX, 110);
-
-  let yPosition = 118;
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(9);
-
-  produits.forEach((item, index) => {
-    const sousTotal = item.prix * item.quantite;
-
-    doc.text(item.nom.substring(0, 25), marginX, yPosition);
-    doc.text(item.quantite.toString(), 100, yPosition);
-    doc.text(`${formatNumberFC(item.prix)} FC`, 130, yPosition);
-    doc.text(`${formatNumberFC(sousTotal)} FC`, 165, yPosition);
-
-    yPosition += 7;
-
-    if (yPosition > 250 && index < produits.length - 1) {
-      doc.addPage();
-      yPosition = 20;
+  function formatField(field) {
+    if (field === undefined || field === null) return "";
+    const stringField = String(field);
+    if (
+      stringField.includes(separator) ||
+      stringField.includes('"') ||
+      stringField.includes("\n")
+    ) {
+      return `"${stringField.replace(/"/g, '""')}"`;
     }
+    return stringField;
+  }
+
+  const headers = [
+    "ID Vente",
+    "Produits",
+    "Quantité totale",
+    "Total (FC)",
+    "Date",
+  ].map((h) => formatField(h));
+
+  const rows = ventes.map((v) => {
+    const venteNettoyee = nettoyerVente(v);
+    let produitsListe = "";
+    let quantiteTotale = 0;
+
+    if (venteNettoyee.produits.length > 0) {
+      produitsListe = venteNettoyee.produits
+        .map((p) => `${p.nom}(${p.quantite})`)
+        .join(", ");
+      quantiteTotale = venteNettoyee.produits.reduce(
+        (sum, p) => sum + p.quantite,
+        0,
+      );
+    }
+
+    const row = [
+      v.id,
+      produitsListe,
+      quantiteTotale,
+      formatNumberFC(venteNettoyee.total),
+      formatDate(v.date),
+    ].map((field) => formatField(field));
+
+    return row;
   });
 
-  yPosition += 5;
-  doc.line(marginX, yPosition, rightX, yPosition);
-  yPosition += 8;
-
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(11);
-  doc.text("TOTAL À PAYER :", 130, yPosition);
-  doc.setFontSize(14);
-  doc.setTextColor(76, 175, 80);
-  doc.text(`${formatNumberFC(total)} FC`, rightX, yPosition, {
-    align: "right",
+  const csvContent = [headers, ...rows]
+    .map((row) => row.join(separator))
+    .join("\n");
+  const blob = new Blob(["\uFEFF" + csvContent], {
+    type: "text/csv;charset=utf-8;",
   });
+  const link = document.createElement("a");
+  const url = URL.createObjectURL(blob);
+  link.setAttribute("href", url);
+  link.setAttribute(
+    "download",
+    `ventes_${client.nom.replace(/\s/g, "_")}_${new Date().toISOString().slice(0, 10)}.csv`,
+  );
+  link.click();
+  URL.revokeObjectURL(url);
 
-  doc.setFontSize(8);
-  doc.setTextColor(100, 100, 100);
-  doc.text("Merci de votre confiance !", pageWidth / 2, 280, {
-    align: "center",
-  });
-  doc.text("Paiement à réception de facture", pageWidth / 2, 285, {
-    align: "center",
-  });
-
-  const nomFichier = `facture_${client.nom.replace(/\s/g, "_")}_${vente.id}.pdf`;
-  doc.save(nomFichier);
-
-  showTemporaryNotification(`✅ Facture générée avec succès !`);
+  showTemporaryNotification("📥 Export CSV effectué !");
 }
 
 // ============================================
-// MODULE 6.2: FACTURE MENSUELLE
+// FACTURE MENSUELLE
 // ============================================
 
 function genererFactureMensuelleMulti(ventes, client) {
   if (typeof window.jspdf === "undefined") {
-    console.error("jsPDF n'est pas chargé !");
-    showTemporaryNotification(
-      "❌ Erreur: La bibliothèque PDF n'est pas chargée",
-    );
+    showTemporaryNotification("❌ Erreur: Bibliothèque PDF non chargée");
     return;
   }
 
@@ -1621,7 +1228,6 @@ function genererFactureMensuelleMulti(ventes, client) {
 
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
-
   const pageWidth = doc.internal.pageSize.getWidth();
   const marginX = 20;
   const rightX = pageWidth - marginX;
@@ -1632,7 +1238,7 @@ function genererFactureMensuelleMulti(ventes, client) {
 
   doc.setFontSize(9);
   doc.setFont("helvetica", "normal");
-  doc.text("Votre Entreprise SARL", marginX, 35);
+  doc.text("VentesPro SARL", marginX, 35);
   doc.text("123 Avenue du Commerce", marginX, 40);
   doc.text("Kinshasa, RDC", marginX, 45);
   doc.text("Tél: +243 XXX XXX XXX", marginX, 50);
@@ -1650,7 +1256,7 @@ function genererFactureMensuelleMulti(ventes, client) {
   doc.text("Client :", marginX, 68);
   doc.setFont("helvetica", "normal");
   doc.setFontSize(10);
-  doc.text(`${client.nom}`, marginX + 30, 68);
+  doc.text(client.nom, marginX + 30, 68);
   doc.text(`Téléphone: ${client.telephone}`, marginX, 75);
   doc.text(`ID Client: ${client.id}`, marginX, 82);
 
@@ -1684,7 +1290,6 @@ function genererFactureMensuelleMulti(ventes, client) {
     doc.text(`${formatNumberFC(venteNettoyee.total)} FC`, 160, yPosition);
 
     yPosition += 7;
-
     if (yPosition > 250 && index < ventesDuMois.length - 1) {
       doc.addPage();
       yPosition = 20;
@@ -1723,23 +1328,121 @@ function genererFactureMensuelleMulti(ventes, client) {
   doc.text("Merci de votre confiance !", pageWidth / 2, 280, {
     align: "center",
   });
-  doc.text("Paiement à réception de facture", pageWidth / 2, 285, {
-    align: "center",
-  });
 
-  const nomFichier = `facture_mensuelle_${client.nom.replace(/\s/g, "_")}_${moisTexte.replace(/\s/g, "_")}.pdf`;
-  doc.save(nomFichier);
-
-  showTemporaryNotification(`✅ Facture mensuelle générée avec succès !`);
+  doc.save(
+    `facture_mensuelle_${client.nom.replace(/\s/g, "_")}_${moisTexte.replace(/\s/g, "_")}.pdf`,
+  );
+  showTemporaryNotification("✅ Facture mensuelle générée !");
 }
 
 // ============================================
-// MODULE 7: GESTION DES PRODUITS AVEC CATÉGORIES ET TYPES
+// FACTURE SIMPLE
+// ============================================
+
+function genererFacturePanier(vente, client) {
+  if (typeof window.jspdf === "undefined") {
+    showTemporaryNotification("❌ Erreur: Bibliothèque PDF non chargée");
+    return;
+  }
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const marginX = 20;
+  const rightX = pageWidth - marginX;
+
+  const venteNettoyee = nettoyerVente(vente);
+  const total = venteNettoyee.total;
+  const produits = venteNettoyee.produits;
+  const dateFacture = new Date().toLocaleString("fr-FR");
+
+  doc.setFontSize(22);
+  doc.setFont("helvetica", "bold");
+  doc.text("FACTURE", pageWidth / 2, 20, { align: "center" });
+
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "normal");
+  doc.text("VentesPro SARL", marginX, 35);
+  doc.text("123 Avenue du Commerce", marginX, 40);
+  doc.text("Kinshasa, RDC", marginX, 45);
+  doc.text("Tél: +243 XXX XXX XXX", marginX, 50);
+
+  doc.setFontSize(9);
+  doc.text(`Facture N°: ${vente.id}`, rightX - 40, 35, { align: "right" });
+  doc.text(`Date: ${dateFacture}`, rightX - 40, 40, { align: "right" });
+
+  doc.line(marginX, 55, rightX, 55);
+
+  doc.setFontSize(11);
+  doc.setFont("helvetica", "bold");
+  doc.text("Client :", marginX, 68);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10);
+  doc.text(client.nom, marginX + 30, 68);
+  doc.text(`Téléphone: ${client.telephone}`, marginX, 75);
+  doc.text(`ID Client: ${client.id}`, marginX, 82);
+
+  doc.line(marginX, 88, rightX, 88);
+
+  doc.setFontSize(11);
+  doc.setFont("helvetica", "bold");
+  doc.text("Détails des produits", marginX, 98);
+
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "bold");
+  doc.text("Produit", marginX, 108);
+  doc.text("Qté", 100, 108);
+  doc.text("Prix unit.", 130, 108);
+  doc.text("Total", 165, 108);
+
+  doc.line(marginX, 110, rightX, 110);
+
+  let yPosition = 118;
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
+
+  produits.forEach((item, index) => {
+    const sousTotal = item.prix * item.quantite;
+    doc.text(item.nom.substring(0, 25), marginX, yPosition);
+    doc.text(item.quantite.toString(), 100, yPosition);
+    doc.text(`${formatNumberFC(item.prix)} FC`, 130, yPosition);
+    doc.text(`${formatNumberFC(sousTotal)} FC`, 165, yPosition);
+    yPosition += 7;
+    if (yPosition > 250 && index < produits.length - 1) {
+      doc.addPage();
+      yPosition = 20;
+    }
+  });
+
+  yPosition += 5;
+  doc.line(marginX, yPosition, rightX, yPosition);
+  yPosition += 8;
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(11);
+  doc.text("TOTAL À PAYER :", 130, yPosition);
+  doc.setFontSize(14);
+  doc.setTextColor(76, 175, 80);
+  doc.text(`${formatNumberFC(total)} FC`, rightX, yPosition, {
+    align: "right",
+  });
+
+  doc.setFontSize(8);
+  doc.setTextColor(100, 100, 100);
+  doc.text("Merci de votre confiance !", pageWidth / 2, 280, {
+    align: "center",
+  });
+
+  doc.save(`facture_${client.nom.replace(/\s/g, "_")}_${vente.id}.pdf`);
+  showTemporaryNotification("✅ Facture générée !");
+}
+
+// ============================================
+// MODULE 5: GESTION DES PRODUITS
 // ============================================
 
 const PRODUITS_STORAGE_KEY = "ventes_pro_produits_v2";
 
-// Structure des produits avec catégories et types
 let produits = {
   BRACONGO: {
     bouteille: {
@@ -1821,13 +1524,11 @@ let currentFournisseur = "BRACONGO";
 let currentType = "bouteille";
 let produitEnEdition = null;
 
-// Éléments du DOM
 const tabBracongo = document.getElementById("tabBracongo");
 const tabBralima = document.getElementById("tabBralima");
 const bracongoContainer = document.getElementById("bracongoContainer");
 const bralimaContainer = document.getElementById("bralimaContainer");
 
-// Éléments des sous-onglets BRACONGO
 const bracongoBouteilleTab = document.getElementById("bracongoBouteilleTab");
 const bracongoCassierTab = document.getElementById("bracongoCassierTab");
 const bracongoBouteilleContainer = document.getElementById(
@@ -1839,7 +1540,6 @@ const bracongoCassierContainer = document.getElementById(
 const bracongoBouteilleBody = document.getElementById("bracongoBouteilleBody");
 const bracongoCassierBody = document.getElementById("bracongoCassierBody");
 
-// Éléments des sous-onglets BRALIMA
 const bralimaBouteilleTab = document.getElementById("bralimaBouteilleTab");
 const bralimaCassierTab = document.getElementById("bralimaCassierTab");
 const bralimaBouteilleContainer = document.getElementById(
@@ -1851,7 +1551,6 @@ const bralimaCassierContainer = document.getElementById(
 const bralimaBouteilleBody = document.getElementById("bralimaBouteilleBody");
 const bralimaCassierBody = document.getElementById("bralimaCassierBody");
 
-// Éléments du modal
 const produitModal = document.getElementById("produitModal");
 const modalTitle = document.getElementById("modalTitle");
 const produitNomInput = document.getElementById("produitNom");
@@ -1865,70 +1564,59 @@ const produitFournisseurSelect = document.getElementById("produitFournisseur");
 const modalSaveBtn = document.getElementById("modalSaveBtn");
 const modalCancelBtn = document.getElementById("modalCancelBtn");
 
-// Initialiser les onglets fournisseurs
 function initFournisseurTabs() {
-  if (tabBracongo) {
+  if (tabBracongo)
     tabBracongo.addEventListener("click", () =>
       setActiveFournisseur("BRACONGO"),
     );
-  }
-  if (tabBralima) {
+  if (tabBralima)
     tabBralima.addEventListener("click", () => setActiveFournisseur("BRALIMA"));
-  }
 }
 
 function setActiveFournisseur(fournisseur) {
   currentFournisseur = fournisseur;
-
   const tabs = document.querySelectorAll(".categorie-tab");
   tabs.forEach((tab) => {
     if (tab.getAttribute("data-categorie") === fournisseur) {
       tab.classList.add("active");
-      tab.style.borderBottom = "3px solid #4caf50";
-      tab.style.color = "#4caf50";
+      tab.style.borderBottomColor = "#10b981";
+      tab.style.color = "#10b981";
     } else {
       tab.classList.remove("active");
-      tab.style.borderBottom = "3px solid transparent";
-      tab.style.color = "#1a1a2e";
+      tab.style.borderBottomColor = "transparent";
+      tab.style.color = "#4b5563";
     }
   });
-
   if (bracongoContainer && bralimaContainer) {
     bracongoContainer.style.display =
       fournisseur === "BRACONGO" ? "block" : "none";
     bralimaContainer.style.display =
       fournisseur === "BRALIMA" ? "block" : "none";
   }
-
   setActiveType(currentType, fournisseur);
 }
 
 function initTypeTabs() {
-  if (bracongoBouteilleTab) {
+  if (bracongoBouteilleTab)
     bracongoBouteilleTab.addEventListener("click", () =>
       setActiveType("bouteille", "BRACONGO"),
     );
-  }
-  if (bracongoCassierTab) {
+  if (bracongoCassierTab)
     bracongoCassierTab.addEventListener("click", () =>
       setActiveType("cassier", "BRACONGO"),
     );
-  }
-  if (bralimaBouteilleTab) {
+  if (bralimaBouteilleTab)
     bralimaBouteilleTab.addEventListener("click", () =>
       setActiveType("bouteille", "BRALIMA"),
     );
-  }
-  if (bralimaCassierTab) {
+  if (bralimaCassierTab)
     bralimaCassierTab.addEventListener("click", () =>
       setActiveType("cassier", "BRALIMA"),
     );
-  }
 }
 
 function setActiveType(type, fournisseur) {
   currentType = type;
-
   if (
     fournisseur === "BRACONGO" &&
     bracongoBouteilleTab &&
@@ -1936,40 +1624,31 @@ function setActiveType(type, fournisseur) {
   ) {
     if (type === "bouteille") {
       bracongoBouteilleTab.classList.add("active");
-      bracongoBouteilleTab.style.borderBottom = "2px solid #4caf50";
       bracongoCassierTab.classList.remove("active");
-      bracongoCassierTab.style.borderBottom = "2px solid transparent";
       if (bracongoBouteilleContainer)
         bracongoBouteilleContainer.style.display = "block";
       if (bracongoCassierContainer)
         bracongoCassierContainer.style.display = "none";
     } else {
       bracongoCassierTab.classList.add("active");
-      bracongoCassierTab.style.borderBottom = "2px solid #4caf50";
       bracongoBouteilleTab.classList.remove("active");
-      bracongoBouteilleTab.style.borderBottom = "2px solid transparent";
       if (bracongoBouteilleContainer)
         bracongoBouteilleContainer.style.display = "none";
       if (bracongoCassierContainer)
         bracongoCassierContainer.style.display = "block";
     }
   }
-
   if (fournisseur === "BRALIMA" && bralimaBouteilleTab && bralimaCassierTab) {
     if (type === "bouteille") {
       bralimaBouteilleTab.classList.add("active");
-      bralimaBouteilleTab.style.borderBottom = "2px solid #4caf50";
       bralimaCassierTab.classList.remove("active");
-      bralimaCassierTab.style.borderBottom = "2px solid transparent";
       if (bralimaBouteilleContainer)
         bralimaBouteilleContainer.style.display = "block";
       if (bralimaCassierContainer)
         bralimaCassierContainer.style.display = "none";
     } else {
       bralimaCassierTab.classList.add("active");
-      bralimaCassierTab.style.borderBottom = "2px solid #4caf50";
       bralimaBouteilleTab.classList.remove("active");
-      bralimaBouteilleTab.style.borderBottom = "2px solid transparent";
       if (bralimaBouteilleContainer)
         bralimaBouteilleContainer.style.display = "none";
       if (bralimaCassierContainer)
@@ -1995,7 +1674,8 @@ function mettreAJourSelecteurProduits() {
   if (!selectProduit) return;
 
   const selectedValue = selectProduit.value;
-  selectProduit.innerHTML = "";
+  selectProduit.innerHTML =
+    '<option value="" disabled selected>-- Sélectionnez un produit --</option>';
 
   const bracongoBouteilleGroup = document.createElement("optgroup");
   bracongoBouteilleGroup.label = "🍺 BRACONGO - Bouteilles";
@@ -2050,28 +1730,28 @@ function updatePrix() {
   if (!produitSelect || !prixInput) return;
 
   const value = produitSelect.value;
-  const [type, nom] = value.split("|");
+  if (!value || value === "") {
+    prixInput.value = "";
+    updateTotal();
+    return;
+  }
 
+  const [type, nom] = value.split("|");
   if (type === "bouteille") {
-    if (produits.BRACONGO.bouteille[nom]) {
+    if (produits.BRACONGO.bouteille[nom])
       prixInput.value = produits.BRACONGO.bouteille[nom].prix;
-    } else if (produits.BRALIMA.bouteille[nom]) {
+    else if (produits.BRALIMA.bouteille[nom])
       prixInput.value = produits.BRALIMA.bouteille[nom].prix;
-    } else {
-      prixInput.value = "";
-    }
+    else prixInput.value = "";
   } else if (type === "cassier") {
-    if (produits.BRACONGO.cassier[nom]) {
+    if (produits.BRACONGO.cassier[nom])
       prixInput.value = produits.BRACONGO.cassier[nom].prixCassier;
-    } else if (produits.BRALIMA.cassier[nom]) {
+    else if (produits.BRALIMA.cassier[nom])
       prixInput.value = produits.BRALIMA.cassier[nom].prixCassier;
-    } else {
-      prixInput.value = "";
-    }
+    else prixInput.value = "";
   } else {
     prixInput.value = "";
   }
-
   updateTotal();
 }
 
@@ -2080,14 +1760,15 @@ function afficherListeProduits() {
     bracongoBouteilleBody.innerHTML = "";
     Object.entries(produits.BRACONGO.bouteille).forEach(([nom, data]) => {
       const tr = document.createElement("tr");
+      tr.className = "border-b border-gray-100 hover:bg-gray-50";
       tr.innerHTML = `
-        <td style="padding: 10px;">${escapeHtml(nom)}</td>
-        <td style="padding: 10px;">${data.format}</td>
-        <td style="padding: 10px; text-align: right;">${formatNumberFC(data.prix)} FC</td>
-        <td style="padding: 10px; text-align: right;">-</td>
-        <td style="padding: 10px; text-align: center;">
-          <button class="btn-edit-bracongo-bouteille" data-nom="${escapeHtml(nom)}" style="background:#2196F3; color:white; border:none; padding:6px 12px; border-radius:8px; cursor:pointer; margin-right:5px;">✏️ Modifier</button>
-          <button class="btn-delete-bracongo-bouteille" data-nom="${escapeHtml(nom)}" style="background:#f44336; color:white; border:none; padding:6px 12px; border-radius:8px; cursor:pointer;">🗑️ Supprimer</button>
+        <td class="px-4 py-3">${escapeHtml(nom)}</td>
+        <td class="px-4 py-3">${data.format}</td>
+        <td class="px-4 py-3 text-right">${formatNumberFC(data.prix)} FC</td>
+        <td class="px-4 py-3 text-right">-</td>
+        <td class="px-4 py-3 text-center">
+          <button class="btn-edit-bracongo-bouteille text-blue-600 hover:text-blue-800 mr-2" data-nom="${escapeHtml(nom)}"><i class="fas fa-edit"></i></button>
+          <button class="btn-delete-bracongo-bouteille text-red-600 hover:text-red-800" data-nom="${escapeHtml(nom)}"><i class="fas fa-trash"></i></button>
         </td>
       `;
       bracongoBouteilleBody.appendChild(tr);
@@ -2098,14 +1779,15 @@ function afficherListeProduits() {
     bracongoCassierBody.innerHTML = "";
     Object.entries(produits.BRACONGO.cassier).forEach(([nom, data]) => {
       const tr = document.createElement("tr");
+      tr.className = "border-b border-gray-100 hover:bg-gray-50";
       tr.innerHTML = `
-        <td style="padding: 10px;">${escapeHtml(nom)}</td>
-        <td style="padding: 10px;">${data.format}</td>
-        <td style="padding: 10px; text-align: right;">${formatNumberFC(data.prixCassier)} FC</td>
-        <td style="padding: 10px; text-align: right;">${formatNumberFC(data.prixUnitaire)} FC</td>
-        <td style="padding: 10px; text-align: center;">
-          <button class="btn-edit-bracongo-cassier" data-nom="${escapeHtml(nom)}" style="background:#2196F3; color:white; border:none; padding:6px 12px; border-radius:8px; cursor:pointer; margin-right:5px;">✏️ Modifier</button>
-          <button class="btn-delete-bracongo-cassier" data-nom="${escapeHtml(nom)}" style="background:#f44336; color:white; border:none; padding:6px 12px; border-radius:8px; cursor:pointer;">🗑️ Supprimer</button>
+        <td class="px-4 py-3">${escapeHtml(nom)}</td>
+        <td class="px-4 py-3">${data.format}</td>
+        <td class="px-4 py-3 text-right">${formatNumberFC(data.prixCassier)} FC</td>
+        <td class="px-4 py-3 text-right">${formatNumberFC(data.prixUnitaire)} FC</td>
+        <td class="px-4 py-3 text-center">
+          <button class="btn-edit-bracongo-cassier text-blue-600 hover:text-blue-800 mr-2" data-nom="${escapeHtml(nom)}"><i class="fas fa-edit"></i></button>
+          <button class="btn-delete-bracongo-cassier text-red-600 hover:text-red-800" data-nom="${escapeHtml(nom)}"><i class="fas fa-trash"></i></button>
         </td>
       `;
       bracongoCassierBody.appendChild(tr);
@@ -2116,14 +1798,15 @@ function afficherListeProduits() {
     bralimaBouteilleBody.innerHTML = "";
     Object.entries(produits.BRALIMA.bouteille).forEach(([nom, data]) => {
       const tr = document.createElement("tr");
+      tr.className = "border-b border-gray-100 hover:bg-gray-50";
       tr.innerHTML = `
-        <td style="padding: 10px;">${escapeHtml(nom)}</td>
-        <td style="padding: 10px;">${data.format}</td>
-        <td style="padding: 10px; text-align: right;">${formatNumberFC(data.prix)} FC</td>
-        <td style="padding: 10px; text-align: right;">-</td>
-        <td style="padding: 10px; text-align: center;">
-          <button class="btn-edit-bralima-bouteille" data-nom="${escapeHtml(nom)}" style="background:#2196F3; color:white; border:none; padding:6px 12px; border-radius:8px; cursor:pointer; margin-right:5px;">✏️ Modifier</button>
-          <button class="btn-delete-bralima-bouteille" data-nom="${escapeHtml(nom)}" style="background:#f44336; color:white; border:none; padding:6px 12px; border-radius:8px; cursor:pointer;">🗑️ Supprimer</button>
+        <td class="px-4 py-3">${escapeHtml(nom)}</td>
+        <td class="px-4 py-3">${data.format}</td>
+        <td class="px-4 py-3 text-right">${formatNumberFC(data.prix)} FC</td>
+        <td class="px-4 py-3 text-right">-</td>
+        <td class="px-4 py-3 text-center">
+          <button class="btn-edit-bralima-bouteille text-blue-600 hover:text-blue-800 mr-2" data-nom="${escapeHtml(nom)}"><i class="fas fa-edit"></i></button>
+          <button class="btn-delete-bralima-bouteille text-red-600 hover:text-red-800" data-nom="${escapeHtml(nom)}"><i class="fas fa-trash"></i></button>
         </td>
       `;
       bralimaBouteilleBody.appendChild(tr);
@@ -2134,14 +1817,15 @@ function afficherListeProduits() {
     bralimaCassierBody.innerHTML = "";
     Object.entries(produits.BRALIMA.cassier).forEach(([nom, data]) => {
       const tr = document.createElement("tr");
+      tr.className = "border-b border-gray-100 hover:bg-gray-50";
       tr.innerHTML = `
-        <td style="padding: 10px;">${escapeHtml(nom)}</td>
-        <td style="padding: 10px;">${data.format}</td>
-        <td style="padding: 10px; text-align: right;">${formatNumberFC(data.prixCassier)} FC</td>
-        <td style="padding: 10px; text-align: right;">${formatNumberFC(data.prixUnitaire)} FC</td>
-        <td style="padding: 10px; text-align: center;">
-          <button class="btn-edit-bralima-cassier" data-nom="${escapeHtml(nom)}" style="background:#2196F3; color:white; border:none; padding:6px 12px; border-radius:8px; cursor:pointer; margin-right:5px;">✏️ Modifier</button>
-          <button class="btn-delete-bralima-cassier" data-nom="${escapeHtml(nom)}" style="background:#f44336; color:white; border:none; padding:6px 12px; border-radius:8px; cursor:pointer;">🗑️ Supprimer</button>
+        <td class="px-4 py-3">${escapeHtml(nom)}</td>
+        <td class="px-4 py-3">${data.format}</td>
+        <td class="px-4 py-3 text-right">${formatNumberFC(data.prixCassier)} FC</td>
+        <td class="px-4 py-3 text-right">${formatNumberFC(data.prixUnitaire)} FC</td>
+        <td class="px-4 py-3 text-center">
+          <button class="btn-edit-bralima-cassier text-blue-600 hover:text-blue-800 mr-2" data-nom="${escapeHtml(nom)}"><i class="fas fa-edit"></i></button>
+          <button class="btn-delete-bralima-cassier text-red-600 hover:text-red-800" data-nom="${escapeHtml(nom)}"><i class="fas fa-trash"></i></button>
         </td>
       `;
       bralimaCassierBody.appendChild(tr);
@@ -2149,65 +1833,41 @@ function afficherListeProduits() {
   }
 
   document.querySelectorAll(".btn-edit-bracongo-bouteille").forEach((btn) => {
-    btn.removeEventListener("click", () =>
-      ouvrirModalEdition("BRACONGO", "bouteille", btn.dataset.nom),
-    );
     btn.addEventListener("click", () =>
       ouvrirModalEdition("BRACONGO", "bouteille", btn.dataset.nom),
     );
   });
   document.querySelectorAll(".btn-delete-bracongo-bouteille").forEach((btn) => {
-    btn.removeEventListener("click", () =>
-      supprimerProduit("BRACONGO", "bouteille", btn.dataset.nom),
-    );
     btn.addEventListener("click", () =>
       supprimerProduit("BRACONGO", "bouteille", btn.dataset.nom),
     );
   });
   document.querySelectorAll(".btn-edit-bracongo-cassier").forEach((btn) => {
-    btn.removeEventListener("click", () =>
-      ouvrirModalEdition("BRACONGO", "cassier", btn.dataset.nom),
-    );
     btn.addEventListener("click", () =>
       ouvrirModalEdition("BRACONGO", "cassier", btn.dataset.nom),
     );
   });
   document.querySelectorAll(".btn-delete-bracongo-cassier").forEach((btn) => {
-    btn.removeEventListener("click", () =>
-      supprimerProduit("BRACONGO", "cassier", btn.dataset.nom),
-    );
     btn.addEventListener("click", () =>
       supprimerProduit("BRACONGO", "cassier", btn.dataset.nom),
     );
   });
   document.querySelectorAll(".btn-edit-bralima-bouteille").forEach((btn) => {
-    btn.removeEventListener("click", () =>
-      ouvrirModalEdition("BRALIMA", "bouteille", btn.dataset.nom),
-    );
     btn.addEventListener("click", () =>
       ouvrirModalEdition("BRALIMA", "bouteille", btn.dataset.nom),
     );
   });
   document.querySelectorAll(".btn-delete-bralima-bouteille").forEach((btn) => {
-    btn.removeEventListener("click", () =>
-      supprimerProduit("BRALIMA", "bouteille", btn.dataset.nom),
-    );
     btn.addEventListener("click", () =>
       supprimerProduit("BRALIMA", "bouteille", btn.dataset.nom),
     );
   });
   document.querySelectorAll(".btn-edit-bralima-cassier").forEach((btn) => {
-    btn.removeEventListener("click", () =>
-      ouvrirModalEdition("BRALIMA", "cassier", btn.dataset.nom),
-    );
     btn.addEventListener("click", () =>
       ouvrirModalEdition("BRALIMA", "cassier", btn.dataset.nom),
     );
   });
   document.querySelectorAll(".btn-delete-bralima-cassier").forEach((btn) => {
-    btn.removeEventListener("click", () =>
-      supprimerProduit("BRALIMA", "cassier", btn.dataset.nom),
-    );
     btn.addEventListener("click", () =>
       supprimerProduit("BRALIMA", "cassier", btn.dataset.nom),
     );
@@ -2223,11 +1883,10 @@ function ouvrirModalAjout() {
   produitPrixInput.value = "";
   produitPrixCassierInput.value = "";
   produitFournisseurSelect.value = currentFournisseur;
-
   prixBouteilleGroup.style.display = "block";
   prixCassierGroup.style.display = "none";
-
-  produitModal.style.display = "flex";
+  produitModal.classList.remove("hidden");
+  produitModal.classList.add("flex");
 }
 
 function ouvrirModalEdition(fournisseur, type, nom) {
@@ -2250,12 +1909,13 @@ function ouvrirModalEdition(fournisseur, type, nom) {
     prixBouteilleGroup.style.display = "none";
     prixCassierGroup.style.display = "block";
   }
-
-  produitModal.style.display = "flex";
+  produitModal.classList.remove("hidden");
+  produitModal.classList.add("flex");
 }
 
 function fermerModal() {
-  produitModal.style.display = "none";
+  produitModal.classList.add("hidden");
+  produitModal.classList.remove("flex");
   produitEnEdition = null;
 }
 
@@ -2276,7 +1936,6 @@ function sauvegarderProduit() {
       type: oldType,
       nom: oldNom,
     } = produitEnEdition;
-
     delete produits[oldFournisseur][oldType][oldNom];
 
     if (type === "bouteille") {
@@ -2353,6 +2012,8 @@ function supprimerProduit(fournisseur, type, nom) {
     sauvegarderProduits();
     mettreAJourSelecteurProduits();
     afficherListeProduits();
+    panier = panier.filter((item) => item.nom !== nom);
+    afficherPanier();
     showTemporaryNotification(`✅ "${nom}" supprimé`);
   }
 }
@@ -2366,27 +2027,10 @@ function chargerProduits() {
   if (saved) {
     try {
       const savedProduits = JSON.parse(saved);
-      if (savedProduits.BRACONGO && savedProduits.BRACONGO.bouteille) {
+      if (savedProduits.BRACONGO && savedProduits.BRACONGO.bouteille)
         produits = savedProduits;
-      }
     } catch (e) {}
   }
-}
-
-function getProduitPrix(produitKey) {
-  const [type, nom] = produitKey.split("|");
-  if (type === "bouteille") {
-    if (produits.BRACONGO.bouteille[nom])
-      return produits.BRACONGO.bouteille[nom].prix;
-    if (produits.BRALIMA.bouteille[nom])
-      return produits.BRALIMA.bouteille[nom].prix;
-  } else if (type === "cassier") {
-    if (produits.BRACONGO.cassier[nom])
-      return produits.BRACONGO.cassier[nom].prixCassier;
-    if (produits.BRALIMA.cassier[nom])
-      return produits.BRALIMA.cassier[nom].prixCassier;
-  }
-  return 0;
 }
 
 function initGestionProduits() {
@@ -2399,7 +2043,6 @@ function initGestionProduits() {
 
   const addProductBtn = document.getElementById("ajouterProduitBtn");
   if (addProductBtn) addProductBtn.addEventListener("click", ouvrirModalAjout);
-
   if (modalSaveBtn) modalSaveBtn.addEventListener("click", sauvegarderProduit);
   if (modalCancelBtn) modalCancelBtn.addEventListener("click", fermerModal);
   if (produitModal) {
@@ -2407,94 +2050,10 @@ function initGestionProduits() {
       if (e.target === produitModal) fermerModal();
     });
   }
+  if (produitSelect) produitSelect.addEventListener("change", updatePrix);
 }
 
-// ============================================
-// MODULE EXPORT CSV
-// ============================================
-
-function exportToCSV() {
-  if (!ventesOriginales || ventesOriginales.length === 0) {
-    showMessage("Aucune donnée à exporter", "red");
-    return;
-  }
-
-  const clientId = historiqueClientId.value;
-
-  let separator = ";";
-
-  function formatField(field) {
-    if (field === undefined || field === null) return "";
-    const stringField = String(field);
-    if (
-      stringField.includes(separator) ||
-      stringField.includes('"') ||
-      stringField.includes("\n")
-    ) {
-      return `"${stringField.replace(/"/g, '""')}"`;
-    }
-    return stringField;
-  }
-
-  const headers = [
-    "ID Vente",
-    "Produits",
-    "Quantité totale",
-    "Total (FC)",
-    "Date",
-  ].map((h) => formatField(h));
-
-  const rows = ventesOriginales.map((v) => {
-    const venteNettoyee = nettoyerVente(v);
-    let produitsListe = "";
-    let quantiteTotale = 0;
-
-    if (venteNettoyee.produits.length > 0) {
-      produitsListe = venteNettoyee.produits
-        .map((p) => `${p.nom}(${p.quantite})`)
-        .join(", ");
-      quantiteTotale = venteNettoyee.produits.reduce(
-        (sum, p) => sum + p.quantite,
-        0,
-      );
-    }
-
-    const row = [
-      v.id,
-      produitsListe,
-      quantiteTotale,
-      formatNumberFC(venteNettoyee.total),
-      formatDate(v.date),
-    ].map((field) => formatField(field));
-
-    return row;
-  });
-
-  const csvContent = [headers, ...rows]
-    .map((row) => row.join(separator))
-    .join("\n");
-
-  const blob = new Blob(["\uFEFF" + csvContent], {
-    type: "text/csv;charset=utf-8;",
-  });
-  const link = document.createElement("a");
-  const url = URL.createObjectURL(blob);
-  link.setAttribute("href", url);
-  link.setAttribute(
-    "download",
-    `ventes_client_${clientId}_${new Date().toISOString().slice(0, 10)}.csv`,
-  );
-  link.style.display = "none";
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
-
-  showMessage("📥 Export CSV effectué !", "green");
-}
-
-// Initialisation globale
+// Initialisation
 loadDashboardStats();
 initGestionProduits();
-
 showTemporaryNotification("Bienvenue sur VentesPro !");

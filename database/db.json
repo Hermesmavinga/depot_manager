@@ -954,6 +954,34 @@
       ],
       "total": 12500,
       "date": "2026-04-21T10:42:52.048Z"
+    },
+    {
+      "id": "b4fc",
+      "clientId": "1",
+      "produits": [
+        {
+          "nom": "fanta",
+          "quantite": 3,
+          "prix": 12000,
+          "type": "bouteille"
+        }
+      ],
+      "total": 36000,
+      "date": "2026-04-22T13:40:02.057Z"
+    },
+    {
+      "id": "8de1",
+      "clientId": "1",
+      "produits": [
+        {
+          "nom": "sprit",
+          "quantite": 1,
+          "prix": 50000,
+          "type": "cassier"
+        }
+      ],
+      "total": 50000,
+      "date": "2026-04-22T13:44:04.351Z"
     }
   ],
   "$schema": "./node_modules/json-server/schema.json"
