@@ -249,6 +249,11 @@
       "id": "4ec9",
       "nom": "ROGER",
       "telephone": "+243 828 790 728"
+    },
+    {
+      "id": "eddb",
+      "nom": "joyce ngende",
+      "telephone": "+243 828 790 728"
     }
   ],
   "produits": [
@@ -1054,6 +1059,26 @@
       ],
       "total": 44000,
       "date": "2026-04-22T15:38:33.765Z"
+    },
+    {
+      "id": "be79",
+      "clientId": "eddb",
+      "produits": [
+        {
+          "nom": "NKOY",
+          "quantite": 5,
+          "prix": 60000,
+          "type": "cassier"
+        },
+        {
+          "nom": "TURBO",
+          "quantite": 2,
+          "prix": 44000,
+          "type": "cassier"
+        }
+      ],
+      "total": 388000,
+      "date": "2026-04-26T19:14:56.502Z"
     }
   ],
   "$schema": "./node_modules/json-server/schema.json"

@@ -16,7 +16,7 @@ if (isLocal) {
   API_BASE_URL = "http://localhost:4000";
 } else {
   // Sur Render : l'API est sur le même domaine
-  API_BASE_URL = window.location.origin;
+  API_BASE_URL = "https://depot-manager.onrender.com";
 }
 
 // URLs spécifiques
