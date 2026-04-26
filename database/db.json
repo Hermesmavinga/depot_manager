@@ -239,6 +239,16 @@
       "id": "1f14",
       "nom": "roberto",
       "telephone": "+243 828 790 728"
+    },
+    {
+      "id": "8efd",
+      "nom": "Mavinga",
+      "telephone": "+243 828 790 728"
+    },
+    {
+      "id": "4ec9",
+      "nom": "ROGER",
+      "telephone": "+243 828 790 728"
     }
   ],
   "produits": [
@@ -982,6 +992,68 @@
       ],
       "total": 50000,
       "date": "2026-04-22T13:44:04.351Z"
+    },
+    {
+      "id": "55af",
+      "clientId": "1",
+      "produits": [
+        {
+          "nom": "NKOY",
+          "quantite": 3,
+          "prix": 60000,
+          "type": "cassier"
+        }
+      ],
+      "total": 180000,
+      "date": "2026-04-22T15:29:36.218Z"
+    },
+    {
+      "id": "f160",
+      "clientId": "1",
+      "produits": [
+        {
+          "nom": "TURBO",
+          "quantite": 3,
+          "prix": 44000,
+          "type": "cassier"
+        }
+      ],
+      "total": 132000,
+      "date": "2026-04-22T15:31:22.060Z"
+    },
+    {
+      "id": "e56b",
+      "clientId": "1",
+      "produits": [
+        {
+          "nom": "TURBO",
+          "quantite": 1,
+          "prix": 44000,
+          "type": "cassier"
+        },
+        {
+          "nom": "NKOY",
+          "quantite": 1,
+          "prix": 60000,
+          "type": "cassier"
+        }
+      ],
+      "total": 104000,
+      "date": "2026-04-22T15:31:55.747Z"
+    },
+    {
+      "id": "fbf7",
+      "clientId": "4ec9",
+      "produits": [
+        {
+          "nom": "TURBO",
+          "quantite": 1,
+          "prix": 44000,
+          "type": "cassier"
+        }
+      ],
+      "total": 44000,
+      "date": "2026-04-22T15:38:33.765Z"
     }
   ],
   "$schema": "./node_modules/json-server/schema.json"

@@ -1,4 +1,34 @@
 // ============================================
+// CONFIGURATION API - CORRECTION POUR LOCAL ET RENDER
+// ============================================
+
+// Détection de l'environnement
+const isLocal =
+  window.location.hostname === "localhost" ||
+  window.location.hostname === "127.0.0.1" ||
+  window.location.protocol === "file:";
+
+// Configuration des URLs
+let API_BASE_URL;
+
+if (isLocal) {
+  // En local : json-server tourne sur le port 4000
+  API_BASE_URL = "http://localhost:4000";
+} else {
+  // Sur Render : l'API est sur le même domaine
+  API_BASE_URL = window.location.origin;
+}
+
+// URLs spécifiques
+const CLIENTS_URL = `${API_BASE_URL}/clients`;
+const VENTES_URL = `${API_BASE_URL}/ventes`;
+
+console.log("🌐 Environnement:", isLocal ? "LOCAL" : "RENDER");
+console.log("📡 API_BASE_URL:", API_BASE_URL);
+console.log("📡 CLIENTS_URL:", CLIENTS_URL);
+console.log("📡 VENTES_URL:", VENTES_URL);
+
+// ============================================
 // FONCTIONS UTILITAIRES
 // ============================================
 
@@ -196,10 +226,10 @@ document.getElementById("currentDate").textContent =
 
 async function loadDashboardStats() {
   try {
-    const ventesRes = await fetch("http://localhost:4000/ventes");
+    const ventesRes = await fetch(VENTES_URL);
     const ventes = await ventesRes.json();
 
-    const clientsRes = await fetch("http://localhost:4000/clients");
+    const clientsRes = await fetch(CLIENTS_URL);
     const clients = await clientsRes.json();
 
     const nbVentes = ventes.length;
@@ -260,8 +290,6 @@ async function loadDashboardStats() {
 // MODULE 1: TROUVER UN CLIENT
 // ============================================
 
-const API_URL = "http://localhost:4000/clients";
-
 const button = document.getElementById("searchBtn");
 const clientIdInput = document.getElementById("clientId");
 const resultDiv = document.getElementById("result");
@@ -279,7 +307,7 @@ async function searchClient() {
   showLoading(resultDiv);
 
   try {
-    const response = await fetch(`${API_URL}/${String(clientId)}`);
+    const response = await fetch(`${CLIENTS_URL}/${String(clientId)}`);
 
     if (!response.ok) {
       if (response.status === 404) {
@@ -427,7 +455,7 @@ async function addClient() {
   showLoadingMessage(messageDiv);
 
   try {
-    const response = await fetch("http://localhost:4000/clients", {
+    const response = await fetch(CLIENTS_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ nom, telephone }),
@@ -573,9 +601,7 @@ async function afficherClient() {
     return;
   }
   try {
-    const response = await fetch(
-      `http://localhost:4000/clients/${String(clientId)}`,
-    );
+    const response = await fetch(`${CLIENTS_URL}/${String(clientId)}`);
     if (!response.ok) {
       if (clientInfoDiv)
         clientInfoDiv.innerHTML = `<span class="text-red-600 text-sm">❌ Client introuvable</span>`;
@@ -677,9 +703,7 @@ async function addVente() {
     '<div class="bg-blue-50 text-blue-600 p-3 rounded-lg">⏳ Enregistrement en cours...</div>';
 
   try {
-    const clientResponse = await fetch(
-      `http://localhost:4000/clients/${String(clientId)}`,
-    );
+    const clientResponse = await fetch(`${CLIENTS_URL}/${String(clientId)}`);
     if (!clientResponse.ok) {
       message.innerHTML =
         '<div class="bg-red-50 text-red-600 p-3 rounded-lg">❌ Client introuvable</div>';
@@ -692,7 +716,7 @@ async function addVente() {
       0,
     );
 
-    const response = await fetch("http://localhost:4000/ventes", {
+    const response = await fetch(VENTES_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -817,9 +841,7 @@ async function afficherHistorique() {
   showMessage("⏳ Chargement...", "blue");
 
   try {
-    const clientResponse = await fetch(
-      `http://localhost:4000/clients/${String(clientId)}`,
-    );
+    const clientResponse = await fetch(`${CLIENTS_URL}/${String(clientId)}`);
     if (!clientResponse.ok) {
       showMessage(`❌ Client avec l'ID ${clientId} non trouvé`, "red");
       return;
@@ -830,7 +852,7 @@ async function afficherHistorique() {
     currentClientData = clientData;
     showClientInfo(clientData);
 
-    const allVentesResponse = await fetch(`http://localhost:4000/ventes`);
+    const allVentesResponse = await fetch(VENTES_URL);
     const allVentes = await allVentesResponse.json();
     const ventes = allVentes.filter(
       (v) => String(v.clientId) === String(clientId),
@@ -845,6 +867,7 @@ async function afficherHistorique() {
     displayVentesMulti(ventes, clientData);
     showMessage(`✅ ${ventes.length} vente(s) trouvée(s)`, "green");
   } catch (error) {
+    console.error("Erreur historique:", error);
     showMessage("❌ Erreur de connexion", "red");
   }
 }
@@ -879,7 +902,7 @@ function displayVentesMulti(ventes, clientData) {
       <td class="px-4 py-3 text-sm text-center">${quantiteTotale}</td>
       <td class="px-4 py-3 text-sm text-right">${formatNumberFC(prixMoyen)} FC</td>
       <td class="px-4 py-3 text-sm text-right font-bold text-emerald-600">${formatNumberFC(total)} FC</td>
-      <td class="px-4 py-3 text-sm">${formatDate(v.date)}</td>
+      <td class="px-4 py-3 text-sm">${formatDate(v.date)}</tr>
       <td class="px-4 py-3 text-sm text-center">
         <button onclick="showVenteDetails(${v.id})" class="bg-blue-600 text-white px-2 py-1 rounded text-xs hover:bg-blue-700 transition mr-1">📄 Détails</button>
         <button onclick="genererFacturePanier(venteNettoyee, clientData)" class="bg-emerald-600 text-white px-2 py-1 rounded text-xs hover:bg-emerald-700 transition">🧾 Facture</button>
@@ -1057,12 +1080,12 @@ function appliquerFiltre(ventesOriginales, clientData) {
 
 async function showVenteDetails(venteId) {
   try {
-    const response = await fetch(`http://localhost:4000/ventes/${venteId}`);
+    const response = await fetch(`${VENTES_URL}/${venteId}`);
     if (!response.ok) throw new Error("Vente non trouvée");
     const vente = await response.json();
 
     const clientResponse = await fetch(
-      `http://localhost:4000/clients/${String(vente.clientId)}`,
+      `${CLIENTS_URL}/${String(vente.clientId)}`,
     );
     const client = clientResponse.ok ? await clientResponse.json() : null;
 
