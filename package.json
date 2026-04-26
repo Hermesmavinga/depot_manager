@@ -5,7 +5,8 @@
   "scripts": {
     "server": "json-server --watch database/db.json --port 4000 --host 0.0.0.0 --static ./",
     "init-data": "node script/init-data.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
   },
   "keywords": [],
   "author": "",
