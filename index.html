@@ -7,65 +7,46 @@
       content="width=device-width, initial-scale=1.0, user-scalable=yes"
     />
     <title>Gestion Ventes Pro | Dashboard</title>
-
-    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
-
-    <!-- Font Awesome Icons -->
     <link
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
     />
-
-    <!-- jsPDF pour factures -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-
     <style>
-      /* Custom styles complémentaires */
       .sidebar-transition {
         transition: transform 0.3s ease-in-out;
       }
-
       .card-hover {
         transition: all 0.3s ease;
       }
-
       .card-hover:hover {
         transform: translateY(-4px);
         box-shadow:
           0 10px 25px -5px rgba(0, 0, 0, 0.1),
           0 10px 10px -5px rgba(0, 0, 0, 0.04);
       }
-
       .btn-hover {
         transition: all 0.2s ease;
       }
-
       .btn-hover:hover {
         transform: translateY(-2px);
       }
-
-      /* Scrollbar personnalisée */
       ::-webkit-scrollbar {
         width: 8px;
         height: 8px;
       }
-
       ::-webkit-scrollbar-track {
         background: #f1f1f1;
         border-radius: 4px;
       }
-
       ::-webkit-scrollbar-thumb {
         background: #10b981;
         border-radius: 4px;
       }
-
-      ::-webkit-scrollbar-thumb:hover {
-        background: #059669;
+      .fade-in {
+        animation: fadeIn 0.3s ease-out;
       }
-
-      /* Animations */
       @keyframes fadeIn {
         from {
           opacity: 0;
@@ -76,12 +57,6 @@
           transform: translateY(0);
         }
       }
-
-      .fade-in {
-        animation: fadeIn 0.3s ease-out;
-      }
-
-      /* Toast notification */
       .toast-notification {
         position: fixed;
         bottom: 20px;
@@ -89,7 +64,6 @@
         z-index: 1000;
         animation: slideInRight 0.3s ease-out;
       }
-
       @keyframes slideInRight {
         from {
           transform: translateX(100%);
@@ -100,8 +74,6 @@
           opacity: 1;
         }
       }
-
-      /* Overlay pour mobile */
       .overlay {
         position: fixed;
         top: 0;
@@ -112,31 +84,17 @@
         z-index: 40;
         display: none;
       }
-
       .overlay.active {
         display: block;
       }
-
-      /* Styles pour les onglets */
-      .categorie-tab {
-        transition: all 0.3s ease;
-      }
-
       .categorie-tab.active {
         border-bottom-color: #10b981 !important;
         color: #10b981 !important;
       }
-
-      .type-tab {
-        transition: all 0.3s ease;
-      }
-
       .type-tab.active {
         border-bottom-color: #10b981 !important;
         color: #10b981 !important;
       }
-
-      /* Badges */
       .type-badge {
         display: inline-block;
         padding: 4px 8px;
@@ -144,42 +102,19 @@
         font-size: 0.7rem;
         font-weight: 600;
       }
-
       .type-badge.bouteille {
         background: #dbeafe;
         color: #1e40af;
       }
-
       .type-badge.cassier {
         background: #fed7aa;
         color: #9a3412;
-      }
-
-      /* Loading spinner */
-      .loading-spinner {
-        display: inline-block;
-        width: 20px;
-        height: 20px;
-        border: 2px solid #f3f3f3;
-        border-top: 2px solid #10b981;
-        border-radius: 50%;
-        animation: spin 1s linear infinite;
-      }
-
-      @keyframes spin {
-        0% {
-          transform: rotate(0deg);
-        }
-        100% {
-          transform: rotate(360deg);
-        }
       }
     </style>
   </head>
   <body
     class="bg-gradient-to-br from-gray-50 to-gray-100 font-sans antialiased"
   >
-    <!-- Overlay pour mobile -->
     <div id="overlay" class="overlay"></div>
 
     <!-- Sidebar -->
@@ -195,49 +130,42 @@
         </h2>
         <p class="text-xs text-gray-400 mt-1">Gestion de ventes intelligente</p>
       </div>
-
       <nav class="py-4">
         <div
           class="nav-item flex items-center gap-3 px-6 py-3 mx-3 rounded-lg cursor-pointer transition-all duration-200 bg-emerald-600 text-white"
           data-section="dashboard"
         >
-          <i class="fas fa-chart-line w-5"></i>
-          <span>Dashboard</span>
+          <i class="fas fa-chart-line w-5"></i><span>Dashboard</span>
         </div>
         <div
           class="nav-item flex items-center gap-3 px-6 py-3 mx-3 rounded-lg cursor-pointer transition-all duration-200 text-gray-300 hover:bg-gray-800 hover:text-white"
           data-section="clients"
         >
-          <i class="fas fa-users w-5"></i>
-          <span>Clients</span>
+          <i class="fas fa-users w-5"></i><span>Clients</span>
         </div>
         <div
           class="nav-item flex items-center gap-3 px-6 py-3 mx-3 rounded-lg cursor-pointer transition-all duration-200 text-gray-300 hover:bg-gray-800 hover:text-white"
           data-section="produits"
         >
-          <i class="fas fa-boxes w-5"></i>
-          <span>Produits</span>
+          <i class="fas fa-boxes w-5"></i><span>Produits</span>
         </div>
         <div
           class="nav-item flex items-center gap-3 px-6 py-3 mx-3 rounded-lg cursor-pointer transition-all duration-200 text-gray-300 hover:bg-gray-800 hover:text-white"
           data-section="ventes"
         >
-          <i class="fas fa-shopping-cart w-5"></i>
-          <span>Ventes</span>
+          <i class="fas fa-shopping-cart w-5"></i><span>Ventes</span>
         </div>
         <div
           class="nav-item flex items-center gap-3 px-6 py-3 mx-3 rounded-lg cursor-pointer transition-all duration-200 text-gray-300 hover:bg-gray-800 hover:text-white"
           data-section="historique"
         >
-          <i class="fas fa-history w-5"></i>
-          <span>Historique</span>
+          <i class="fas fa-history w-5"></i><span>Historique</span>
         </div>
       </nav>
     </aside>
 
     <!-- Main Content -->
     <main class="md:ml-72 min-h-screen">
-      <!-- Top Bar -->
       <header class="bg-white shadow-sm sticky top-0 z-30">
         <div class="px-4 py-4 md:px-8 flex justify-between items-center">
           <div class="flex items-center gap-4">
@@ -255,15 +183,14 @@
             </h1>
           </div>
           <div class="flex items-center gap-3 text-gray-500 text-sm">
-            <i class="fas fa-calendar-alt"></i>
-            <span id="currentDate"></span>
+            <i class="fas fa-calendar-alt"></i><span id="currentDate"></span>
           </div>
         </div>
       </header>
 
       <div class="p-4 md:p-8">
-        <!-- SECTION DASHBOARD -->
-        <div id="dashboardSection" class="section fade-in">
+        <!-- DASHBOARD -->
+        <div id="dashboardSection" class="fade-in">
           <div
             class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8"
           >
@@ -319,7 +246,6 @@
               </div>
             </div>
           </div>
-
           <div
             class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden"
           >
@@ -332,39 +258,51 @@
           </div>
         </div>
 
-        <!-- SECTION CLIENTS -->
-        <div id="clientsSection" class="section fade-in hidden">
+        <!-- CLIENTS -->
+        <div id="clientsSection" class="hidden fade-in">
           <div
             class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden"
           >
             <div class="px-6 py-4 border-b border-gray-100">
               <h3 class="font-semibold text-gray-800">
-                <i class="fas fa-user-plus text-emerald-600 mr-2"></i> Créer un
-                client
+                <i class="fas fa-users text-emerald-600 mr-2"></i> Gestion des
+                clients
               </h3>
             </div>
-            <div class="p-6">
+            <div class="flex border-b border-gray-200 px-6">
+              <button
+                id="tabAjouterClient"
+                class="py-2 px-4 text-sm font-medium text-emerald-600 border-b-2 border-emerald-600"
+              >
+                ➕ Ajouter un client
+              </button>
+              <button
+                id="tabListerClients"
+                class="py-2 px-4 text-sm font-medium text-gray-500 hover:text-gray-700 border-b-2 border-transparent"
+              >
+                📋 Liste des clients
+              </button>
+            </div>
+            <div id="panelAjouterClient" class="p-6">
               <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 <div>
                   <div class="mb-4">
                     <label class="block text-gray-700 text-sm font-medium mb-2"
                       >Nom complet</label
-                    >
-                    <input
+                    ><input
                       type="text"
                       id="nom"
-                      class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition"
+                      class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
                       placeholder="Jean Dupont"
                     />
                   </div>
                   <div class="mb-4">
                     <label class="block text-gray-700 text-sm font-medium mb-2"
                       >Téléphone</label
-                    >
-                    <input
+                    ><input
                       type="tel"
                       id="telephone"
-                      class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition"
+                      class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
                       placeholder="+243 XXX XXX XXX"
                     />
                   </div>
@@ -385,10 +323,9 @@
                       <input
                         type="text"
                         id="clientId"
-                        class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition"
+                        class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
                         placeholder="ID client"
-                      />
-                      <button
+                      /><button
                         id="searchBtn"
                         class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition btn-hover"
                       >
@@ -400,11 +337,69 @@
                 </div>
               </div>
             </div>
+            <div id="panelListerClients" class="p-6 hidden">
+              <div
+                class="mb-4 flex justify-between items-center flex-wrap gap-4"
+              >
+                <div class="relative">
+                  <input
+                    type="text"
+                    id="searchClientList"
+                    placeholder="🔍 Rechercher par nom ou téléphone..."
+                    class="px-4 py-2 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none w-64"
+                  /><i
+                    class="fas fa-search absolute left-3 top-3 text-gray-400"
+                  ></i>
+                </div>
+                <button
+                  id="refreshClientsBtn"
+                  class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-lg transition text-sm"
+                >
+                  <i class="fas fa-sync-alt"></i> Actualiser
+                </button>
+              </div>
+              <div class="overflow-x-auto">
+                <table class="w-full">
+                  <thead class="bg-gray-50">
+                    <tr>
+                      <th
+                        class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase"
+                      >
+                        ID
+                      </th>
+                      <th
+                        class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase"
+                      >
+                        Nom
+                      </th>
+                      <th
+                        class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase"
+                      >
+                        Téléphone
+                      </th>
+                      <th
+                        class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase"
+                      >
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody
+                    id="clientsTableBody"
+                    class="divide-y divide-gray-100"
+                  ></tbody>
+                </table>
+              </div>
+              <div
+                id="clientsPagination"
+                class="mt-4 flex justify-between items-center"
+              ></div>
+            </div>
           </div>
         </div>
 
-        <!-- SECTION PRODUITS -->
-        <div id="produitsSection" class="section fade-in hidden">
+        <!-- PRODUITS -->
+        <div id="produitsSection" class="hidden fade-in">
           <div
             class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden"
           >
@@ -426,12 +421,11 @@
               <div class="flex gap-2 border-b border-gray-200 mb-6">
                 <button
                   id="tabBracongo"
-                  class="categorie-tab active px-4 py-2 font-medium text-gray-600 border-b-2 border-emerald-500 text-emerald-600"
+                  class="categorie-tab active px-4 py-2 font-medium border-b-2 border-emerald-500 text-emerald-600"
                   data-categorie="BRACONGO"
                 >
-                  🍺 BRACONGO
-                </button>
-                <button
+                  🍺 BRACONGO</button
+                ><button
                   id="tabBralima"
                   class="categorie-tab px-4 py-2 font-medium text-gray-600 border-b-2 border-transparent hover:text-gray-800"
                   data-categorie="BRALIMA"
@@ -439,16 +433,14 @@
                   🍻 BRALIMA
                 </button>
               </div>
-
               <div id="bracongoContainer">
                 <div class="flex gap-2 border-b border-gray-200 mb-4">
                   <button
                     id="bracongoBouteilleTab"
                     class="type-tab active px-3 py-1 text-sm font-medium text-emerald-600 border-b-2 border-emerald-500"
                   >
-                    🍾 BOUTEILLES
-                  </button>
-                  <button
+                    🍾 BOUTEILLES</button
+                  ><button
                     id="bracongoCassierTab"
                     class="type-tab px-3 py-1 text-sm font-medium text-gray-600 border-b-2 border-transparent"
                   >
@@ -534,16 +526,14 @@
                   </div>
                 </div>
               </div>
-
               <div id="bralimaContainer" class="hidden">
                 <div class="flex gap-2 border-b border-gray-200 mb-4">
                   <button
                     id="bralimaBouteilleTab"
                     class="type-tab px-3 py-1 text-sm font-medium text-gray-600 border-b-2 border-transparent"
                   >
-                    🍾 BOUTEILLES
-                  </button>
-                  <button
+                    🍾 BOUTEILLES</button
+                  ><button
                     id="bralimaCassierTab"
                     class="type-tab px-3 py-1 text-sm font-medium text-gray-600 border-b-2 border-transparent"
                   >
@@ -633,8 +623,8 @@
           </div>
         </div>
 
-        <!-- SECTION VENTES -->
-        <div id="ventesSection" class="section fade-in hidden">
+        <!-- VENTES -->
+        <div id="ventesSection" class="hidden fade-in">
           <div
             class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden"
           >
@@ -648,26 +638,23 @@
               <div class="mb-6">
                 <label class="block text-gray-700 text-sm font-medium mb-2"
                   >ID Client</label
-                >
-                <input
+                ><input
                   type="text"
                   id="venteClientId"
-                  class="w-full max-w-xs px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition"
+                  class="w-full max-w-xs px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
                   placeholder="Entrez l'ID du client"
                 />
                 <div id="clientInfo" class="mt-2"></div>
               </div>
-
               <div
                 class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6"
               >
                 <div>
                   <label class="block text-gray-700 text-sm font-medium mb-2"
                     >Produit</label
-                  >
-                  <select
+                  ><select
                     id="produit"
-                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition"
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
                   >
                     <option value="">-- Chargement des produits --</option>
                   </select>
@@ -675,11 +662,10 @@
                 <div>
                   <label class="block text-gray-700 text-sm font-medium mb-2"
                     >Quantité</label
-                  >
-                  <input
+                  ><input
                     type="number"
                     id="quantite"
-                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition"
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
                     value="1"
                     min="1"
                   />
@@ -687,8 +673,7 @@
                 <div>
                   <label class="block text-gray-700 text-sm font-medium mb-2"
                     >Prix unitaire (FC)</label
-                  >
-                  <input
+                  ><input
                     type="number"
                     id="prix"
                     class="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50"
@@ -704,12 +689,10 @@
                   </button>
                 </div>
               </div>
-
               <div
                 id="panier"
                 class="bg-gray-50 rounded-lg p-4 mb-6 min-h-[100px]"
               ></div>
-
               <button
                 id="addVenteBtn"
                 class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-3 px-4 rounded-lg transition btn-hover"
@@ -721,8 +704,8 @@
           </div>
         </div>
 
-        <!-- SECTION HISTORIQUE -->
-        <div id="historiqueSection" class="section fade-in hidden">
+        <!-- HISTORIQUE -->
+        <div id="historiqueSection" class="hidden fade-in">
           <div
             class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden"
           >
@@ -737,19 +720,16 @@
                 <input
                   type="text"
                   id="historiqueClientId"
-                  class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition"
+                  class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
                   placeholder="ID client"
-                />
-                <button
+                /><button
                   id="showHistoriqueBtn"
                   class="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2 rounded-lg transition btn-hover"
                 >
                   <i class="fas fa-search mr-2"></i> Afficher
                 </button>
               </div>
-
               <div id="historiqueMessage"></div>
-
               <div class="overflow-x-auto">
                 <table id="historiqueTable" class="w-full hidden">
                   <thead class="bg-gray-50">
@@ -824,16 +804,14 @@
       </div>
     </main>
 
-    <!-- Modal pour ajouter/modifier un produit -->
+    <!-- Modal Produit -->
     <div
       id="produitModal"
       class="fixed inset-0 bg-black/50 z-50 hidden items-center justify-center"
     >
-      <div
-        class="bg-white rounded-xl shadow-xl w-full max-w-md mx-4 transform transition-all"
-      >
-        <div class="px-6 py-4 border-b border-gray-100">
-          <h3 id="modalTitle" class="text-lg font-semibold text-gray-800">
+      <div class="bg-white rounded-xl shadow-xl w-full max-w-md mx-4">
+        <div class="px-6 py-4 border-b">
+          <h3 id="modalTitle" class="text-lg font-semibold">
             Ajouter un produit
           </h3>
         </div>
@@ -841,32 +819,29 @@
           <div>
             <label class="block text-gray-700 text-sm font-medium mb-2"
               >Nom du produit</label
-            >
-            <input
+            ><input
               type="text"
               id="produitNom"
-              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition"
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
               placeholder="Ex: NGOK"
             />
           </div>
           <div>
             <label class="block text-gray-700 text-sm font-medium mb-2"
               >Format / Contenance</label
-            >
-            <input
+            ><input
               type="text"
               id="produitFormat"
-              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition"
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
               placeholder="Ex: 33cl"
             />
           </div>
           <div>
             <label class="block text-gray-700 text-sm font-medium mb-2"
               >Type d'emballage</label
-            >
-            <select
+            ><select
               id="produitType"
-              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition"
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
             >
               <option value="bouteille">🍾 Bouteille (unité)</option>
               <option value="cassier">📦 Cassier (lot)</option>
@@ -875,64 +850,104 @@
           <div id="prixBouteilleGroup">
             <label class="block text-gray-700 text-sm font-medium mb-2"
               >Prix unitaire (FC)</label
-            >
-            <input
+            ><input
               type="number"
               id="produitPrix"
-              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition"
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
               placeholder="Ex: 30000"
             />
           </div>
           <div id="prixCassierGroup" class="hidden">
             <label class="block text-gray-700 text-sm font-medium mb-2"
               >Prix du cassier (FC)</label
-            >
-            <input
+            ><input
               type="number"
               id="produitPrixCassier"
-              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition"
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
               placeholder="Ex: 600000"
             />
           </div>
           <div id="nbBouteillesGroup" class="hidden">
             <label class="block text-gray-700 text-sm font-medium mb-2"
               >Nombre de bouteilles par cassier</label
-            >
-            <input
+            ><input
               type="number"
               id="produitNbBouteilles"
-              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition"
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
               value="24"
               min="1"
               max="100"
             />
             <p class="text-xs text-gray-500 mt-1">
-              Exemples: 12, 20, 24, 30 bouteilles par cassier
+              Exemples: 12, 20, 24, 30 bouteilles
             </p>
           </div>
           <div>
             <label class="block text-gray-700 text-sm font-medium mb-2"
               >Fournisseur</label
-            >
-            <select
+            ><select
               id="produitFournisseur"
-              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition"
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
             >
               <option value="BRACONGO">🍺 BRACONGO</option>
               <option value="BRALIMA">🍻 BRALIMA</option>
             </select>
           </div>
         </div>
-        <div class="px-6 py-4 border-t border-gray-100 flex justify-end gap-3">
+        <div class="px-6 py-4 border-t flex justify-end gap-3">
           <button
             id="modalCancelBtn"
-            class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition"
+            class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
           >
-            Annuler
-          </button>
-          <button
+            Annuler</button
+          ><button
             id="modalSaveBtn"
-            class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition"
+            class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg"
+          >
+            Enregistrer
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal Client -->
+    <div
+      id="editClientModal"
+      class="fixed inset-0 bg-black/50 z-50 hidden items-center justify-center"
+    >
+      <div class="bg-white rounded-xl shadow-xl w-full max-w-md mx-4">
+        <div class="px-6 py-4 border-b">
+          <h3 class="text-lg font-semibold">Modifier le client</h3>
+        </div>
+        <div class="p-6 space-y-4">
+          <div>
+            <label class="block text-gray-700 text-sm font-medium mb-2"
+              >Nom complet</label
+            ><input
+              type="text"
+              id="editClientNom"
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
+            />
+          </div>
+          <div>
+            <label class="block text-gray-700 text-sm font-medium mb-2"
+              >Téléphone</label
+            ><input
+              type="tel"
+              id="editClientTelephone"
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
+            />
+          </div>
+        </div>
+        <div class="px-6 py-4 border-t flex justify-end gap-3">
+          <button
+            id="closeEditModalBtn"
+            class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+          >
+            Annuler</button
+          ><button
+            id="saveEditClientBtn"
+            class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg"
           >
             Enregistrer
           </button>

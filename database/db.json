@@ -259,6 +259,11 @@
       "nom": "Karl",
       "telephone": "+243 828 790 728",
       "id": "1onRUH4"
+    },
+    {
+      "nom": "range",
+      "telephone": "+243 828 790 728",
+      "id": "iVYomCu"
     }
   ],
   "produits": [
@@ -309,6 +314,15 @@
       "fournisseur": "BRACONGO",
       "nbBouteilles": 12,
       "id": "LXh4dOW"
+    },
+    {
+      "nom": "Heimeken",
+      "prixCassier": 80000,
+      "format": "33 cl",
+      "type": "cassier",
+      "fournisseur": "BRALIMA",
+      "nbBouteilles": 20,
+      "id": "UsYQw2s"
     }
   ],
   "ventes": [
@@ -1141,6 +1155,20 @@
       "total": 60000,
       "date": "2026-05-02T11:20:48.198Z",
       "id": "r69hXNx"
+    },
+    {
+      "clientId": "1",
+      "produits": [
+        {
+          "nom": "Heimeken",
+          "quantite": 3,
+          "prix": 80000,
+          "type": "cassier"
+        }
+      ],
+      "total": 240000,
+      "date": "2026-05-02T13:56:35.060Z",
+      "id": "M-djLOR"
     }
   ],
   "$schema": "./node_modules/json-server/schema.json"
