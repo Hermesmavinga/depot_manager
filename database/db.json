@@ -254,6 +254,11 @@
       "id": "eddb",
       "nom": "joyce ngende",
       "telephone": "+243 828 790 728"
+    },
+    {
+      "nom": "Karl",
+      "telephone": "+243 828 790 728",
+      "id": "1onRUH4"
     }
   ],
   "produits": [
@@ -261,6 +266,49 @@
       "id": "1",
       "nom": "Casier bière",
       "prix": 10
+    },
+    {
+      "nom": "Primus",
+      "prixCassier": 60000,
+      "format": "33 cl",
+      "type": "cassier",
+      "fournisseur": "BRALIMA",
+      "nbBouteilles": 24,
+      "id": "18L55T6"
+    },
+    {
+      "nom": "Primus",
+      "prix": 2400,
+      "format": "30 cl",
+      "type": "bouteille",
+      "fournisseur": "BRALIMA",
+      "id": "4iKYmiG"
+    },
+    {
+      "nom": "Nkoy",
+      "prixCassier": 60000,
+      "format": "33 cl",
+      "type": "cassier",
+      "fournisseur": "BRACONGO",
+      "nbBouteilles": 24,
+      "id": "1WBmip9"
+    },
+    {
+      "nom": "Nkoy",
+      "prix": 2500,
+      "format": "33 cl",
+      "type": "bouteille",
+      "fournisseur": "BRACONGO",
+      "id": "JL9h48N"
+    },
+    {
+      "nom": "Skol",
+      "prixCassier": 40000,
+      "format": "33 cl",
+      "type": "cassier",
+      "fournisseur": "BRACONGO",
+      "nbBouteilles": 12,
+      "id": "LXh4dOW"
     }
   ],
   "ventes": [
@@ -1079,6 +1127,20 @@
       ],
       "total": 388000,
       "date": "2026-04-26T19:14:56.502Z"
+    },
+    {
+      "clientId": "1onRUH4",
+      "produits": [
+        {
+          "nom": "Nkoy",
+          "quantite": 1,
+          "prix": 60000,
+          "type": "cassier"
+        }
+      ],
+      "total": 60000,
+      "date": "2026-05-02T11:20:48.198Z",
+      "id": "r69hXNx"
     }
   ],
   "$schema": "./node_modules/json-server/schema.json"

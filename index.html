@@ -264,7 +264,6 @@
       <div class="p-4 md:p-8">
         <!-- SECTION DASHBOARD -->
         <div id="dashboardSection" class="section fade-in">
-          <!-- Stats Grid -->
           <div
             class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8"
           >
@@ -321,7 +320,6 @@
             </div>
           </div>
 
-          <!-- Top produits -->
           <div
             class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden"
           >
@@ -425,23 +423,23 @@
               </button>
             </div>
             <div class="p-6">
-              <!-- Onglets fournisseurs -->
               <div class="flex gap-2 border-b border-gray-200 mb-6">
                 <button
                   id="tabBracongo"
                   class="categorie-tab active px-4 py-2 font-medium text-gray-600 border-b-2 border-emerald-500 text-emerald-600"
+                  data-categorie="BRACONGO"
                 >
                   🍺 BRACONGO
                 </button>
                 <button
                   id="tabBralima"
                   class="categorie-tab px-4 py-2 font-medium text-gray-600 border-b-2 border-transparent hover:text-gray-800"
+                  data-categorie="BRALIMA"
                 >
                   🍻 BRALIMA
                 </button>
               </div>
 
-              <!-- Contenu BRACONGO -->
               <div id="bracongoContainer">
                 <div class="flex gap-2 border-b border-gray-200 mb-4">
                   <button
@@ -454,7 +452,7 @@
                     id="bracongoCassierTab"
                     class="type-tab px-3 py-1 text-sm font-medium text-gray-600 border-b-2 border-transparent"
                   >
-                    📦 CASSIERS (24 bouteilles)
+                    📦 CASSIERS
                   </button>
                 </div>
                 <div id="bracongoBouteilleContainer">
@@ -476,11 +474,6 @@
                             class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase"
                           >
                             Prix unitaire (FC)
-                          </th>
-                          <th
-                            class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase"
-                          >
-                            Prix cassier (FC)
                           </th>
                           <th
                             class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase"
@@ -519,6 +512,11 @@
                           <th
                             class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase"
                           >
+                            Nb bouteilles
+                          </th>
+                          <th
+                            class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase"
+                          >
                             Prix/bouteille (FC)
                           </th>
                           <th
@@ -526,7 +524,7 @@
                           >
                             Actions
                           </th>
-                        </td>
+                        </tr>
                       </thead>
                       <tbody
                         id="bracongoCassierBody"
@@ -537,7 +535,6 @@
                 </div>
               </div>
 
-              <!-- Contenu BRALIMA -->
               <div id="bralimaContainer" class="hidden">
                 <div class="flex gap-2 border-b border-gray-200 mb-4">
                   <button
@@ -550,7 +547,7 @@
                     id="bralimaCassierTab"
                     class="type-tab px-3 py-1 text-sm font-medium text-gray-600 border-b-2 border-transparent"
                   >
-                    📦 CASSIERS (24 bouteilles)
+                    📦 CASSIERS
                   </button>
                 </div>
                 <div id="bralimaBouteilleContainer">
@@ -572,11 +569,6 @@
                             class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase"
                           >
                             Prix unitaire (FC)
-                          </th>
-                          <th
-                            class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase"
-                          >
-                            Prix cassier (FC)
                           </th>
                           <th
                             class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase"
@@ -611,6 +603,11 @@
                             class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase"
                           >
                             Prix cassier (FC)
+                          </th>
+                          <th
+                            class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase"
+                          >
+                            Nb bouteilles
                           </th>
                           <th
                             class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase"
@@ -872,7 +869,7 @@
               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition"
             >
               <option value="bouteille">🍾 Bouteille (unité)</option>
-              <option value="cassier">📦 Cassier (24 bouteilles)</option>
+              <option value="cassier">📦 Cassier (lot)</option>
             </select>
           </div>
           <div id="prixBouteilleGroup">
@@ -888,7 +885,7 @@
           </div>
           <div id="prixCassierGroup" class="hidden">
             <label class="block text-gray-700 text-sm font-medium mb-2"
-              >Prix du cassier (FC) - 24 bouteilles</label
+              >Prix du cassier (FC)</label
             >
             <input
               type="number"
@@ -896,6 +893,22 @@
               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition"
               placeholder="Ex: 600000"
             />
+          </div>
+          <div id="nbBouteillesGroup" class="hidden">
+            <label class="block text-gray-700 text-sm font-medium mb-2"
+              >Nombre de bouteilles par cassier</label
+            >
+            <input
+              type="number"
+              id="produitNbBouteilles"
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition"
+              value="24"
+              min="1"
+              max="100"
+            />
+            <p class="text-xs text-gray-500 mt-1">
+              Exemples: 12, 20, 24, 30 bouteilles par cassier
+            </p>
           </div>
           <div>
             <label class="block text-gray-700 text-sm font-medium mb-2"
