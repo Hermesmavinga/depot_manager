@@ -283,7 +283,7 @@
     },
     {
       "nom": "Primus",
-      "prix": 2400,
+      "prix": 2500,
       "format": "30 cl",
       "type": "bouteille",
       "fournisseur": "BRALIMA",
@@ -323,6 +323,15 @@
       "fournisseur": "BRALIMA",
       "nbBouteilles": 20,
       "id": "UsYQw2s"
+    },
+    {
+      "nom": "33 export",
+      "prixCassier": 50000,
+      "format": "33 cl",
+      "type": "cassier",
+      "fournisseur": "BRACONGO",
+      "nbBouteilles": 24,
+      "id": "c6RGCKx"
     }
   ],
   "ventes": [
@@ -1169,6 +1178,20 @@
       "total": 240000,
       "date": "2026-05-02T13:56:35.060Z",
       "id": "M-djLOR"
+    },
+    {
+      "clientId": "1",
+      "produits": [
+        {
+          "nom": "Primus",
+          "quantite": 1,
+          "prix": 2400,
+          "type": "bouteille"
+        }
+      ],
+      "total": 2400,
+      "date": "2026-05-02T19:57:58.003Z",
+      "id": "kA28RKw"
     }
   ],
   "$schema": "./node_modules/json-server/schema.json"

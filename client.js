@@ -141,6 +141,7 @@ const sections = {
   produits: document.getElementById("produitsSection"),
   ventes: document.getElementById("ventesSection"),
   historique: document.getElementById("historiqueSection"),
+  rapports: document.getElementById("rapportsSection"),
 };
 const sidebar = document.getElementById("sidebar");
 const mobileMenuBtn = document.getElementById("mobileMenuBtn");
@@ -766,7 +767,7 @@ function initGestionProduits() {
 }
 
 // ============================================
-// CLIENTS (RECHERCHE, AJOUT, LISTE, MODIFICATION, SUPPRESSION)
+// CLIENTS
 // ============================================
 const button = document.getElementById("searchBtn");
 const clientIdInput = document.getElementById("clientId");
@@ -1296,7 +1297,6 @@ if (historiqueClientIdElem)
     }
   });
 
-// Fonction globale pour les détails
 window.showVenteDetail = async function (venteId) {
   try {
     const response = await fetch(`${VENTES_URL}/${venteId}`);
@@ -1534,7 +1534,427 @@ function appliquerFiltre(ventesOriginales, clientData) {
 }
 
 // ============================================
-// FACTURES
+// RAPPORTS MENSUELS
+// ============================================
+async function chargerClientsPourRapport() {
+  try {
+    const response = await fetch(CLIENTS_URL);
+    const clients = await response.json();
+    const selectClient = document.getElementById("rapportClientSelect");
+    if (selectClient) {
+      selectClient.innerHTML =
+        '<option value="">-- Tous les clients --</option>';
+      clients.forEach((client) => {
+        const option = document.createElement("option");
+        option.value = client.id;
+        option.textContent = `${client.nom} (ID: ${client.id})`;
+        selectClient.appendChild(option);
+      });
+    }
+  } catch (error) {
+    console.error("Erreur chargement clients pour rapport:", error);
+  }
+}
+async function genererRapportMensuel() {
+  const clientId = document.getElementById("rapportClientSelect")?.value;
+  const mois = parseInt(document.getElementById("rapportMoisSelect")?.value);
+  const annee = parseInt(document.getElementById("rapportAnneeSelect")?.value);
+  if (!mois || !annee) {
+    showTemporaryNotification(
+      "❌ Veuillez sélectionner un mois et une année",
+      "error",
+    );
+    return;
+  }
+  showTemporaryNotification("⏳ Génération du rapport...", "info");
+  try {
+    const [ventesRes, clientsRes] = await Promise.all([
+      fetch(VENTES_URL),
+      fetch(CLIENTS_URL),
+    ]);
+    const toutesVentes = await ventesRes.json();
+    const tousClients = await clientsRes.json();
+    let ventesFiltrees = toutesVentes.filter((vente) => {
+      const dateVente = parseDate(vente.date);
+      if (isNaN(dateVente.getTime())) return false;
+      return (
+        dateVente.getMonth() + 1 === mois && dateVente.getFullYear() === annee
+      );
+    });
+    if (clientId && clientId !== "") {
+      ventesFiltrees = ventesFiltrees.filter(
+        (v) => String(v.clientId) === String(clientId),
+      );
+    }
+    if (ventesFiltrees.length === 0) {
+      document.getElementById("rapportTable")?.classList.add("hidden");
+      document.getElementById("rapportResume")?.classList.add("hidden");
+      document.getElementById("rapportEmpty")?.classList.remove("hidden");
+      return;
+    }
+    document.getElementById("rapportEmpty")?.classList.add("hidden");
+    const totauxParClient = new Map();
+    ventesFiltrees.forEach((vente) => {
+      const venteNettoyee = nettoyerVente(vente);
+      const total = venteNettoyee.total;
+      const clientIdVente = String(vente.clientId);
+      if (!totauxParClient.has(clientIdVente)) {
+        totauxParClient.set(clientIdVente, {
+          clientId: clientIdVente,
+          nbVentes: 0,
+          total: 0,
+        });
+      }
+      const clientTotal = totauxParClient.get(clientIdVente);
+      clientTotal.nbVentes++;
+      clientTotal.total += total;
+    });
+    const rapportData = [];
+    for (let [id, data] of totauxParClient) {
+      const client = tousClients.find((c) => String(c.id) === String(id));
+      rapportData.push({
+        clientId: id,
+        clientNom: client ? client.nom : `Client ${id}`,
+        clientTelephone: client ? client.telephone : "N/A",
+        nbVentes: data.nbVentes,
+        total: data.total,
+        remise: data.total * 0.05,
+        net: data.total * 0.95,
+      });
+    }
+    rapportData.sort((a, b) => b.total - a.total);
+    const tbody = document.getElementById("rapportTableBody");
+    const table = document.getElementById("rapportTable");
+    const footNbVentes = document.getElementById("rapportFootNbVentes");
+    const footTotal = document.getElementById("rapportFootTotal");
+    const footRemise = document.getElementById("rapportFootRemise");
+    const footNet = document.getElementById("rapportFootNet");
+    if (tbody) {
+      tbody.innerHTML = "";
+      let totalGlobalNbVentes = 0,
+        totalGlobal = 0,
+        totalGlobalRemise = 0,
+        totalGlobalNet = 0;
+      rapportData.forEach((item, index) => {
+        const tr = document.createElement("tr");
+        tr.className = index % 2 === 0 ? "bg-gray-50" : "hover:bg-gray-100";
+        tr.innerHTML = `<td class="px-4 py-3"><div class="font-medium text-gray-800">${escapeHtml(item.clientNom)}</div><div class="text-xs text-gray-500">ID: ${item.clientId}</div><\/td><td class="px-4 py-3 text-center">${item.nbVentes}<\/td><td class="px-4 py-3 text-right font-medium">${formatNumberFC(item.total)} FC<\/td><td class="px-4 py-3 text-right text-orange-600">${formatNumberFC(item.remise)} FC<\/td><td class="px-4 py-3 text-right font-bold text-emerald-600">${formatNumberFC(item.net)} FC<\/td><td class="px-4 py-3 text-center"><button onclick="window.genererFactureMensuelleClient(${item.clientId}, ${mois}, ${annee})" class="bg-purple-600 hover:bg-purple-700 text-white px-2 py-1 rounded text-xs transition"><i class="fas fa-file-invoice"></i> Facture</button><\/td>`;
+        tbody.appendChild(tr);
+        totalGlobalNbVentes += item.nbVentes;
+        totalGlobal += item.total;
+        totalGlobalRemise += item.remise;
+        totalGlobalNet += item.net;
+      });
+      if (footNbVentes) footNbVentes.textContent = totalGlobalNbVentes;
+      if (footTotal)
+        footTotal.textContent = formatNumberFC(totalGlobal) + " FC";
+      if (footRemise)
+        footRemise.textContent = formatNumberFC(totalGlobalRemise) + " FC";
+      if (footNet) footNet.textContent = formatNumberFC(totalGlobalNet) + " FC";
+      if (table) table.classList.remove("hidden");
+    }
+    const resume = document.getElementById("rapportResume");
+    if (resume) {
+      resume.classList.remove("hidden");
+      const totalVentes = rapportData.reduce(
+        (sum, item) => sum + item.nbVentes,
+        0,
+      );
+      const totalMontant = rapportData.reduce(
+        (sum, item) => sum + item.total,
+        0,
+      );
+      const totalRemise = rapportData.reduce(
+        (sum, item) => sum + item.remise,
+        0,
+      );
+      document.getElementById("rapportTotalVentes").textContent = totalVentes;
+      document.getElementById("rapportMontantTotal").textContent =
+        formatNumberFC(totalMontant) + " FC";
+      document.getElementById("rapportRemise").textContent =
+        formatNumberFC(totalRemise) + " FC";
+    }
+  } catch (error) {
+    console.error("Erreur génération rapport:", error);
+    showTemporaryNotification(
+      "❌ Erreur lors de la génération du rapport",
+      "error",
+    );
+  }
+}
+window.genererFactureMensuelleClient = async function (clientId, mois, annee) {
+  try {
+    const [ventesRes, clientsRes] = await Promise.all([
+      fetch(VENTES_URL),
+      fetch(CLIENTS_URL),
+    ]);
+    const toutesVentes = await ventesRes.json();
+    const clients = await clientsRes.json();
+    const client = clients.find((c) => String(c.id) === String(clientId));
+    if (!client) {
+      showTemporaryNotification("❌ Client non trouvé", "error");
+      return;
+    }
+    const ventesClient = toutesVentes.filter((v) => {
+      const dateVente = parseDate(v.date);
+      if (isNaN(dateVente.getTime())) return false;
+      return (
+        String(v.clientId) === String(clientId) &&
+        dateVente.getMonth() + 1 === mois &&
+        dateVente.getFullYear() === annee
+      );
+    });
+    if (ventesClient.length === 0) {
+      showTemporaryNotification(
+        "❌ Aucune vente pour ce client sur la période",
+        "error",
+      );
+      return;
+    }
+    genererFactureMensuelleClientPDF(ventesClient, client, mois, annee);
+  } catch (error) {
+    showTemporaryNotification("❌ Erreur lors de la génération", "error");
+  }
+};
+function genererFactureMensuelleClientPDF(ventes, client, mois, annee) {
+  if (typeof window.jspdf === "undefined") {
+    showTemporaryNotification("❌ Erreur: Bibliothèque PDF non chargée");
+    return;
+  }
+  const moisNoms = [
+    "Janvier",
+    "Février",
+    "Mars",
+    "Avril",
+    "Mai",
+    "Juin",
+    "Juillet",
+    "Août",
+    "Septembre",
+    "Octobre",
+    "Novembre",
+    "Décembre",
+  ];
+  const moisTexte = `${moisNoms[mois - 1]} ${annee}`;
+  let total = 0;
+  const detailsVentes = [];
+  ventes.forEach((vente) => {
+    const venteNettoyee = nettoyerVente(vente);
+    total += venteNettoyee.total;
+    detailsVentes.push({
+      date: formatDate(vente.date),
+      total: venteNettoyee.total,
+      produits: venteNettoyee.produits,
+    });
+  });
+  const remise = total * 0.05;
+  const totalFinal = total - remise;
+  const dateFacture = new Date().toLocaleString("fr-FR");
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const marginX = 20;
+  const rightX = pageWidth - marginX;
+  doc.setFontSize(20);
+  doc.setFont("helvetica", "bold");
+  doc.text("FACTURE MENSUELLE", pageWidth / 2, 20, { align: "center" });
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "normal");
+  doc.text("VentesPro SARL", marginX, 35);
+  doc.text("123 Avenue du Commerce", marginX, 40);
+  doc.text("Kinshasa, RDC", marginX, 45);
+  doc.text("Tél: +243 XXX XXX XXX", marginX, 50);
+  doc.setFontSize(9);
+  doc.text(`Période: ${moisTexte}`, rightX - 40, 35, { align: "right" });
+  doc.text(`Date d'édition: ${dateFacture}`, rightX - 40, 40, {
+    align: "right",
+  });
+  doc.text(
+    `Facture N°: FAC-${client.id}-${annee}${String(mois).padStart(2, "0")}`,
+    rightX - 40,
+    45,
+    { align: "right" },
+  );
+  doc.line(marginX, 55, rightX, 55);
+  doc.setFontSize(11);
+  doc.setFont("helvetica", "bold");
+  doc.text("Client :", marginX, 68);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10);
+  doc.text(client.nom, marginX + 30, 68);
+  doc.text(`Téléphone: ${client.telephone}`, marginX, 75);
+  doc.text(`ID Client: ${client.id}`, marginX, 82);
+  doc.line(marginX, 88, rightX, 88);
+  doc.setFontSize(11);
+  doc.setFont("helvetica", "bold");
+  doc.text(`Récapitulatif des achats - ${moisTexte}`, marginX, 98);
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "bold");
+  doc.text("Date", marginX, 108);
+  doc.text("Produits", 55, 108);
+  doc.text("Total", 160, 108);
+  doc.line(marginX, 110, rightX, 110);
+  let yPosition = 118;
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8);
+  detailsVentes.forEach((vente, index) => {
+    let produitsListe = vente.produits
+      .map((p) => `${p.nom}(${p.quantite})`)
+      .join(", ");
+    doc.text(vente.date.substring(0, 10), marginX, yPosition);
+    doc.text(produitsListe.substring(0, 45), 55, yPosition);
+    doc.text(`${formatNumberFC(vente.total)} FC`, 160, yPosition);
+    yPosition += 6;
+    if (yPosition > 250 && index < detailsVentes.length - 1) {
+      doc.addPage();
+      yPosition = 20;
+    }
+  });
+  yPosition += 5;
+  doc.line(marginX, yPosition, rightX, yPosition);
+  yPosition += 8;
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10);
+  doc.text("Sous-total:", 130, yPosition);
+  doc.text(`${formatNumberFC(total)} FC`, rightX, yPosition, {
+    align: "right",
+  });
+  yPosition += 7;
+  doc.text("Remise (5%):", 130, yPosition);
+  doc.text(`-${formatNumberFC(remise)} FC`, rightX, yPosition, {
+    align: "right",
+  });
+  yPosition += 10;
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(12);
+  doc.text("TOTAL À PAYER :", 130, yPosition);
+  doc.setFontSize(14);
+  doc.setTextColor(76, 175, 80);
+  doc.text(`${formatNumberFC(totalFinal)} FC`, rightX, yPosition, {
+    align: "right",
+  });
+  doc.setFontSize(8);
+  doc.setTextColor(100, 100, 100);
+  doc.text("Merci de votre confiance !", pageWidth / 2, 280, {
+    align: "center",
+  });
+  doc.save(
+    `facture_mensuelle_${client.nom.replace(/\s/g, "_")}_${moisTexte.replace(/\s/g, "_")}.pdf`,
+  );
+  showTemporaryNotification("✅ Facture mensuelle générée !");
+}
+function exporterRapportCSV() {
+  const table = document.getElementById("rapportTable");
+  if (!table || table.classList.contains("hidden")) {
+    showTemporaryNotification("❌ Aucun rapport à exporter", "error");
+    return;
+  }
+  const mois = parseInt(document.getElementById("rapportMoisSelect")?.value);
+  const annee = parseInt(document.getElementById("rapportAnneeSelect")?.value);
+  const clientSelect = document.getElementById("rapportClientSelect");
+  const clientNom =
+    clientSelect?.options[clientSelect.selectedIndex]?.text || "tous";
+  const moisNoms = [
+    "Janvier",
+    "Février",
+    "Mars",
+    "Avril",
+    "Mai",
+    "Juin",
+    "Juillet",
+    "Août",
+    "Septembre",
+    "Octobre",
+    "Novembre",
+    "Décembre",
+  ];
+  let separator = ";";
+  const formatField = (field) => {
+    if (field === undefined || field === null) return "";
+    const stringField = String(field);
+    if (
+      stringField.includes(separator) ||
+      stringField.includes('"') ||
+      stringField.includes("\n")
+    ) {
+      return `"${stringField.replace(/"/g, '""')}"`;
+    }
+    return stringField;
+  };
+  const headers = [
+    "Client ID",
+    "Client Nom",
+    "Nb ventes",
+    "Total (FC)",
+    "Remise 5% (FC)",
+    "Net à payer (FC)",
+  ];
+  const rows = [];
+  const tbodyRows = document.querySelectorAll("#rapportTableBody tr");
+  tbodyRows.forEach((row) => {
+    const cells = row.querySelectorAll("td");
+    if (cells.length >= 5) {
+      const clientId =
+        cells[0].querySelector(".text-xs")?.textContent.replace("ID: ", "") ||
+        "";
+      const clientNomCell =
+        cells[0].querySelector(".font-medium")?.textContent || "";
+      const nbVentes = cells[1]?.textContent || "0";
+      const total = cells[2]?.textContent.replace(" FC", "") || "0";
+      const remise = cells[3]?.textContent.replace(" FC", "") || "0";
+      const net = cells[4]?.textContent.replace(" FC", "") || "0";
+      rows.push(
+        [clientId, clientNomCell, nbVentes, total, remise, net].map((f) =>
+          formatField(f),
+        ),
+      );
+    }
+  });
+  const csvContent = [headers.map((h) => formatField(h)), ...rows]
+    .map((row) => row.join(separator))
+    .join("\n");
+  const blob = new Blob(["\uFEFF" + csvContent], {
+    type: "text/csv;charset=utf-8;",
+  });
+  const link = document.createElement("a");
+  const url = URL.createObjectURL(blob);
+  link.setAttribute("href", url);
+  link.setAttribute(
+    "download",
+    `rapport_${moisNoms[mois - 1]}_${annee}_${clientNom}.csv`,
+  );
+  link.click();
+  URL.revokeObjectURL(url);
+  showTemporaryNotification("📥 Rapport exporté en CSV !");
+}
+function initRapports() {
+  const genererBtn = document.getElementById("genererRapportBtn");
+  const exporterBtn = document.getElementById("exporterRapportBtn");
+  const anneeSelect = document.getElementById("rapportAnneeSelect");
+  if (anneeSelect) {
+    const anneeActuelle = new Date().getFullYear();
+    const optionExists = Array.from(anneeSelect.options).some(
+      (opt) => opt.value == anneeActuelle,
+    );
+    if (!optionExists) {
+      const option = document.createElement("option");
+      option.value = anneeActuelle;
+      option.textContent = anneeActuelle;
+      anneeSelect.appendChild(option);
+    }
+    anneeSelect.value = anneeActuelle;
+  }
+  const moisSelect = document.getElementById("rapportMoisSelect");
+  if (moisSelect) {
+    moisSelect.value = new Date().getMonth() + 1;
+  }
+  if (genererBtn) genererBtn.addEventListener("click", genererRapportMensuel);
+  if (exporterBtn) exporterBtn.addEventListener("click", exporterRapportCSV);
+  chargerClientsPourRapport();
+}
+
+// ============================================
+// FACTURES (GLOBALES)
 // ============================================
 function genererFacturePanier(vente, client) {
   if (typeof window.jspdf === "undefined") {
@@ -1702,7 +2122,7 @@ function genererFactureMensuelleMulti(ventes, client) {
     doc.text(dateStr.substring(0, 10), marginX, yPosition);
     doc.text(produitsListe.substring(0, 45), 55, yPosition);
     doc.text(`${formatNumberFC(venteNettoyee.total)} FC`, 160, yPosition);
-    yPosition += 7;
+    yPosition += 6;
     if (yPosition > 250 && index < ventesDuMois.length - 1) {
       doc.addPage();
       yPosition = 20;
@@ -1810,4 +2230,5 @@ function exportToCSV(ventes, client) {
 loadDashboardStats();
 initGestionProduits();
 initGestionClients();
+initRapports();
 showTemporaryNotification("Bienvenue sur VentesPro !");
