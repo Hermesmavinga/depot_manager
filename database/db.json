@@ -268,7 +268,7 @@
     {
       "nom": "kitoko",
       "telephone": "+243 828 790 728",
-      "id": "499sAen"
+      "id": "J_qRLqo"
     }
   ],
   "produits": [
@@ -1211,6 +1211,34 @@
       "total": 60000,
       "date": "2026-05-03T14:12:40.891Z",
       "id": "8Bgl7Qf"
+    },
+    {
+      "clientId": "1",
+      "produits": [
+        {
+          "nom": "Nkoy",
+          "quantite": 1,
+          "prix": 2500,
+          "type": "bouteille"
+        }
+      ],
+      "total": 2500,
+      "date": "2026-05-03T14:41:48.786Z",
+      "id": "33VxavS"
+    },
+    {
+      "clientId": "1",
+      "produits": [
+        {
+          "nom": "Heimeken",
+          "quantite": 1,
+          "prix": 80000,
+          "type": "cassier"
+        }
+      ],
+      "total": 80000,
+      "date": "2026-05-03T18:40:37.629Z",
+      "id": "z3Bsiff"
     }
   ],
   "$schema": "./node_modules/json-server/schema.json"

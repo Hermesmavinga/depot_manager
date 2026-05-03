@@ -28,27 +28,19 @@ let currentClientsPage = 1;
 const clientsPerPage = 10;
 let allClients = [];
 let filteredClients = [];
+let weeklyChart = null;
 
 // ============================================
-// REDIRECTION VERS LA SECTION VENTES (NOUVEAU)
+// REDIRECTION VERS LA SECTION VENTES
 // ============================================
-
-/**
- * Redirige vers la section Ventes et pré-remplit l'ID client si fourni
- * @param {string|null} clientId - L'ID du client (optionnel)
- */
 function redirectToVente(clientId = null) {
-  // 1. Trouver l'élément de navigation "Ventes"
   const navItems = document.querySelectorAll(".nav-item");
   let ventesNavItem = null;
-
   navItems.forEach((item) => {
     if (item.dataset.section === "ventes") {
       ventesNavItem = item;
     }
   });
-
-  // 2. Sections disponibles
   const sections = {
     dashboard: document.getElementById("dashboardSection"),
     clients: document.getElementById("clientsSection"),
@@ -57,8 +49,6 @@ function redirectToVente(clientId = null) {
     historique: document.getElementById("historiqueSection"),
     rapports: document.getElementById("rapportsSection"),
   };
-
-  // 3. Mettre à jour l'état du menu (navigation active)
   if (ventesNavItem) {
     navItems.forEach((nav) => {
       nav.classList.remove("bg-emerald-600", "text-white");
@@ -66,20 +56,15 @@ function redirectToVente(clientId = null) {
     });
     ventesNavItem.classList.add("bg-emerald-600", "text-white");
     ventesNavItem.classList.remove("text-gray-300");
-
     const pageTitle = document.getElementById("currentPageTitle");
     if (pageTitle) {
       pageTitle.textContent = ventesNavItem.querySelector("span").textContent;
     }
   }
-
-  // 4. Afficher la section Ventes, masquer les autres
   Object.values(sections).forEach((section) => {
     if (section) section.classList.add("hidden");
   });
   if (sections.ventes) sections.ventes.classList.remove("hidden");
-
-  // 5. Optionnel : pré-remplir l'ID client si fourni
   if (clientId) {
     const venteClientInput = document.getElementById("venteClientId");
     if (venteClientInput) {
@@ -89,27 +74,17 @@ function redirectToVente(clientId = null) {
       showTemporaryNotification(`✅ Client sélectionné - ID: ${clientId}`);
     }
   }
-
-  // 6. Fermer le menu mobile si ouvert
   const sidebar = document.getElementById("sidebar");
   const overlay = document.getElementById("overlay");
   if (window.innerWidth < 768 && sidebar) {
     sidebar.classList.add("-translate-x-full");
     if (overlay) overlay.classList.remove("active");
   }
-
-  // 7. Faire défiler vers le haut de la page
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
-
-/**
- * Fonction principale pour les boutons "Faire une vente"
- * @param {string} clientId - L'ID du client
- */
 function fillVenteForm(clientId) {
   redirectToVente(clientId);
 }
-
 function fillVenteFormWithId(clientId) {
   redirectToVente(clientId);
 }
@@ -173,37 +148,46 @@ function nettoyerVente(vente) {
   ) {
     produitsListe = vente.produits
       .filter(
-        (p) =>
-          p &&
-          p.nom &&
-          typeof p.quantite === "number" &&
-          typeof p.prix === "number" &&
-          !isNaN(p.prix) &&
-          p.prix > 0,
+        (p) => p && p.nom && typeof p.quantite === "number" && p.quantite > 0,
       )
-      .map((p) => ({ nom: p.nom, quantite: p.quantite, prix: p.prix }));
+      .map((p) => ({
+        nom: p.nom || "Produit inconnu",
+        quantite: Number(p.quantite) || 0,
+        prix: Number(p.prix) || 0,
+      }));
     if (produitsListe.length > 0)
       total = produitsListe.reduce((sum, p) => sum + p.prix * p.quantite, 0);
-  } else if (
-    vente.produit &&
-    vente.quantite &&
-    vente.prix &&
-    !isNaN(vente.prix) &&
-    vente.prix > 0
-  ) {
+  } else if (vente.produit && vente.quantite && vente.prix) {
     produitsListe = [
       {
         nom: vente.produit,
-        quantite: Number(vente.quantite),
-        prix: Number(vente.prix),
+        quantite: Number(vente.quantite) || 0,
+        prix: Number(vente.prix) || 0,
       },
     ];
-    total = vente.prix * vente.quantite;
-  } else if (total > 0 && !produitsListe.length) {
+    total = (Number(vente.prix) || 0) * (Number(vente.quantite) || 0);
+  } else if (
+    vente.panier &&
+    Array.isArray(vente.panier) &&
+    vente.panier.length > 0
+  ) {
+    produitsListe = vente.panier
+      .filter((p) => p && p.nom)
+      .map((p) => ({
+        nom: p.nom,
+        quantite: Number(p.quantite) || 0,
+        prix: Number(p.prix) || 0,
+      }));
+    if (produitsListe.length > 0)
+      total = produitsListe.reduce((sum, p) => sum + p.prix * p.quantite, 0);
+  } else if (total > 0 && produitsListe.length === 0) {
     produitsListe = [
       { nom: "Produit (données manquantes)", quantite: 1, prix: total },
     ];
   }
+  produitsListe = produitsListe.filter((p) => p.quantite > 0 && p.prix >= 0);
+  if (produitsListe.length > 0 && total === 0)
+    total = produitsListe.reduce((sum, p) => sum + p.prix * p.quantite, 0);
   return { produits: produitsListe, total: total };
 }
 function afficherProduitsListe(produits) {
@@ -283,25 +267,29 @@ async function loadDashboardStats() {
     ]);
     const ventes = await ventesRes.json();
     const clients = await clientsRes.json();
-    const nbVentes = ventes.length;
     let quantiteTotale = 0;
+    let caTotal = 0;
     ventes.forEach((v) => {
-      if (v.produits && Array.isArray(v.produits)) {
-        quantiteTotale += v.produits.reduce((s, p) => s + (p.quantite || 0), 0);
-      } else if (v.quantite) quantiteTotale += v.quantite;
+      const venteNettoyee = nettoyerVente(v);
+      caTotal += venteNettoyee.total;
+      quantiteTotale += venteNettoyee.produits.reduce(
+        (s, p) => s + p.quantite,
+        0,
+      );
     });
-    document.getElementById("statVentes").textContent = nbVentes;
+    document.getElementById("statVentes").textContent = ventes.length;
     document.getElementById("statQuantite").textContent = quantiteTotale;
     document.getElementById("statClients").textContent = clients.length;
+    document.getElementById("statCA").textContent =
+      formatNumberFC(caTotal) + " FC";
     const produitsMap = new Map();
     ventes.forEach((v) => {
-      if (v.produits && Array.isArray(v.produits)) {
-        v.produits.forEach((p) => {
-          if (!produitsMap.has(p.nom))
-            produitsMap.set(p.nom, { nom: p.nom, quantite: 0 });
-          produitsMap.get(p.nom).quantite += p.quantite;
-        });
-      }
+      const venteNettoyee = nettoyerVente(v);
+      venteNettoyee.produits.forEach((p) => {
+        if (!produitsMap.has(p.nom))
+          produitsMap.set(p.nom, { nom: p.nom, quantite: 0 });
+        produitsMap.get(p.nom).quantite += p.quantite;
+      });
     });
     const topProduits = Array.from(produitsMap.values())
       .sort((a, b) => b.quantite - a.quantite)
@@ -326,6 +314,325 @@ async function loadDashboardStats() {
 }
 
 // ============================================
+// STATISTIQUES JOURNALIÈRES
+// ============================================
+async function getDailyStats(date = null) {
+  try {
+    const response = await fetch(VENTES_URL);
+    const allVentes = await response.json();
+    const targetDate = date ? new Date(date) : new Date();
+    const dateStr = targetDate.toISOString().split("T")[0];
+    const ventesDuJour = allVentes.filter((vente) => {
+      const venteDate = parseDate(vente.date);
+      return venteDate.toDateString() === targetDate.toDateString();
+    });
+    let totalVentes = ventesDuJour.length;
+    let totalMontant = 0,
+      totalBouteilles = 0,
+      totalCassiers = 0,
+      totalEquivalentBouteilles = 0;
+    const ventesDetail = [];
+    for (const vente of ventesDuJour) {
+      const venteNettoyee = nettoyerVente(vente);
+      totalMontant += venteNettoyee.total;
+      let bouteillesCount = 0,
+        cassiersCount = 0,
+        equivalentCount = 0;
+      for (const produit of venteNettoyee.produits) {
+        const isCassier = produit.prix > 50000 || produit.quantite > 10;
+        if (isCassier) {
+          cassiersCount += produit.quantite;
+          equivalentCount += produit.quantite * 24;
+        } else {
+          bouteillesCount += produit.quantite;
+          equivalentCount += produit.quantite;
+        }
+      }
+      totalBouteilles += bouteillesCount;
+      totalCassiers += cassiersCount;
+      totalEquivalentBouteilles += equivalentCount;
+      let clientInfo = { nom: "Client inconnu", id: vente.clientId };
+      try {
+        const clientRes = await fetch(
+          `${CLIENTS_URL}/${String(vente.clientId)}`,
+        );
+        if (clientRes.ok) clientInfo = await clientRes.json();
+      } catch (e) {}
+      ventesDetail.push({
+        id: vente.id,
+        heure: formatDate(vente.date).split(" à ")[1] || formatDate(vente.date),
+        clientNom: clientInfo.nom,
+        clientId: vente.clientId,
+        produits: venteNettoyee.produits,
+        bouteilles: bouteillesCount,
+        cassiers: cassiersCount,
+        total: venteNettoyee.total,
+        date: vente.date,
+      });
+    }
+    document.getElementById("dailyTotalVentes").textContent = totalVentes;
+    document.getElementById("dailyTotalMontant").textContent =
+      formatNumberFC(totalMontant) + " FC";
+    document.getElementById("dailyBouteilles").textContent = totalBouteilles;
+    document.getElementById("dailyCassiers").textContent = totalCassiers;
+    document.getElementById("dailyEquivalentBouteilles").textContent =
+      totalEquivalentBouteilles;
+    displayDailySalesDetail(ventesDetail, dateStr);
+    await checkInconsistencies(ventesDuJour, allVentes);
+    return {
+      totalVentes,
+      totalMontant,
+      totalBouteilles,
+      totalCassiers,
+      totalEquivalentBouteilles,
+      ventesDetail,
+    };
+  } catch (error) {
+    console.error("Erreur chargement stats journalières:", error);
+    return null;
+  }
+}
+function displayDailySalesDetail(ventesDetail, dateStr) {
+  const tbody = document.getElementById("dailySalesDetailBody");
+  const footer = document.getElementById("dailySalesFooter");
+  const dateDisplay = document.getElementById("selectedDateDisplay");
+  if (dateDisplay) dateDisplay.textContent = ` - ${dateStr}`;
+  if (!tbody) return;
+  if (ventesDetail.length === 0) {
+    tbody.innerHTML =
+      '<tr><td colspan="7" class="px-4 py-8 text-center text-gray-400">📭 Aucune vente enregistrée ce jour</td></tr>';
+    if (footer) footer.classList.add("hidden");
+    return;
+  }
+  let totalBouteillesGlobal = 0,
+    totalCassiersGlobal = 0,
+    totalMontantGlobal = 0;
+  tbody.innerHTML = ventesDetail
+    .map((vente, index) => {
+      totalBouteillesGlobal += vente.bouteilles;
+      totalCassiersGlobal += vente.cassiers;
+      totalMontantGlobal += vente.total;
+      const produitsHtml = vente.produits
+        .map(
+          (p) =>
+            `<div class="text-xs">${escapeHtml(p.nom)} (${p.quantite})</div>`,
+        )
+        .join("");
+      const rowClass = index % 2 === 0 ? "bg-white" : "bg-gray-50";
+      return `<tr class="${rowClass} hover:bg-gray-100 transition"><td class="px-4 py-3 text-sm font-mono">${vente.heure}</td><td class="px-4 py-3"><div class="font-medium text-gray-800">${escapeHtml(vente.clientNom)}</div><div class="text-xs text-gray-400">ID: ${vente.clientId}</div></div></td><td class="px-4 py-3 text-sm">${produitsHtml}</td><td class="px-4 py-3 text-center text-sm font-medium text-orange-600">${vente.bouteilles}</td><td class="px-4 py-3 text-center text-sm font-medium text-purple-600">${vente.cassiers}</td><td class="px-4 py-3 text-right text-sm font-bold text-emerald-600">${formatNumberFC(vente.total)} FC</td><td class="px-4 py-3 text-center"><button onclick="genererFactureVenteSpecifique('${vente.id}')" class="bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded text-xs transition"><i class="fas fa-receipt"></i> Facture</button></td></tr>`;
+    })
+    .join("");
+  if (footer) {
+    footer.classList.remove("hidden");
+    document.getElementById("footerTotalBouteilles").textContent =
+      totalBouteillesGlobal;
+    document.getElementById("footerTotalCassiers").textContent =
+      totalCassiersGlobal;
+    document.getElementById("footerTotalMontant").textContent =
+      formatNumberFC(totalMontantGlobal) + " FC";
+  }
+}
+window.genererFactureVenteSpecifique = async function (venteId) {
+  try {
+    const response = await fetch(`${VENTES_URL}/${venteId}`);
+    if (!response.ok) throw new Error("Vente non trouvée");
+    const vente = await response.json();
+    const clientRes = await fetch(`${CLIENTS_URL}/${String(vente.clientId)}`);
+    const client = clientRes.ok
+      ? await clientRes.json()
+      : { nom: "Client inconnu", telephone: "N/A", id: vente.clientId };
+    genererFacturePanier(vente, client);
+  } catch (error) {
+    showTemporaryNotification("❌ Erreur génération facture", "error");
+  }
+};
+async function checkInconsistencies(ventesDuJour, allVentes) {
+  const alerts = [];
+  for (const vente of ventesDuJour) {
+    const venteNettoyee = nettoyerVente(vente);
+    for (const produit of venteNettoyee.produits) {
+      if (produit.prix < 1000 && produit.prix > 0) {
+        alerts.push({
+          level: "warning",
+          message: `⚠️ Prix suspect (${formatNumberFC(produit.prix)} FC) pour "${produit.nom}" - Vente #${vente.id}`,
+          venteId: vente.id,
+        });
+      }
+    }
+  }
+  for (const vente of ventesDuJour) {
+    const venteNettoyee = nettoyerVente(vente);
+    let totalQuantite = venteNettoyee.produits.reduce(
+      (sum, p) => sum + p.quantite,
+      0,
+    );
+    if (totalQuantite > 100) {
+      alerts.push({
+        level: "warning",
+        message: `⚠️ Quantité anormalement élevée (${totalQuantite} unités) - Vente #${vente.id}`,
+        venteId: vente.id,
+      });
+    }
+  }
+  const ventesParClient = {};
+  for (const vente of allVentes) {
+    const clientId = String(vente.clientId);
+    if (!ventesParClient[clientId]) ventesParClient[clientId] = [];
+    ventesParClient[clientId].push(vente);
+  }
+  for (const [clientId, ventes] of Object.entries(ventesParClient)) {
+    for (let i = 0; i < ventes.length - 1; i++) {
+      const v1 = ventes[i],
+        v2 = ventes[i + 1];
+      const date1 = parseDate(v1.date),
+        date2 = parseDate(v2.date);
+      const diffMinutes = Math.abs(date2 - date1) / 1000 / 60;
+      if (diffMinutes < 2 && Math.abs(v1.total - v2.total) < 100) {
+        alerts.push({
+          level: "critical",
+          message: `🚨 Série de ventes rapides (${Math.round(diffMinutes)} min) pour client #${clientId}`,
+          venteId: v1.id,
+        });
+        break;
+      }
+    }
+  }
+  displayAlerts(alerts);
+  return alerts;
+}
+function displayAlerts(alerts) {
+  const container = document.getElementById("alertsContainer");
+  if (!container) return;
+  if (alerts.length === 0) {
+    container.innerHTML = `<div class="text-center text-gray-400 py-4"><i class="fas fa-check-circle text-2xl mb-2 block text-emerald-500"></i><p>✅ Aucune anomalie détectée - Tout est conforme</p><p class="text-xs mt-1">Dernière vérification: ${new Date().toLocaleTimeString()}</p></div>`;
+    return;
+  }
+  container.innerHTML = `<div class="space-y-2">${alerts.map((alert) => `<div class="flex items-start gap-3 p-3 rounded-lg ${alert.level === "critical" ? "bg-red-50 border-l-4 border-red-500" : "bg-yellow-50 border-l-4 border-yellow-500"}"><i class="fas ${alert.level === "critical" ? "fa-skull-crosswalk text-red-500" : "fa-exclamation-triangle text-yellow-500"} mt-0.5"></i><div class="flex-1"><p class="text-sm ${alert.level === "critical" ? "text-red-700" : "text-yellow-700"}">${alert.message}</p>${alert.venteId ? `<p class="text-xs text-gray-500 mt-1">ID Vente: ${alert.venteId}</p>` : ""}</div>${alert.venteId ? `<button onclick="genererFactureVenteSpecifique('${alert.venteId}')" class="text-xs bg-gray-200 hover:bg-gray-300 px-2 py-1 rounded">🔍 Voir</button>` : ""}</div>`).join("")}</div>`;
+}
+async function getWeeklyTrend() {
+  try {
+    const response = await fetch(VENTES_URL);
+    const allVentes = await response.json();
+    const stats = [];
+    const today = new Date();
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(today.getDate() - i);
+      date.setHours(0, 0, 0, 0);
+      const ventesDuJour = allVentes.filter((vente) => {
+        const venteDate = parseDate(vente.date);
+        return venteDate.toDateString() === date.toDateString();
+      });
+      let total = 0,
+        bouteilles = 0,
+        cassiers = 0;
+      for (const vente of ventesDuJour) {
+        const venteNettoyee = nettoyerVente(vente);
+        total += venteNettoyee.total;
+        for (const produit of venteNettoyee.produits) {
+          if (produit.prix > 50000) cassiers += produit.quantite;
+          else bouteilles += produit.quantite;
+        }
+      }
+      stats.push({
+        date: date,
+        dateStr: date.toLocaleDateString("fr-FR", {
+          weekday: "short",
+          day: "numeric",
+        }),
+        total: total,
+        bouteilles: bouteilles,
+        cassiers: cassiers,
+        ventes: ventesDuJour.length,
+      });
+    }
+    updateWeeklyChart(stats);
+    return stats;
+  } catch (error) {
+    console.error("Erreur tendances hebdomadaires:", error);
+    return null;
+  }
+}
+function updateWeeklyChart(stats) {
+  const canvas = document.getElementById("weeklyTrendChart");
+  if (!canvas) return;
+  const ctx = canvas.getContext("2d");
+  if (weeklyChart) weeklyChart.destroy();
+  weeklyChart = new Chart(ctx, {
+    type: "line",
+    data: {
+      labels: stats.map((s) => s.dateStr),
+      datasets: [
+        {
+          label: "Chiffre d'affaires (FC)",
+          data: stats.map((s) => s.total),
+          borderColor: "#10b981",
+          backgroundColor: "rgba(16, 185, 129, 0.1)",
+          tension: 0.3,
+          fill: true,
+          yAxisID: "y",
+        },
+        {
+          label: "Bouteilles vendues",
+          data: stats.map((s) => s.bouteilles),
+          borderColor: "#f97316",
+          backgroundColor: "rgba(249, 115, 22, 0.1)",
+          tension: 0.3,
+          fill: true,
+          yAxisID: "y1",
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: { position: "top" },
+        tooltip: {
+          callbacks: {
+            label: (ctx) =>
+              `${ctx.dataset.label}: ${formatNumberFC(ctx.raw)} ${ctx.dataset.label.includes("FC") ? "FC" : ""}`,
+          },
+        },
+      },
+      scales: {
+        y: {
+          title: { display: true, text: "Montant (FC)", color: "#10b981" },
+          ticks: { callback: (val) => formatNumberFC(val) },
+        },
+        y1: {
+          position: "right",
+          title: { display: true, text: "Quantité", color: "#f97316" },
+          grid: { drawOnChartArea: false },
+        },
+      },
+    },
+  });
+}
+async function initDailyStats() {
+  const dateInput = document.getElementById("dailyStatsDate");
+  if (dateInput) {
+    const today = new Date().toISOString().split("T")[0];
+    dateInput.value = today;
+    dateInput.addEventListener("change", () => {
+      getDailyStats(dateInput.value);
+    });
+  }
+  const refreshBtn = document.getElementById("refreshDailyStats");
+  if (refreshBtn) {
+    refreshBtn.addEventListener("click", () => {
+      const date = dateInput ? dateInput.value : null;
+      getDailyStats(date);
+      getWeeklyTrend();
+      showTemporaryNotification("📊 Statistiques actualisées");
+    });
+  }
+  await getDailyStats();
+  await getWeeklyTrend();
+}
+
+// ============================================
 // API PRODUITS
 // ============================================
 async function chargerProduits() {
@@ -338,20 +645,19 @@ async function chargerProduits() {
       BRALIMA: { bouteille: {}, cassier: {} },
     };
     produitsArray.forEach((p) => {
-      if (p.type === "bouteille") {
+      if (p.type === "bouteille")
         produits[p.fournisseur].bouteille[p.nom] = {
           id: p.id,
           prix: p.prix,
           format: p.format,
         };
-      } else if (p.type === "cassier") {
+      else if (p.type === "cassier")
         produits[p.fournisseur].cassier[p.nom] = {
           id: p.id,
           prixCassier: p.prixCassier,
           format: p.format,
           nbBouteilles: p.nbBouteilles || 24,
         };
-      }
     });
     return produits;
   } catch (error) {
@@ -887,19 +1193,6 @@ function showError(message, container) {
     if (container.innerHTML.includes(message)) container.innerHTML = "";
   }, 5000);
 }
-function showTemporaryMessage(message, elementId) {
-  const element = document.getElementById(elementId);
-  if (element) {
-    const originalContent = element.innerHTML;
-    element.innerHTML = `<span class="text-emerald-600">${message}</span>`;
-    setTimeout(() => {
-      if (
-        element.innerHTML === `<span class="text-emerald-600">${message}</span>`
-      )
-        element.innerHTML = originalContent;
-    }, 3000);
-  }
-}
 function clearResult() {
   if (resultDiv) resultDiv.innerHTML = "";
 }
@@ -921,7 +1214,6 @@ clearButton.addEventListener("click", () => {
   if (clientIdInput) clientIdInput.focus();
 });
 if (button) button.insertAdjacentElement("afterend", clearButton);
-
 const addBtn = document.getElementById("addClientBtn");
 const nomInput = document.getElementById("nom");
 const telephoneInput = document.getElementById("telephone");
@@ -1004,7 +1296,6 @@ function showCopyNotification(message, type = "success") {
   document.body.appendChild(notification);
   setTimeout(() => notification.remove(), 2000);
 }
-
 function initClientsTabs() {
   const tabAjouter = document.getElementById("tabAjouterClient");
   const tabLister = document.getElementById("tabListerClients");
@@ -1204,7 +1495,7 @@ function initGestionClients() {
 const venteBtn = document.getElementById("addVenteBtn");
 const clientInput = document.getElementById("venteClientId");
 const clientInfoDiv = document.getElementById("clientInfo");
-const message = document.getElementById("venteMessage");
+const messageVente = document.getElementById("venteMessage");
 const quantiteInput = document.getElementById("quantite");
 const prixInputVente = document.getElementById("prix");
 const ajouterPanierBtn = document.getElementById("ajouterPanierBtn");
@@ -1278,10 +1569,9 @@ function afficherPanier() {
   panierDiv.innerHTML = html;
 }
 function supprimerDuPanier(index) {
-  const produit = panier[index].nom;
   panier.splice(index, 1);
   afficherPanier();
-  showTemporaryNotification(`❌ ${produit} retiré du panier`);
+  showTemporaryNotification(`❌ Produit retiré du panier`);
 }
 async function addVente() {
   const clientId = clientInput.value.trim();
@@ -1293,12 +1583,12 @@ async function addVente() {
     showTemporaryNotification("❌ Ajoutez des produits au panier");
     return;
   }
-  message.innerHTML =
+  messageVente.innerHTML =
     '<div class="bg-blue-50 text-blue-600 p-3 rounded-lg">⏳ Enregistrement en cours...</div>';
   try {
     const clientResponse = await fetch(`${CLIENTS_URL}/${String(clientId)}`);
     if (!clientResponse.ok) {
-      message.innerHTML =
+      messageVente.innerHTML =
         '<div class="bg-red-50 text-red-600 p-3 rounded-lg">❌ Client introuvable</div>';
       return;
     }
@@ -1321,15 +1611,17 @@ async function addVente() {
     genererFacturePanier(data, clientData);
     panier = [];
     afficherPanier();
-    message.innerHTML = `<div class="bg-emerald-50 text-emerald-700 p-4 rounded-lg">✅ Vente enregistrée ! ID: ${data.id}<br>💰 Total: ${formatNumberFC(total)} FC</div>`;
+    messageVente.innerHTML = `<div class="bg-emerald-50 text-emerald-700 p-4 rounded-lg">✅ Vente enregistrée ! ID: ${data.id}<br>💰 Total: ${formatNumberFC(total)} FC</div>`;
     clientInput.focus();
     loadDashboardStats();
+    getDailyStats();
+    getWeeklyTrend();
     setTimeout(() => {
-      if (message.innerHTML.includes("Vente enregistrée"))
-        message.innerHTML = "";
+      if (messageVente.innerHTML.includes("Vente enregistrée"))
+        messageVente.innerHTML = "";
     }, 5000);
   } catch (error) {
-    message.innerHTML = `<div class="bg-red-50 text-red-600 p-3 rounded-lg">❌ Erreur: ${error.message}</div>`;
+    messageVente.innerHTML = `<div class="bg-red-50 text-red-600 p-3 rounded-lg">❌ Erreur: ${error.message}</div>`;
   }
 }
 if (ajouterPanierBtn)
@@ -1351,112 +1643,84 @@ const historiqueClientIdElem = document.getElementById("historiqueClientId");
 const historiqueMessageDiv = document.getElementById("historiqueMessage");
 const historiqueTableElem = document.getElementById("historiqueTable");
 const historiqueTableBody = document.getElementById("historiqueTableBody");
-let currentClientData = null;
-let ventesOriginales = [];
-
 if (showHistoriqueBtn)
   showHistoriqueBtn.addEventListener("click", afficherHistorique);
-if (historiqueClientIdElem)
-  historiqueClientIdElem.addEventListener("keypress", function (e) {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      afficherHistorique();
-    }
-  });
-
 window.showVenteDetail = async function (venteId) {
   try {
     const response = await fetch(`${VENTES_URL}/${venteId}`);
     if (!response.ok) throw new Error("Vente non trouvée");
     const vente = await response.json();
-    const clientResponse = await fetch(
-      `${CLIENTS_URL}/${String(vente.clientId)}`,
-    );
-    const client = clientResponse.ok ? await clientResponse.json() : null;
+    let clientNom = "Client inconnu";
+    try {
+      const clientRes = await fetch(`${CLIENTS_URL}/${String(vente.clientId)}`);
+      if (clientRes.ok) {
+        const client = await clientRes.json();
+        clientNom = client.nom;
+      }
+    } catch (e) {}
     const venteNettoyee = nettoyerVente(vente);
     const produits = venteNettoyee.produits;
     const total = venteNettoyee.total;
     let produitsHtml = produits
       .map(
         (p) =>
-          `<li>${escapeHtml(p.nom)} : ${p.quantite} x ${formatNumberFC(p.prix)} FC = ${formatNumberFC(p.prix * p.quantite)} FC</li>`,
+          `<li class="flex justify-between items-center py-2 border-b border-gray-100"><span class="font-medium">${escapeHtml(p.nom)}</span><span class="text-gray-600">${p.quantite} x ${formatNumberFC(p.prix)} FC</span><span class="font-bold text-emerald-600">${formatNumberFC(p.prix * p.quantite)} FC</span></li>`,
       )
       .join("");
     let totalArticles = produits.reduce((sum, p) => sum + p.quantite, 0);
     const modal = document.createElement("div");
     modal.className =
       "fixed inset-0 bg-black/50 z-50 flex items-center justify-center";
-    modal.innerHTML = `<div class="bg-white rounded-xl shadow-xl max-w-md w-full mx-4"><div class="px-6 py-4 border-b"><h3 class="text-lg font-semibold">📋 Détails de la vente</h3></div><div class="p-6 space-y-2 text-sm"><p><strong>🆔 ID Vente :</strong> ${vente.id}</p>${client ? `<p><strong>👤 Client :</strong> ${escapeHtml(client.nom)} (ID: ${client.id})</p>` : ""}<p><strong>📦 Produits :</strong></p><ul class="list-disc pl-5">${produitsHtml}</ul><p><strong>📊 Total articles :</strong> ${totalArticles}</p><p><strong>💰 Total :</strong> <span class="font-bold text-emerald-600">${formatNumberFC(total)} FC</span></p><p><strong>📅 Date :</strong> ${formatDate(vente.date)}</p></div><div class="px-6 py-4 border-t flex justify-end"><button onclick="this.closest('.fixed').remove()" class="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700">Fermer</button></div></div>`;
+    modal.innerHTML = `<div class="bg-white rounded-xl shadow-xl max-w-md w-full mx-4 animate-fadeIn"><div class="px-6 py-4 border-b bg-gradient-to-r from-blue-50 to-white"><h3 class="text-lg font-semibold text-blue-800"><i class="fas fa-receipt text-blue-600 mr-2"></i> Détails de la vente</h3></div><div class="p-6 space-y-3"><div class="grid grid-cols-2 gap-2 text-sm"><p class="text-gray-500">🆔 ID Vente :</p><p class="font-mono font-medium">${vente.id}</p><p class="text-gray-500">👤 Client :</p><p class="font-medium">${escapeHtml(clientNom)}</p><p class="text-gray-500">🆔 ID Client :</p><p class="font-mono">${vente.clientId}</p></div><div class="border-t border-gray-100 pt-3"><p class="text-gray-500 text-sm mb-2">📦 Produits :</p><ul class="space-y-1 max-h-48 overflow-y-auto">${produitsHtml || '<li class="text-gray-400 text-center py-2">Aucun produit</li>'}</ul></div><div class="border-t border-gray-100 pt-3"><div class="flex justify-between items-center"><span class="text-gray-500">📊 Total articles :</span><span class="font-semibold">${totalArticles}</span></div><div class="flex justify-between items-center mt-2"><span class="text-gray-500">💰 Montant total :</span><span class="text-xl font-bold text-emerald-600">${formatNumberFC(total)} FC</span></div><div class="flex justify-between items-center mt-2"><span class="text-gray-500">📅 Date :</span><span class="text-sm">${formatDate(vente.date)}</span></div></div></div><div class="px-6 py-4 border-t flex justify-end gap-3"><button onclick="genererFactureVente('${vente.id}', '${vente.clientId}')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg transition text-sm"><i class="fas fa-print mr-1"></i> Imprimer facture</button><button onclick="this.closest('.fixed').remove()" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg transition text-sm">Fermer</button></div></div>`;
     document.body.appendChild(modal);
   } catch (error) {
     showTemporaryNotification("❌ Erreur chargement détails", "error");
   }
 };
-
-function showClientInfo(clientData) {
-  let infoDiv = document.getElementById("clientInfoHistorique");
-  if (!infoDiv) {
-    infoDiv = document.createElement("div");
-    infoDiv.id = "clientInfoHistorique";
-    infoDiv.className = "bg-emerald-50 p-3 rounded-lg mb-4";
-    if (historiqueMessageDiv)
-      historiqueMessageDiv.insertAdjacentElement("afterend", infoDiv);
+window.genererFactureVente = async function (venteId, clientId) {
+  try {
+    const [venteRes, clientRes] = await Promise.all([
+      fetch(`${VENTES_URL}/${venteId}`),
+      fetch(`${CLIENTS_URL}/${String(clientId)}`),
+    ]);
+    if (!venteRes.ok) throw new Error("Vente non trouvée");
+    const vente = await venteRes.json();
+    const client = clientRes.ok
+      ? await clientRes.json()
+      : { nom: "Client inconnu", telephone: "N/A", id: clientId };
+    genererFacturePanier(vente, client);
+  } catch (error) {
+    showTemporaryNotification("❌ Erreur génération facture", "error");
   }
-  infoDiv.innerHTML = `<strong>👤 Client :</strong> ${escapeHtml(clientData.nom)} (ID: ${clientData.id})<br>📞 ${escapeHtml(clientData.telephone)}`;
-}
-function showMessage(msg, color) {
-  if (historiqueMessageDiv) {
-    const colorClass =
-      color === "red"
-        ? "text-red-600"
-        : color === "green"
-          ? "text-emerald-600"
-          : "text-blue-600";
-    historiqueMessageDiv.innerHTML = `<span class="${colorClass}">${msg}</span>`;
-  }
-}
-function resetDisplay() {
-  if (historiqueTableBody) historiqueTableBody.innerHTML = "";
-  if (historiqueTableElem) historiqueTableElem.classList.add("hidden");
-  if (historiqueMessageDiv) historiqueMessageDiv.innerHTML = "";
-  const infoDiv = document.getElementById("clientInfoHistorique");
-  if (infoDiv) infoDiv.remove();
-  const filterContainer = document.getElementById("filterContainer");
-  if (filterContainer) filterContainer.remove();
-  const actionButtons = document.querySelector(".action-buttons-container");
-  if (actionButtons) actionButtons.remove();
-}
+};
 async function afficherHistorique() {
   const clientId = historiqueClientIdElem.value.trim();
-  resetDisplay();
   if (!clientId) {
-    showMessage("Entrez l'ID du client", "red");
+    historiqueMessageDiv.innerHTML =
+      '<span class="text-red-600">⚠️ Veuillez entrer un ID client</span>';
     return;
   }
-  showMessage("⏳ Chargement...", "blue");
   try {
     const clientResponse = await fetch(`${CLIENTS_URL}/${String(clientId)}`);
     if (!clientResponse.ok) {
-      showMessage(`❌ Client avec l'ID ${clientId} non trouvé`, "red");
+      historiqueMessageDiv.innerHTML = `<span class="text-red-600">❌ Client avec l'ID "${clientId}" non trouvé</span>`;
       return;
     }
     const clientData = await clientResponse.json();
-    currentClientData = clientData;
-    showClientInfo(clientData);
-    const allVentesResponse = await fetch(VENTES_URL);
-    const allVentes = await allVentesResponse.json();
+    const ventesRes = await fetch(VENTES_URL);
+    const allVentes = await ventesRes.json();
     const ventes = allVentes.filter(
       (v) => String(v.clientId) === String(clientId),
     );
     if (ventes.length === 0) {
-      showMessage(`📭 Aucune vente pour ${clientData.nom}`, "blue");
+      historiqueMessageDiv.innerHTML = `<span class="text-blue-600">📭 Aucune vente trouvée pour ${clientData.nom}</span>`;
+      historiqueTableElem.classList.add("hidden");
       return;
     }
-    ventesOriginales = ventes;
+    historiqueMessageDiv.innerHTML = `<span class="text-emerald-600">✅ ${ventes.length} vente(s) trouvée(s) pour ${escapeHtml(clientData.nom)} (ID: ${clientData.id})</span>`;
     displayVentesMulti(ventes, clientData);
-    showMessage(`✅ ${ventes.length} vente(s) trouvée(s)`, "green");
   } catch (error) {
-    showMessage("❌ Erreur de connexion", "red");
+    historiqueMessageDiv.innerHTML = `<span class="text-red-600">❌ Erreur: ${error.message}</span>`;
   }
 }
 function displayVentesMulti(ventes, clientData) {
@@ -1478,7 +1742,7 @@ function displayVentesMulti(ventes, clientData) {
       if (isNaN(total) || !isFinite(total)) return;
       const row = document.createElement("tr");
       row.className = index % 2 === 0 ? "bg-gray-50" : "";
-      row.innerHTML = `<td class="px-4 py-3 text-sm">${v.id}<\/td><td class="px-4 py-3 text-sm">${afficherProduitsListe(produitsListe)}<\/td><td class="px-4 py-3 text-sm text-center">${quantiteTotale}<\/td><td class="px-4 py-3 text-sm text-right">${formatNumberFC(prixMoyen)} FC<\/td><td class="px-4 py-3 text-sm text-right font-bold text-emerald-600">${formatNumberFC(total)} FC<\/td><td class="px-4 py-3 text-sm">${formatDate(v.date)}<\/td><td class="px-4 py-3 text-sm text-center"><button onclick="window.showVenteDetail('${v.id}')" class="bg-blue-600 text-white px-2 py-1 rounded text-xs hover:bg-blue-700 mr-1">📄 Détails</button><button onclick="genererFacturePanier(${JSON.stringify(venteNettoyee).replace(/"/g, "&quot;")}, ${JSON.stringify(clientData).replace(/"/g, "&quot;")})" class="bg-emerald-600 text-white px-2 py-1 rounded text-xs hover:bg-emerald-700">🧾 Facture</button><\/td>`;
+      row.innerHTML = `<td class="px-4 py-3 text-sm font-mono">${v.id.substring(0, 8)}<\/td><td class="px-4 py-3 text-sm">${afficherProduitsListe(produitsListe)}<\/td><td class="px-4 py-3 text-sm text-center font-medium">${quantiteTotale}<\/td><td class="px-4 py-3 text-sm text-right">${formatNumberFC(prixMoyen)} FC<\/td><td class="px-4 py-3 text-sm text-right font-bold text-emerald-600">${formatNumberFC(total)} FC<\/td><td class="px-4 py-3 text-sm">${formatDate(v.date)}<\/td><td class="px-4 py-3 text-sm text-center"><button onclick="showVenteDetail('${v.id}')" class="bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded text-xs transition mr-1">📄 Détails</button><button onclick="genererFactureVente('${v.id}', '${clientData.id}')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-2 py-1 rounded text-xs transition">🧾 Facture</button><\/td>`;
       historiqueTableBody.appendChild(row);
       totalQuantite += quantiteTotale;
       totalPrix += total;
@@ -1493,39 +1757,47 @@ function displayVentesMulti(ventes, clientData) {
     filterContainer.id = "filterContainer";
     filterContainer.className =
       "mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200";
-    filterContainer.innerHTML = `<strong class="text-gray-700">🔍 Filtrer les ventes :</strong><div class="flex flex-wrap gap-3 mt-2"><label class="inline-flex items-center gap-2"><input type="radio" name="filterType" value="all" checked class="text-emerald-600"> Toutes</label><label class="inline-flex items-center gap-2"><input type="radio" name="filterType" value="today" class="text-emerald-600"> Aujourd'hui</label><label class="inline-flex items-center gap-2"><input type="radio" name="filterType" value="week" class="text-emerald-600"> Cette semaine</label><label class="inline-flex items-center gap-2"><input type="radio" name="filterType" value="month" class="text-emerald-600"> Ce mois</label><button id="applyFilterBtn" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-1 rounded-lg transition text-sm">Appliquer</button></div>`;
+    filterContainer.innerHTML = `<div class="flex flex-wrap items-center justify-between gap-4"><div><strong class="text-gray-700"><i class="fas fa-filter mr-1"></i> 🔍 Filtrer les ventes :</strong></div><div class="flex flex-wrap gap-3"><label class="inline-flex items-center gap-2 cursor-pointer"><input type="radio" name="filterType" value="all" checked class="text-emerald-600 w-4 h-4"> <span class="text-sm">📅 Toutes</span></label><label class="inline-flex items-center gap-2 cursor-pointer"><input type="radio" name="filterType" value="today" class="text-emerald-600 w-4 h-4"> <span class="text-sm">📆 Aujourd'hui</span></label><label class="inline-flex items-center gap-2 cursor-pointer"><input type="radio" name="filterType" value="week" class="text-emerald-600 w-4 h-4"> <span class="text-sm">📊 Cette semaine</span></label><label class="inline-flex items-center gap-2 cursor-pointer"><input type="radio" name="filterType" value="month" class="text-emerald-600 w-4 h-4"> <span class="text-sm">📈 Ce mois</span></label><button id="applyFilterBtn" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-1.5 rounded-lg transition text-sm"><i class="fas fa-check mr-1"></i> Appliquer</button><button id="resetFilterBtn" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-1.5 rounded-lg transition text-sm"><i class="fas fa-undo-alt mr-1"></i> Réinitialiser</button></div></div>`;
     const historiqueContainer =
       document.getElementById("historiqueTable").parentElement;
     historiqueContainer.appendChild(filterContainer);
   }
   const applyFilterBtn = document.getElementById("applyFilterBtn");
+  const resetFilterBtn = document.getElementById("resetFilterBtn");
   if (applyFilterBtn) {
     const newBtn = applyFilterBtn.cloneNode(true);
     applyFilterBtn.parentNode.replaceChild(newBtn, applyFilterBtn);
     newBtn.addEventListener("click", () => appliquerFiltre(ventes, clientData));
+  }
+  if (resetFilterBtn) {
+    const newResetBtn = resetFilterBtn.cloneNode(true);
+    resetFilterBtn.parentNode.replaceChild(newResetBtn, resetFilterBtn);
+    newResetBtn.addEventListener("click", () => {
+      const allRadio = document.querySelector(
+        'input[name="filterType"][value="all"]',
+      );
+      if (allRadio) allRadio.checked = true;
+      displayVentesMulti(ventes, clientData);
+      showTemporaryNotification("📋 Filtre réinitialisé");
+    });
   }
   const existingButtons = document.querySelector(".action-buttons-container");
   if (existingButtons) existingButtons.remove();
   const actionButtons = document.createElement("div");
   actionButtons.className =
     "action-buttons-container flex gap-3 mt-4 justify-end";
-  const csvBtn = document.createElement("button");
-  csvBtn.className =
-    "bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg transition flex items-center gap-2";
-  csvBtn.innerHTML = '<i class="fas fa-download"></i> Exporter CSV';
-  csvBtn.onclick = () => exportToCSV(ventes, clientData);
-  const factureMensuelleBtn = document.createElement("button");
-  factureMensuelleBtn.className =
-    "bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg transition flex items-center gap-2";
-  factureMensuelleBtn.innerHTML =
-    '<i class="fas fa-file-invoice"></i> Facture mensuelle';
-  factureMensuelleBtn.onclick = () =>
-    genererFactureMensuelleMulti(ventes, clientData);
-  actionButtons.appendChild(csvBtn);
-  actionButtons.appendChild(factureMensuelleBtn);
-  const historiqueContainer =
+  actionButtons.innerHTML = `<button id="exportCsvActionBtn" class="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg transition flex items-center gap-2"><i class="fas fa-file-excel"></i> Exporter CSV</button><button id="factureMensuelleActionBtn" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg transition flex items-center gap-2"><i class="fas fa-file-invoice"></i> Facture mensuelle</button>`;
+  const historiqueContainerActions =
     document.getElementById("historiqueTable").parentElement;
-  historiqueContainer.appendChild(actionButtons);
+  historiqueContainerActions.appendChild(actionButtons);
+  document
+    .getElementById("exportCsvActionBtn")
+    ?.addEventListener("click", () => exportToCSV(ventes, clientData));
+  document
+    .getElementById("factureMensuelleActionBtn")
+    ?.addEventListener("click", () =>
+      genererFactureMensuelleMulti(ventes, clientData),
+    );
 }
 function appliquerFiltre(ventesOriginales, clientData) {
   const filterType = document.querySelector(
@@ -1535,9 +1807,10 @@ function appliquerFiltre(ventesOriginales, clientData) {
   let ventesFiltrees = [...ventesOriginales];
   switch (filterType) {
     case "today":
-      ventesFiltrees = ventesOriginales.filter(
-        (v) => parseDate(v.date).toDateString() === now.toDateString(),
-      );
+      ventesFiltrees = ventesOriginales.filter((v) => {
+        const dateVente = parseDate(v.date);
+        return dateVente.toDateString() === now.toDateString();
+      });
       break;
     case "week":
       const weekAgo = new Date();
@@ -1563,40 +1836,13 @@ function appliquerFiltre(ventesOriginales, clientData) {
       break;
   }
   if (ventesFiltrees.length === 0) {
-    showMessage(`📭 Aucune vente trouvée pour cette période`, "blue");
+    historiqueMessageDiv.innerHTML = `<span class="text-blue-600">📭 Aucune vente trouvée pour cette période</span>`;
     if (historiqueTableBody) historiqueTableBody.innerHTML = "";
     document.getElementById("totalQuantite").textContent = "0";
     document.getElementById("totalPrix").textContent = "0 FC";
   } else {
-    historiqueTableBody.innerHTML = "";
-    let totalQuantite = 0,
-      totalPrix = 0;
-    ventesFiltrees
-      .sort((a, b) => parseDate(b.date) - parseDate(a.date))
-      .forEach((v, index) => {
-        const venteNettoyee = nettoyerVente(v);
-        const produitsListe = venteNettoyee.produits;
-        const total = venteNettoyee.total;
-        let quantiteTotale = produitsListe.reduce(
-          (sum, p) => sum + p.quantite,
-          0,
-        );
-        const prixMoyen = quantiteTotale > 0 ? total / quantiteTotale : 0;
-        if (isNaN(total) || !isFinite(total)) return;
-        const row = document.createElement("tr");
-        row.className = index % 2 === 0 ? "bg-gray-50" : "";
-        row.innerHTML = `<td class="px-4 py-3 text-sm">${v.id}<\/td><td class="px-4 py-3 text-sm">${afficherProduitsListe(produitsListe)}<\/td><td class="px-4 py-3 text-sm text-center">${quantiteTotale}<\/td><td class="px-4 py-3 text-sm text-right">${formatNumberFC(prixMoyen)} FC<\/td><td class="px-4 py-3 text-sm text-right font-bold text-emerald-600">${formatNumberFC(total)} FC<\/td><td class="px-4 py-3 text-sm">${formatDate(v.date)}<\/td><td class="px-4 py-3 text-sm text-center"><button onclick="window.showVenteDetail('${v.id}')" class="bg-blue-600 text-white px-2 py-1 rounded text-xs hover:bg-blue-700 mr-1">📄 Détails</button><button onclick="genererFacturePanier(${JSON.stringify(venteNettoyee).replace(/"/g, "&quot;")}, ${JSON.stringify(clientData).replace(/"/g, "&quot;")})" class="bg-emerald-600 text-white px-2 py-1 rounded text-xs hover:bg-emerald-700">🧾 Facture</button><\/td>`;
-        historiqueTableBody.appendChild(row);
-        totalQuantite += quantiteTotale;
-        totalPrix += total;
-      });
-    document.getElementById("totalQuantite").textContent = totalQuantite;
-    document.getElementById("totalPrix").textContent =
-      formatNumberFC(totalPrix) + " FC";
-    showMessage(
-      `✅ ${ventesFiltrees.length} vente(s) trouvée(s) pour cette période`,
-      "green",
-    );
+    displayVentesMulti(ventesFiltrees, clientData);
+    historiqueMessageDiv.innerHTML = `<span class="text-emerald-600">✅ ${ventesFiltrees.length} vente(s) trouvée(s) pour cette période</span>`;
   }
 }
 
@@ -1607,446 +1853,146 @@ async function chargerClientsPourRapport() {
   try {
     const response = await fetch(CLIENTS_URL);
     const clients = await response.json();
-    const selectClient = document.getElementById("rapportClientSelect");
-    if (selectClient) {
-      selectClient.innerHTML =
-        '<option value="">-- Tous les clients --</option>';
-      clients.forEach((client) => {
-        const option = document.createElement("option");
-        option.value = client.id;
-        option.textContent = `${client.nom} (ID: ${client.id})`;
-        selectClient.appendChild(option);
+    const select = document.getElementById("rapportClientSelect");
+    if (select) {
+      select.innerHTML = '<option value="">-- Tous les clients --</option>';
+      clients.forEach((c) => {
+        const opt = document.createElement("option");
+        opt.value = c.id;
+        opt.textContent = `${escapeHtml(c.nom)} (${c.id})`;
+        select.appendChild(opt);
       });
     }
-  } catch (error) {
-    console.error("Erreur chargement clients pour rapport:", error);
+  } catch (e) {
+    console.error("Erreur chargement clients rapport", e);
   }
 }
 async function genererRapportMensuel() {
   const clientId = document.getElementById("rapportClientSelect")?.value;
   const mois = parseInt(document.getElementById("rapportMoisSelect")?.value);
   const annee = parseInt(document.getElementById("rapportAnneeSelect")?.value);
-  if (!mois || !annee) {
-    showTemporaryNotification(
-      "❌ Veuillez sélectionner un mois et une année",
-      "error",
-    );
-    return;
-  }
-  showTemporaryNotification("⏳ Génération du rapport...", "info");
+  showTemporaryNotification("⏳ Génération du rapport...");
   try {
-    const [ventesRes, clientsRes] = await Promise.all([
-      fetch(VENTES_URL),
-      fetch(CLIENTS_URL),
-    ]);
+    const ventesRes = await fetch(VENTES_URL);
+    const clientsRes = await fetch(CLIENTS_URL);
     const toutesVentes = await ventesRes.json();
     const tousClients = await clientsRes.json();
-    let ventesFiltrees = toutesVentes.filter((vente) => {
-      const dateVente = parseDate(vente.date);
-      if (isNaN(dateVente.getTime())) return false;
+    let ventesFiltrees = toutesVentes.filter((v) => {
+      const d = parseDate(v.date);
       return (
-        dateVente.getMonth() + 1 === mois && dateVente.getFullYear() === annee
+        !isNaN(d.getTime()) &&
+        d.getMonth() + 1 === mois &&
+        d.getFullYear() === annee
       );
     });
-    if (clientId && clientId !== "") {
+    if (clientId && clientId !== "")
       ventesFiltrees = ventesFiltrees.filter(
         (v) => String(v.clientId) === String(clientId),
       );
-    }
     if (ventesFiltrees.length === 0) {
+      showTemporaryNotification("📭 Aucune donnée pour cette période", "error");
       document.getElementById("rapportTable")?.classList.add("hidden");
       document.getElementById("rapportResume")?.classList.add("hidden");
       document.getElementById("rapportEmpty")?.classList.remove("hidden");
       return;
     }
     document.getElementById("rapportEmpty")?.classList.add("hidden");
-    const totauxParClient = new Map();
-    ventesFiltrees.forEach((vente) => {
-      const venteNettoyee = nettoyerVente(vente);
+    const totaux = new Map();
+    ventesFiltrees.forEach((v) => {
+      const id = String(v.clientId);
+      const venteNettoyee = nettoyerVente(v);
       const total = venteNettoyee.total;
-      const clientIdVente = String(vente.clientId);
-      if (!totauxParClient.has(clientIdVente)) {
-        totauxParClient.set(clientIdVente, {
-          clientId: clientIdVente,
-          nbVentes: 0,
-          total: 0,
-        });
-      }
-      const clientTotal = totauxParClient.get(clientIdVente);
-      clientTotal.nbVentes++;
-      clientTotal.total += total;
+      if (!totaux.has(id)) totaux.set(id, { nb: 0, total: 0 });
+      const t = totaux.get(id);
+      t.nb++;
+      t.total += total;
     });
-    const rapportData = [];
-    for (let [id, data] of totauxParClient) {
-      const client = tousClients.find((c) => String(c.id) === String(id));
-      rapportData.push({
-        clientId: id,
-        clientNom: client ? client.nom : `Client ${id}`,
-        clientTelephone: client ? client.telephone : "N/A",
-        nbVentes: data.nbVentes,
-        total: data.total,
-        remise: data.total * 0.05,
-        net: data.total * 0.95,
-      });
-    }
-    rapportData.sort((a, b) => b.total - a.total);
     const tbody = document.getElementById("rapportTableBody");
     const table = document.getElementById("rapportTable");
-    const footNbVentes = document.getElementById("rapportFootNbVentes");
-    const footTotal = document.getElementById("rapportFootTotal");
-    const footRemise = document.getElementById("rapportFootRemise");
-    const footNet = document.getElementById("rapportFootNet");
     if (tbody) {
       tbody.innerHTML = "";
-      let totalGlobalNbVentes = 0,
-        totalGlobal = 0,
-        totalGlobalRemise = 0,
-        totalGlobalNet = 0;
-      rapportData.forEach((item, index) => {
+      let totalGlobal = 0,
+        nbGlobal = 0;
+      for (let [id, data] of totaux) {
+        const client = tousClients.find((c) => String(c.id) === String(id));
+        const remise = data.total * 0.05;
+        totalGlobal += data.total;
+        nbGlobal += data.nb;
         const tr = document.createElement("tr");
-        tr.className = index % 2 === 0 ? "bg-gray-50" : "hover:bg-gray-100";
-        tr.innerHTML = `<td class="px-4 py-3"><div class="font-medium text-gray-800">${escapeHtml(item.clientNom)}</div><div class="text-xs text-gray-500">ID: ${item.clientId}</div><\/td><td class="px-4 py-3 text-center">${item.nbVentes}<\/td><td class="px-4 py-3 text-right font-medium">${formatNumberFC(item.total)} FC<\/td><td class="px-4 py-3 text-right text-orange-600">${formatNumberFC(item.remise)} FC<\/td><td class="px-4 py-3 text-right font-bold text-emerald-600">${formatNumberFC(item.net)} FC<\/td><td class="px-4 py-3 text-center"><button onclick="window.genererFactureMensuelleClient(${item.clientId}, ${mois}, ${annee})" class="bg-purple-600 hover:bg-purple-700 text-white px-2 py-1 rounded text-xs transition"><i class="fas fa-file-invoice"></i> Facture</button><\/td>`;
+        tr.className = "border-b border-gray-100 hover:bg-gray-50";
+        tr.innerHTML = `<td class="px-4 py-3"><div class="font-medium">${client ? escapeHtml(client.nom) : "Client " + id}</div><div class="text-xs text-gray-400">ID: ${id}</div></div></td><td class="px-4 py-3 text-center">${data.nb}</td><td class="px-4 py-3 text-right">${formatNumberFC(data.total)} FC</td><td class="px-4 py-3 text-right text-orange-600">${formatNumberFC(remise)} FC</td><td class="px-4 py-3 text-right font-bold text-emerald-600">${formatNumberFC(data.total - remise)} FC</td><td class="px-4 py-3 text-center"><button onclick="showTemporaryNotification('Facture mensuelle en cours...')" class="bg-purple-600 hover:bg-purple-700 text-white px-2 py-1 rounded text-xs transition">🧾 Facture</button></td>`;
         tbody.appendChild(tr);
-        totalGlobalNbVentes += item.nbVentes;
-        totalGlobal += item.total;
-        totalGlobalRemise += item.remise;
-        totalGlobalNet += item.net;
-      });
-      if (footNbVentes) footNbVentes.textContent = totalGlobalNbVentes;
-      if (footTotal)
-        footTotal.textContent = formatNumberFC(totalGlobal) + " FC";
-      if (footRemise)
-        footRemise.textContent = formatNumberFC(totalGlobalRemise) + " FC";
-      if (footNet) footNet.textContent = formatNumberFC(totalGlobalNet) + " FC";
+      }
+      document.getElementById("rapportFootNbVentes").textContent = nbGlobal;
+      document.getElementById("rapportFootTotal").textContent =
+        formatNumberFC(totalGlobal) + " FC";
+      document.getElementById("rapportFootRemise").textContent =
+        formatNumberFC(totalGlobal * 0.05) + " FC";
+      document.getElementById("rapportFootNet").textContent =
+        formatNumberFC(totalGlobal * 0.95) + " FC";
       if (table) table.classList.remove("hidden");
+      const resume = document.getElementById("rapportResume");
+      if (resume) {
+        resume.classList.remove("hidden");
+        document.getElementById("rapportTotalVentes").textContent = nbGlobal;
+        document.getElementById("rapportMontantTotal").textContent =
+          formatNumberFC(totalGlobal) + " FC";
+        document.getElementById("rapportRemise").textContent =
+          formatNumberFC(totalGlobal * 0.05) + " FC";
+      }
     }
-    const resume = document.getElementById("rapportResume");
-    if (resume) {
-      resume.classList.remove("hidden");
-      const totalVentes = rapportData.reduce(
-        (sum, item) => sum + item.nbVentes,
-        0,
-      );
-      const totalMontant = rapportData.reduce(
-        (sum, item) => sum + item.total,
-        0,
-      );
-      const totalRemise = rapportData.reduce(
-        (sum, item) => sum + item.remise,
-        0,
-      );
-      document.getElementById("rapportTotalVentes").textContent = totalVentes;
-      document.getElementById("rapportMontantTotal").textContent =
-        formatNumberFC(totalMontant) + " FC";
-      document.getElementById("rapportRemise").textContent =
-        formatNumberFC(totalRemise) + " FC";
-    }
-  } catch (error) {
-    console.error("Erreur génération rapport:", error);
+    showTemporaryNotification("✅ Rapport généré avec succès !");
+  } catch (e) {
+    console.error(e);
     showTemporaryNotification(
       "❌ Erreur lors de la génération du rapport",
       "error",
     );
   }
 }
-window.genererFactureMensuelleClient = async function (clientId, mois, annee) {
-  try {
-    const [ventesRes, clientsRes] = await Promise.all([
-      fetch(VENTES_URL),
-      fetch(CLIENTS_URL),
-    ]);
-    const toutesVentes = await ventesRes.json();
-    const clients = await clientsRes.json();
-    const client = clients.find((c) => String(c.id) === String(clientId));
-    if (!client) {
-      showTemporaryNotification("❌ Client non trouvé", "error");
-      return;
-    }
-    const ventesClient = toutesVentes.filter((v) => {
-      const dateVente = parseDate(v.date);
-      if (isNaN(dateVente.getTime())) return false;
-      return (
-        String(v.clientId) === String(clientId) &&
-        dateVente.getMonth() + 1 === mois &&
-        dateVente.getFullYear() === annee
-      );
+function initRapports() {
+  const genererBtn = document.getElementById("genererRapportBtn");
+  if (genererBtn) genererBtn.addEventListener("click", genererRapportMensuel);
+  const exporterBtn = document.getElementById("exporterRapportBtn");
+  if (exporterBtn) {
+    exporterBtn.addEventListener("click", () => {
+      showTemporaryNotification("📥 Export CSV - Fonctionnalité à compléter");
     });
-    if (ventesClient.length === 0) {
-      showTemporaryNotification(
-        "❌ Aucune vente pour ce client sur la période",
-        "error",
-      );
-      return;
-    }
-    genererFactureMensuelleClientPDF(ventesClient, client, mois, annee);
-  } catch (error) {
-    showTemporaryNotification("❌ Erreur lors de la génération", "error");
   }
-};
-function genererFactureMensuelleClientPDF(ventes, client, mois, annee) {
+  const anneeSelect = document.getElementById("rapportAnneeSelect");
+  if (anneeSelect) anneeSelect.value = new Date().getFullYear();
+  const moisSelect = document.getElementById("rapportMoisSelect");
+  if (moisSelect) moisSelect.value = new Date().getMonth() + 1;
+  chargerClientsPourRapport();
+}
+
+// ============================================
+// FACTURES
+// ============================================
+function genererFacturePanier(vente, client) {
   if (typeof window.jspdf === "undefined") {
-    showTemporaryNotification("❌ Erreur: Bibliothèque PDF non chargée");
+    showTemporaryNotification(
+      "❌ Erreur: Bibliothèque PDF non chargée",
+      "error",
+    );
     return;
   }
-  const moisNoms = [
-    "Janvier",
-    "Février",
-    "Mars",
-    "Avril",
-    "Mai",
-    "Juin",
-    "Juillet",
-    "Août",
-    "Septembre",
-    "Octobre",
-    "Novembre",
-    "Décembre",
-  ];
-  const moisTexte = `${moisNoms[mois - 1]} ${annee}`;
-  let total = 0;
-  const detailsVentes = [];
-  ventes.forEach((vente) => {
-    const venteNettoyee = nettoyerVente(vente);
-    total += venteNettoyee.total;
-    detailsVentes.push({
-      date: formatDate(vente.date),
-      total: venteNettoyee.total,
-      produits: venteNettoyee.produits,
-    });
-  });
-  const remise = total * 0.05;
-  const totalFinal = total - remise;
-  const dateFacture = new Date().toLocaleString("fr-FR");
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
   const marginX = 20;
   const rightX = pageWidth - marginX;
-  doc.setFontSize(20);
-  doc.setFont("helvetica", "bold");
-  doc.text("FACTURE MENSUELLE", pageWidth / 2, 20, { align: "center" });
-  doc.setFontSize(9);
-  doc.setFont("helvetica", "normal");
-  doc.text("VentesPro SARL", marginX, 35);
-  doc.text("123 Avenue du Commerce", marginX, 40);
-  doc.text("Kinshasa, RDC", marginX, 45);
-  doc.text("Tél: +243 XXX XXX XXX", marginX, 50);
-  doc.setFontSize(9);
-  doc.text(`Période: ${moisTexte}`, rightX - 40, 35, { align: "right" });
-  doc.text(`Date d'édition: ${dateFacture}`, rightX - 40, 40, {
-    align: "right",
-  });
-  doc.text(
-    `Facture N°: FAC-${client.id}-${annee}${String(mois).padStart(2, "0")}`,
-    rightX - 40,
-    45,
-    { align: "right" },
-  );
-  doc.line(marginX, 55, rightX, 55);
-  doc.setFontSize(11);
-  doc.setFont("helvetica", "bold");
-  doc.text("Client :", marginX, 68);
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(10);
-  doc.text(client.nom, marginX + 30, 68);
-  doc.text(`Téléphone: ${client.telephone}`, marginX, 75);
-  doc.text(`ID Client: ${client.id}`, marginX, 82);
-  doc.line(marginX, 88, rightX, 88);
-  doc.setFontSize(11);
-  doc.setFont("helvetica", "bold");
-  doc.text(`Récapitulatif des achats - ${moisTexte}`, marginX, 98);
-  doc.setFontSize(9);
-  doc.setFont("helvetica", "bold");
-  doc.text("Date", marginX, 108);
-  doc.text("Produits", 55, 108);
-  doc.text("Total", 160, 108);
-  doc.line(marginX, 110, rightX, 110);
-  let yPosition = 118;
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(8);
-  detailsVentes.forEach((vente, index) => {
-    let produitsListe = vente.produits
-      .map((p) => `${p.nom}(${p.quantite})`)
-      .join(", ");
-    doc.text(vente.date.substring(0, 10), marginX, yPosition);
-    doc.text(produitsListe.substring(0, 45), 55, yPosition);
-    doc.text(`${formatNumberFC(vente.total)} FC`, 160, yPosition);
-    yPosition += 6;
-    if (yPosition > 250 && index < detailsVentes.length - 1) {
-      doc.addPage();
-      yPosition = 20;
-    }
-  });
-  yPosition += 5;
-  doc.line(marginX, yPosition, rightX, yPosition);
-  yPosition += 8;
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(10);
-  doc.text("Sous-total:", 130, yPosition);
-  doc.text(`${formatNumberFC(total)} FC`, rightX, yPosition, {
-    align: "right",
-  });
-  yPosition += 7;
-  doc.text("Remise (5%):", 130, yPosition);
-  doc.text(`-${formatNumberFC(remise)} FC`, rightX, yPosition, {
-    align: "right",
-  });
-  yPosition += 10;
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(12);
-  doc.text("TOTAL À PAYER :", 130, yPosition);
-  doc.setFontSize(14);
-  doc.setTextColor(76, 175, 80);
-  doc.text(`${formatNumberFC(totalFinal)} FC`, rightX, yPosition, {
-    align: "right",
-  });
-  doc.setFontSize(8);
-  doc.setTextColor(100, 100, 100);
-  doc.text("Merci de votre confiance !", pageWidth / 2, 280, {
-    align: "center",
-  });
-  doc.save(
-    `facture_mensuelle_${client.nom.replace(/\s/g, "_")}_${moisTexte.replace(/\s/g, "_")}.pdf`,
-  );
-  showTemporaryNotification("✅ Facture mensuelle générée !");
-}
-function exporterRapportCSV() {
-  const table = document.getElementById("rapportTable");
-  if (!table || table.classList.contains("hidden")) {
-    showTemporaryNotification("❌ Aucun rapport à exporter", "error");
-    return;
-  }
-  const mois = parseInt(document.getElementById("rapportMoisSelect")?.value);
-  const annee = parseInt(document.getElementById("rapportAnneeSelect")?.value);
-  const clientSelect = document.getElementById("rapportClientSelect");
-  const clientNom =
-    clientSelect?.options[clientSelect.selectedIndex]?.text || "tous";
-  const moisNoms = [
-    "Janvier",
-    "Février",
-    "Mars",
-    "Avril",
-    "Mai",
-    "Juin",
-    "Juillet",
-    "Août",
-    "Septembre",
-    "Octobre",
-    "Novembre",
-    "Décembre",
-  ];
-  let separator = ";";
-  const formatField = (field) => {
-    if (field === undefined || field === null) return "";
-    const stringField = String(field);
-    if (
-      stringField.includes(separator) ||
-      stringField.includes('"') ||
-      stringField.includes("\n")
-    ) {
-      return `"${stringField.replace(/"/g, '""')}"`;
-    }
-    return stringField;
-  };
-  const headers = [
-    "Client ID",
-    "Client Nom",
-    "Nb ventes",
-    "Total (FC)",
-    "Remise 5% (FC)",
-    "Net à payer (FC)",
-  ];
-  const rows = [];
-  const tbodyRows = document.querySelectorAll("#rapportTableBody tr");
-  tbodyRows.forEach((row) => {
-    const cells = row.querySelectorAll("td");
-    if (cells.length >= 5) {
-      const clientId =
-        cells[0].querySelector(".text-xs")?.textContent.replace("ID: ", "") ||
-        "";
-      const clientNomCell =
-        cells[0].querySelector(".font-medium")?.textContent || "";
-      const nbVentes = cells[1]?.textContent || "0";
-      const total = cells[2]?.textContent.replace(" FC", "") || "0";
-      const remise = cells[3]?.textContent.replace(" FC", "") || "0";
-      const net = cells[4]?.textContent.replace(" FC", "") || "0";
-      rows.push(
-        [clientId, clientNomCell, nbVentes, total, remise, net].map((f) =>
-          formatField(f),
-        ),
-      );
-    }
-  });
-  const csvContent = [headers.map((h) => formatField(h)), ...rows]
-    .map((row) => row.join(separator))
-    .join("\n");
-  const blob = new Blob(["\uFEFF" + csvContent], {
-    type: "text/csv;charset=utf-8;",
-  });
-  const link = document.createElement("a");
-  const url = URL.createObjectURL(blob);
-  link.setAttribute("href", url);
-  link.setAttribute(
-    "download",
-    `rapport_${moisNoms[mois - 1]}_${annee}_${clientNom}.csv`,
-  );
-  link.click();
-  URL.revokeObjectURL(url);
-  showTemporaryNotification("📥 Rapport exporté en CSV !");
-}
-function initRapports() {
-  const genererBtn = document.getElementById("genererRapportBtn");
-  const exporterBtn = document.getElementById("exporterRapportBtn");
-  const anneeSelect = document.getElementById("rapportAnneeSelect");
-  if (anneeSelect) {
-    const anneeActuelle = new Date().getFullYear();
-    const optionExists = Array.from(anneeSelect.options).some(
-      (opt) => opt.value == anneeActuelle,
-    );
-    if (!optionExists) {
-      const option = document.createElement("option");
-      option.value = anneeActuelle;
-      option.textContent = anneeActuelle;
-      anneeSelect.appendChild(option);
-    }
-    anneeSelect.value = anneeActuelle;
-  }
-  const moisSelect = document.getElementById("rapportMoisSelect");
-  if (moisSelect) {
-    moisSelect.value = new Date().getMonth() + 1;
-  }
-  if (genererBtn) genererBtn.addEventListener("click", genererRapportMensuel);
-  if (exporterBtn) exporterBtn.addEventListener("click", exporterRapportCSV);
-  chargerClientsPourRapport();
-}
-
-// ============================================
-// FACTURES (GLOBALES)
-// ============================================
-function genererFacturePanier(vente, client) {
-  if (typeof window.jspdf === "undefined") {
-    showTemporaryNotification("❌ Erreur: Bibliothèque PDF non chargée");
-    return;
-  }
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF();
-  const pageWidth = doc.internal.pageSize.getWidth();
-  const marginX = 20,
-    rightX = pageWidth - marginX;
   const venteNettoyee = nettoyerVente(vente);
-  const total = venteNettoyee.total,
-    produits = venteNettoyee.produits,
-    dateFacture = new Date().toLocaleString("fr-FR");
+  const total = venteNettoyee.total;
+  const produits = venteNettoyee.produits;
+  const dateFacture = new Date().toLocaleString("fr-FR");
   doc.setFontSize(22);
   doc.setFont("helvetica", "bold");
   doc.text("FACTURE", pageWidth / 2, 20, { align: "center" });
   doc.setFontSize(9);
   doc.setFont("helvetica", "normal");
   doc.text("VentesPro SARL", marginX, 35);
-  doc.text("123 Avenue du Commerce", marginX, 40);
   doc.text("Kinshasa, RDC", marginX, 45);
-  doc.text("Tél: +243 XXX XXX XXX", marginX, 50);
-  doc.setFontSize(9);
   doc.text(`Facture N°: ${vente.id || "N/A"}`, rightX - 40, 35, {
     align: "right",
   });
@@ -2058,33 +2004,29 @@ function genererFacturePanier(vente, client) {
   doc.setFont("helvetica", "normal");
   doc.setFontSize(10);
   doc.text(client.nom, marginX + 30, 68);
-  doc.text(`Téléphone: ${client.telephone}`, marginX, 75);
+  doc.text(`Téléphone: ${client.telephone || "N/A"}`, marginX, 75);
   doc.text(`ID Client: ${client.id}`, marginX, 82);
-  doc.line(marginX, 88, rightX, 88);
+  doc.line(marginX, 90, rightX, 90);
   doc.setFontSize(11);
   doc.setFont("helvetica", "bold");
-  doc.text("Détails des produits", marginX, 98);
+  doc.text("Détails des produits", marginX, 102);
   doc.setFontSize(9);
   doc.setFont("helvetica", "bold");
-  doc.text("Produit", marginX, 108);
-  doc.text("Qté", 100, 108);
-  doc.text("Prix unit.", 130, 108);
-  doc.text("Total", 165, 108);
-  doc.line(marginX, 110, rightX, 110);
-  let yPosition = 118;
+  doc.text("Produit", marginX, 112);
+  doc.text("Qté", 100, 112);
+  doc.text("Prix unit.", 130, 112);
+  doc.text("Total", 165, 112);
+  doc.line(marginX, 114, rightX, 114);
+  let yPosition = 122;
   doc.setFont("helvetica", "normal");
   doc.setFontSize(9);
-  produits.forEach((item, index) => {
+  produits.forEach((item) => {
     const sousTotal = item.prix * item.quantite;
-    doc.text(item.nom.substring(0, 25), marginX, yPosition);
+    doc.text(item.nom.substring(0, 30), marginX, yPosition);
     doc.text(item.quantite.toString(), 100, yPosition);
     doc.text(`${formatNumberFC(item.prix)} FC`, 130, yPosition);
     doc.text(`${formatNumberFC(sousTotal)} FC`, 165, yPosition);
     yPosition += 7;
-    if (yPosition > 250 && index < produits.length - 1) {
-      doc.addPage();
-      yPosition = 20;
-    }
   });
   yPosition += 5;
   doc.line(marginX, yPosition, rightX, yPosition);
@@ -2109,12 +2051,15 @@ function genererFacturePanier(vente, client) {
 }
 function genererFactureMensuelleMulti(ventes, client) {
   if (typeof window.jspdf === "undefined") {
-    showTemporaryNotification("❌ Erreur: Bibliothèque PDF non chargée");
+    showTemporaryNotification(
+      "❌ Erreur: Bibliothèque PDF non chargée",
+      "error",
+    );
     return;
   }
   const maintenant = new Date();
-  const moisActuel = maintenant.getMonth(),
-    anneeActuelle = maintenant.getFullYear();
+  const moisActuel = maintenant.getMonth();
+  const anneeActuelle = maintenant.getFullYear();
   const ventesDuMois = ventes.filter((v) => {
     const dateVente = parseDate(v.date);
     if (isNaN(dateVente.getTime())) return false;
@@ -2124,7 +2069,10 @@ function genererFactureMensuelleMulti(ventes, client) {
     );
   });
   if (ventesDuMois.length === 0) {
-    showTemporaryNotification("❌ Aucune vente ce mois-ci");
+    showTemporaryNotification(
+      "📭 Aucune vente ce mois-ci pour ce client",
+      "error",
+    );
     return;
   }
   let total = 0;
@@ -2132,32 +2080,27 @@ function genererFactureMensuelleMulti(ventes, client) {
     const venteNettoyee = nettoyerVente(v);
     total += venteNettoyee.total;
   });
-  const remise = total * 0.05,
-    totalFinal = total - remise,
-    dateFacture = new Date().toLocaleString("fr-FR");
+  const remise = total * 0.05;
+  const totalFinal = total - remise;
+  const dateFacture = new Date().toLocaleString("fr-FR");
   const moisTexte = maintenant.toLocaleString("fr-FR", {
     month: "long",
     year: "numeric",
   });
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
-  const pageWidth = doc.internal.pageSize.getWidth(),
-    marginX = 20,
-    rightX = pageWidth - marginX;
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const marginX = 20;
+  const rightX = pageWidth - marginX;
   doc.setFontSize(20);
   doc.setFont("helvetica", "bold");
   doc.text("FACTURE MENSUELLE", pageWidth / 2, 20, { align: "center" });
   doc.setFontSize(9);
   doc.setFont("helvetica", "normal");
   doc.text("VentesPro SARL", marginX, 35);
-  doc.text("123 Avenue du Commerce", marginX, 40);
   doc.text("Kinshasa, RDC", marginX, 45);
-  doc.text("Tél: +243 XXX XXX XXX", marginX, 50);
-  doc.setFontSize(9);
   doc.text(`Période: ${moisTexte}`, rightX - 40, 35, { align: "right" });
-  doc.text(`Date d'édition: ${dateFacture}`, rightX - 40, 40, {
-    align: "right",
-  });
+  doc.text(`Date: ${dateFacture}`, rightX - 40, 40, { align: "right" });
   doc.line(marginX, 55, rightX, 55);
   doc.setFontSize(11);
   doc.setFont("helvetica", "bold");
@@ -2165,19 +2108,19 @@ function genererFactureMensuelleMulti(ventes, client) {
   doc.setFont("helvetica", "normal");
   doc.setFontSize(10);
   doc.text(client.nom, marginX + 30, 68);
-  doc.text(`Téléphone: ${client.telephone}`, marginX, 75);
+  doc.text(`Téléphone: ${client.telephone || "N/A"}`, marginX, 75);
   doc.text(`ID Client: ${client.id}`, marginX, 82);
-  doc.line(marginX, 88, rightX, 88);
+  doc.line(marginX, 90, rightX, 90);
   doc.setFontSize(11);
   doc.setFont("helvetica", "bold");
-  doc.text(`Récapitulatif des achats - ${moisTexte}`, marginX, 98);
+  doc.text(`Récapitulatif des achats - ${moisTexte}`, marginX, 102);
   doc.setFontSize(9);
   doc.setFont("helvetica", "bold");
-  doc.text("Date", marginX, 108);
-  doc.text("Produits", 55, 108);
-  doc.text("Total", 160, 108);
-  doc.line(marginX, 110, rightX, 110);
-  let yPosition = 118;
+  doc.text("Date", marginX, 112);
+  doc.text("Produits", 55, 112);
+  doc.text("Total", 160, 112);
+  doc.line(marginX, 114, rightX, 114);
+  let yPosition = 122;
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8);
   ventesDuMois.forEach((vente, index) => {
@@ -2195,7 +2138,7 @@ function genererFactureMensuelleMulti(ventes, client) {
       yPosition = 20;
     }
   });
-  yPosition += 5;
+  yPosition += 8;
   doc.line(marginX, yPosition, rightX, yPosition);
   yPosition += 8;
   doc.setFont("helvetica", "normal");
@@ -2230,7 +2173,7 @@ function genererFactureMensuelleMulti(ventes, client) {
 }
 function exportToCSV(ventes, client) {
   if (!ventes || ventes.length === 0) {
-    showTemporaryNotification("Aucune donnée à exporter", "error");
+    showTemporaryNotification("📭 Aucune donnée à exporter", "error");
     return;
   }
   let separator = ";";
@@ -2241,8 +2184,9 @@ function exportToCSV(ventes, client) {
       stringField.includes(separator) ||
       stringField.includes('"') ||
       stringField.includes("\n")
-    )
+    ) {
       return `"${stringField.replace(/"/g, '""')}"`;
+    }
     return stringField;
   };
   const headers = [
@@ -2298,4 +2242,5 @@ loadDashboardStats();
 initGestionProduits();
 initGestionClients();
 initRapports();
+initDailyStats();
 showTemporaryNotification("Bienvenue sur VentesPro !");
