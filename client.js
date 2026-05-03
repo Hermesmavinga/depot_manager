@@ -30,6 +30,91 @@ let allClients = [];
 let filteredClients = [];
 
 // ============================================
+// REDIRECTION VERS LA SECTION VENTES (NOUVEAU)
+// ============================================
+
+/**
+ * Redirige vers la section Ventes et pré-remplit l'ID client si fourni
+ * @param {string|null} clientId - L'ID du client (optionnel)
+ */
+function redirectToVente(clientId = null) {
+  // 1. Trouver l'élément de navigation "Ventes"
+  const navItems = document.querySelectorAll(".nav-item");
+  let ventesNavItem = null;
+
+  navItems.forEach((item) => {
+    if (item.dataset.section === "ventes") {
+      ventesNavItem = item;
+    }
+  });
+
+  // 2. Sections disponibles
+  const sections = {
+    dashboard: document.getElementById("dashboardSection"),
+    clients: document.getElementById("clientsSection"),
+    produits: document.getElementById("produitsSection"),
+    ventes: document.getElementById("ventesSection"),
+    historique: document.getElementById("historiqueSection"),
+    rapports: document.getElementById("rapportsSection"),
+  };
+
+  // 3. Mettre à jour l'état du menu (navigation active)
+  if (ventesNavItem) {
+    navItems.forEach((nav) => {
+      nav.classList.remove("bg-emerald-600", "text-white");
+      nav.classList.add("text-gray-300");
+    });
+    ventesNavItem.classList.add("bg-emerald-600", "text-white");
+    ventesNavItem.classList.remove("text-gray-300");
+
+    const pageTitle = document.getElementById("currentPageTitle");
+    if (pageTitle) {
+      pageTitle.textContent = ventesNavItem.querySelector("span").textContent;
+    }
+  }
+
+  // 4. Afficher la section Ventes, masquer les autres
+  Object.values(sections).forEach((section) => {
+    if (section) section.classList.add("hidden");
+  });
+  if (sections.ventes) sections.ventes.classList.remove("hidden");
+
+  // 5. Optionnel : pré-remplir l'ID client si fourni
+  if (clientId) {
+    const venteClientInput = document.getElementById("venteClientId");
+    if (venteClientInput) {
+      venteClientInput.value = clientId;
+      const event = new Event("input", { bubbles: true });
+      venteClientInput.dispatchEvent(event);
+      showTemporaryNotification(`✅ Client sélectionné - ID: ${clientId}`);
+    }
+  }
+
+  // 6. Fermer le menu mobile si ouvert
+  const sidebar = document.getElementById("sidebar");
+  const overlay = document.getElementById("overlay");
+  if (window.innerWidth < 768 && sidebar) {
+    sidebar.classList.add("-translate-x-full");
+    if (overlay) overlay.classList.remove("active");
+  }
+
+  // 7. Faire défiler vers le haut de la page
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+/**
+ * Fonction principale pour les boutons "Faire une vente"
+ * @param {string} clientId - L'ID du client
+ */
+function fillVenteForm(clientId) {
+  redirectToVente(clientId);
+}
+
+function fillVenteFormWithId(clientId) {
+  redirectToVente(clientId);
+}
+
+// ============================================
 // FONCTIONS UTILITAIRES
 // ============================================
 function showNotification(message, type = "success") {
@@ -793,15 +878,6 @@ async function searchClient() {
 function displayClient(client) {
   resultDiv.innerHTML = `<div class="border-2 border-emerald-500 rounded-lg p-4 mt-3 bg-emerald-50"><div class="flex justify-between items-center mb-3"><h3 class="font-bold text-emerald-700">✅ Client trouvé</h3><button onclick="clearResult()" class="bg-red-500 text-white px-2 py-1 rounded text-sm hover:bg-red-600">✕</button></div><div class="space-y-1 text-sm"><p><strong>🆔 ID :</strong> ${client.id}</p><p><strong>👤 Nom :</strong> ${escapeHtml(client.nom)}</p><p><strong>📞 Téléphone :</strong> ${escapeHtml(client.telephone)}</p></div><div class="flex gap-2 mt-3"><button onclick="fillVenteForm('${client.id}')" class="bg-emerald-600 text-white px-3 py-1 rounded text-sm hover:bg-emerald-700">🛒 Faire une vente</button><button onclick="copyToClipboard('${client.id}')" class="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700">📋 Copier l'ID</button></div></div>`;
 }
-function fillVenteForm(clientId) {
-  const venteClientInput = document.getElementById("venteClientId");
-  if (venteClientInput) {
-    venteClientInput.value = clientId;
-    const event = new Event("input", { bubbles: true });
-    venteClientInput.dispatchEvent(event);
-    showTemporaryMessage("✅ ID client pré-rempli !", "venteMessage");
-  }
-}
 function showLoading(container) {
   container.innerHTML = `<div class="border border-blue-500 p-3 mt-3 rounded bg-blue-50 text-blue-600">⏳ Recherche en cours...</div>`;
 }
@@ -913,15 +989,6 @@ function showErrorMessage(message, container) {
 function showLoadingMessage(container) {
   container.innerHTML = `<div class="bg-blue-50 border border-blue-500 rounded-lg p-3 text-blue-600">⏳ Création en cours...</div>`;
 }
-function fillVenteFormWithId(clientId) {
-  const venteClientInput = document.getElementById("venteClientId");
-  if (venteClientInput) {
-    venteClientInput.value = clientId;
-    const event = new Event("input", { bubbles: true });
-    venteClientInput.dispatchEvent(event);
-    showTemporaryNotification("✅ ID client pré-rempli !");
-  }
-}
 async function copyToClipboard(text) {
   try {
     await navigator.clipboard.writeText(text.toString());
@@ -997,7 +1064,7 @@ function displayClientsTable() {
     clientsToShow.forEach((client) => {
       const tr = document.createElement("tr");
       tr.className = "border-b border-gray-100 hover:bg-gray-50";
-      tr.innerHTML = `<td class="px-4 py-3 text-sm font-mono">${client.id}<\/td><td class="px-4 py-3 text-sm">${escapeHtml(client.nom)}<\/td><td class="px-4 py-3 text-sm">${escapeHtml(client.telephone)}<\/td><td class="px-4 py-3 text-sm text-center"><button class="edit-client-btn text-blue-600 hover:text-blue-800 mr-3 transition" data-id="${client.id}" data-nom="${escapeHtml(client.nom)}" data-telephone="${escapeHtml(client.telephone)}"><i class="fas fa-edit"></i> Modifier</button><button class="delete-client-btn text-red-600 hover:text-red-800 transition" data-id="${client.id}" data-nom="${escapeHtml(client.nom)}"><i class="fas fa-trash"></i> Supprimer</button><\/td>`;
+      tr.innerHTML = `<td class="px-4 py-3 text-sm font-mono">${client.id}<\/td><td class="px-4 py-3 text-sm">${escapeHtml(client.nom)}<\/td><td class="px-4 py-3 text-sm">${escapeHtml(client.telephone)}<\/td><td class="px-4 py-3 text-sm text-center"><button onclick="fillVenteForm('${client.id}')" class="bg-emerald-600 text-white px-3 py-1 rounded text-xs hover:bg-emerald-700 mr-2 transition">🛒 Vendre</button><button class="edit-client-btn text-blue-600 hover:text-blue-800 mr-3 transition" data-id="${client.id}" data-nom="${escapeHtml(client.nom)}" data-telephone="${escapeHtml(client.telephone)}"><i class="fas fa-edit"></i> Modifier</button><button class="delete-client-btn text-red-600 hover:text-red-800 transition" data-id="${client.id}" data-nom="${escapeHtml(client.nom)}"><i class="fas fa-trash"></i> Supprimer</button><\/td>`;
       tbody.appendChild(tr);
     });
   }

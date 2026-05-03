@@ -264,6 +264,11 @@
       "nom": "range",
       "telephone": "+243 828 790 728",
       "id": "iVYomCu"
+    },
+    {
+      "nom": "kitoko",
+      "telephone": "+243 828 790 728",
+      "id": "499sAen"
     }
   ],
   "produits": [
@@ -1192,6 +1197,20 @@
       "total": 2400,
       "date": "2026-05-02T19:57:58.003Z",
       "id": "kA28RKw"
+    },
+    {
+      "clientId": "d3c0",
+      "produits": [
+        {
+          "nom": "Primus",
+          "quantite": 1,
+          "prix": 60000,
+          "type": "cassier"
+        }
+      ],
+      "total": 60000,
+      "date": "2026-05-03T14:12:40.891Z",
+      "id": "8Bgl7Qf"
     }
   ],
   "$schema": "./node_modules/json-server/schema.json"
