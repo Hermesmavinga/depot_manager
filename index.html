@@ -109,17 +109,70 @@
       .animate-fadeIn {
         animation: fadeInModal 0.2s ease-out;
       }
-      @keyframes pulse-red {
-        0%,
-        100% {
-          background-color: rgba(239, 68, 68, 0.1);
+
+      /* Styles améliorés pour les modals de détails avec beaucoup de données */
+      .detail-modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.6);
+        z-index: 1000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        backdrop-filter: blur(3px);
+      }
+      .detail-modal-content {
+        background: white;
+        border-radius: 24px;
+        max-width: 650px;
+        width: 90%;
+        max-height: 85vh;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        animation: modalSlideIn 0.3s ease-out;
+      }
+      .detail-modal-content .overflow-y-auto {
+        scrollbar-width: thin;
+        scrollbar-color: #cbd5e1 #f1f5f9;
+      }
+      .detail-modal-content .overflow-y-auto::-webkit-scrollbar {
+        width: 6px;
+      }
+      .detail-modal-content .overflow-y-auto::-webkit-scrollbar-track {
+        background: #f1f5f9;
+        border-radius: 10px;
+      }
+      .detail-modal-content .overflow-y-auto::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 10px;
+      }
+      .detail-modal-content .overflow-y-auto::-webkit-scrollbar-thumb:hover {
+        background: #94a3b8;
+      }
+      @keyframes modalSlideIn {
+        from {
+          opacity: 0;
+          transform: translateY(30px) scale(0.95);
         }
-        50% {
-          background-color: rgba(239, 68, 68, 0.3);
+        to {
+          opacity: 1;
+          transform: translateY(0) scale(1);
         }
       }
-      .alert-pulse {
-        animation: pulse-red 1s ease-in-out infinite;
+      .stat-card-clickable {
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+      .stat-card-clickable:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15);
+      }
+      .stat-card-clickable:active {
+        transform: scale(0.98);
       }
     </style>
   </head>
@@ -339,7 +392,8 @@
                   <p class="text-xs text-gray-400 mt-1">Chiffre d'affaires</p>
                 </div>
                 <div
-                  class="bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl p-4 text-center"
+                  class="bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl p-4 text-center stat-card-clickable"
+                  id="bouteillesCard"
                 >
                   <p class="text-gray-500 text-xs uppercase tracking-wider">
                     Bouteilles vendues
@@ -353,7 +407,8 @@
                   <p class="text-xs text-gray-400 mt-1">Unités individuelles</p>
                 </div>
                 <div
-                  class="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-4 text-center"
+                  class="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-4 text-center stat-card-clickable"
+                  id="cassiersCard"
                 >
                   <p class="text-gray-500 text-xs uppercase tracking-wider">
                     Cassiers vendus

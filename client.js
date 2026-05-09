@@ -29,6 +29,7 @@ const clientsPerPage = 10;
 let allClients = [];
 let filteredClients = [];
 let weeklyChart = null;
+let lastDailyVentesDetail = [];
 
 // ============================================
 // REDIRECTION VERS LA SECTION VENTES
@@ -332,13 +333,21 @@ async function getDailyStats(date = null) {
       let bc = 0,
         cc = 0,
         eq = 0;
+      const produitsAvecType = [];
       for (const p of vn.produits) {
-        if (p.prix > 50000 || p.quantite > 10) {
+        const isCassier = p.prix > 50000 || p.quantite > 10;
+        if (isCassier) {
           cc += p.quantite;
           eq += p.quantite * 24;
+          produitsAvecType.push({
+            ...p,
+            type: "cassier",
+            nbBouteillesParCassier: 24,
+          });
         } else {
           bc += p.quantite;
           eq += p.quantite;
+          produitsAvecType.push({ ...p, type: "bouteille" });
         }
       }
       totalBouteilles += bc;
@@ -354,12 +363,14 @@ async function getDailyStats(date = null) {
         heure: formatDate(vente.date).split(" à ")[1] || formatDate(vente.date),
         clientNom: clientInfo.nom,
         clientId: vente.clientId,
-        produits: vn.produits,
+        produits: produitsAvecType,
         bouteilles: bc,
         cassiers: cc,
         total: vn.total,
+        date: vente.date,
       });
     }
+    lastDailyVentesDetail = ventesDetail;
     document.getElementById("dailyTotalVentes").textContent = totalVentes;
     document.getElementById("dailyTotalMontant").textContent =
       formatNumberFC(totalMontant) + " FC";
@@ -390,7 +401,7 @@ function displayDailySalesDetail(ventesDetail, dateStr) {
   if (!tbody) return;
   if (ventesDetail.length === 0) {
     tbody.innerHTML =
-      '<tr><td colspan="7" class="px-4 py-8 text-center text-gray-400">📭 Aucune vente enregistrée ce jour</td></tr>';
+      '<tr><td colspan="7" class="px-4 py-8 text-center text-gray-400">📭 Aucune vente enregistrée ce jour</td></table>';
     if (footer) footer.classList.add("hidden");
     return;
   }
@@ -575,25 +586,240 @@ function updateWeeklyChart(stats) {
     },
   });
 }
+
+// ============================================
+// POPUPS DE DÉTAIL POUR BOUTEILLES ET CASSIERS (AVEC SCROLL)
+// ============================================
+function showBouteillesDetail() {
+  if (!lastDailyVentesDetail || lastDailyVentesDetail.length === 0) {
+    showTemporaryNotification("📭 Aucune vente enregistrée ce jour", "info");
+    return;
+  }
+  const bouteillesVentes = [];
+  let totalBouteilles = 0,
+    totalMontant = 0;
+  for (const vente of lastDailyVentesDetail) {
+    for (const produit of vente.produits) {
+      if (produit.type === "bouteille") {
+        const sousTotal = produit.quantite * produit.prix;
+        bouteillesVentes.push({
+          produit: produit.nom,
+          quantite: produit.quantite,
+          prix: produit.prix,
+          sousTotal: sousTotal,
+          client: vente.clientNom,
+          heure: vente.heure,
+          venteId: vente.id,
+        });
+        totalBouteilles += produit.quantite;
+        totalMontant += sousTotal;
+      }
+    }
+  }
+  if (bouteillesVentes.length === 0) {
+    showTemporaryNotification("🍾 Aucune bouteille vendue aujourd'hui", "info");
+    return;
+  }
+  bouteillesVentes.sort((a, b) => a.client.localeCompare(b.client));
+  const modal = document.createElement("div");
+  modal.className = "detail-modal";
+  modal.innerHTML = `<div class="detail-modal-content" style="max-width: 600px; width: 90%; max-height: 85vh; display: flex; flex-direction: column;"><div class="sticky top-0 bg-gradient-to-r from-orange-500 to-orange-600 text-white px-6 py-4 rounded-t-2xl flex justify-between items-center"><div><i class="fas fa-wine-bottle text-xl mr-2"></i><span class="font-bold text-lg">Détail des bouteilles vendues</span><p class="text-xs opacity-90 mt-1">${new Date().toLocaleDateString("fr-FR")}</p></div><button onclick="this.closest('.detail-modal').remove()" class="text-white hover:bg-white/20 rounded-full w-8 h-8 flex items-center justify-center"><i class="fas fa-times"></i></button></div><div class="p-4 flex-1 overflow-y-auto" style="max-height: calc(85vh - 140px);"><div class="grid grid-cols-2 gap-3 mb-4"><div class="bg-orange-50 rounded-xl p-3 text-center"><p class="text-gray-500 text-xs">Total bouteilles</p><p class="text-2xl font-bold text-orange-600">${totalBouteilles}</p></div><div class="bg-emerald-50 rounded-xl p-3 text-center"><p class="text-gray-500 text-xs">Montant total</p><p class="text-2xl font-bold text-emerald-600">${formatNumberFC(totalMontant)} FC</p></div></div><div class="space-y-2">${bouteillesVentes.map((item, idx) => `<div class="bg-gray-50 rounded-lg p-3 hover:bg-gray-100 transition"><div class="flex justify-between items-start"><div class="flex-1"><div class="font-medium text-gray-800">${escapeHtml(item.produit)}</div><div class="text-xs text-gray-500 mt-1"><i class="fas fa-user mr-1"></i>${escapeHtml(item.client)} | <i class="fas fa-clock mr-1"></i>${item.heure}</div></div><div class="text-right"><div class="font-bold text-orange-600">${item.quantite} x ${formatNumberFC(item.prix)} FC</div><div class="text-sm font-semibold text-emerald-600">= ${formatNumberFC(item.sousTotal)} FC</div></div></div></div>`).join("")}</div></div><div class="sticky bottom-0 bg-white border-t border-gray-100 pt-3 pb-2 px-4 flex justify-end gap-2"><button onclick="genererRapportBouteilles()" class="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg text-sm transition"><i class="fas fa-download mr-1"></i> Exporter CSV</button><button onclick="this.closest('.detail-modal').remove()" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm transition">Fermer</button></div></div>`;
+  document.body.appendChild(modal);
+  modal.addEventListener("click", (e) => {
+    if (e.target === modal) modal.remove();
+  });
+}
+function showCassiersDetail() {
+  if (!lastDailyVentesDetail || lastDailyVentesDetail.length === 0) {
+    showTemporaryNotification("📭 Aucune vente enregistrée ce jour", "info");
+    return;
+  }
+  const cassiersVentes = [];
+  let totalCassiers = 0,
+    totalBouteillesEquivalent = 0,
+    totalMontant = 0;
+  for (const vente of lastDailyVentesDetail) {
+    for (const produit of vente.produits) {
+      if (produit.type === "cassier") {
+        const nbBouteilles = produit.nbBouteillesParCassier || 24;
+        const sousTotal = produit.quantite * produit.prix;
+        cassiersVentes.push({
+          produit: produit.nom,
+          quantite: produit.quantite,
+          prix: produit.prix,
+          nbBouteillesParCassier: nbBouteilles,
+          totalBouteilles: produit.quantite * nbBouteilles,
+          sousTotal: sousTotal,
+          client: vente.clientNom,
+          heure: vente.heure,
+          venteId: vente.id,
+        });
+        totalCassiers += produit.quantite;
+        totalBouteillesEquivalent += produit.quantite * nbBouteilles;
+        totalMontant += sousTotal;
+      }
+    }
+  }
+  if (cassiersVentes.length === 0) {
+    showTemporaryNotification("📦 Aucun cassier vendu aujourd'hui", "info");
+    return;
+  }
+  cassiersVentes.sort((a, b) => a.client.localeCompare(b.client));
+  const modal = document.createElement("div");
+  modal.className = "detail-modal";
+  modal.innerHTML = `<div class="detail-modal-content" style="max-width: 650px; width: 90%; max-height: 85vh; display: flex; flex-direction: column;"><div class="sticky top-0 bg-gradient-to-r from-purple-500 to-purple-600 text-white px-6 py-4 rounded-t-2xl flex justify-between items-center"><div><i class="fas fa-boxes text-xl mr-2"></i><span class="font-bold text-lg">Détail des cassiers vendus</span><p class="text-xs opacity-90 mt-1">${new Date().toLocaleDateString("fr-FR")}</p></div><button onclick="this.closest('.detail-modal').remove()" class="text-white hover:bg-white/20 rounded-full w-8 h-8 flex items-center justify-center"><i class="fas fa-times"></i></button></div><div class="p-4 flex-1 overflow-y-auto" style="max-height: calc(85vh - 140px);"><div class="grid grid-cols-3 gap-3 mb-4"><div class="bg-purple-50 rounded-xl p-3 text-center"><p class="text-gray-500 text-xs">Cassiers vendus</p><p class="text-2xl font-bold text-purple-600">${totalCassiers}</p></div><div class="bg-rose-50 rounded-xl p-3 text-center"><p class="text-gray-500 text-xs">Bouteilles équiv.</p><p class="text-2xl font-bold text-rose-600">${totalBouteillesEquivalent}</p></div><div class="bg-emerald-50 rounded-xl p-3 text-center"><p class="text-gray-500 text-xs">Montant total</p><p class="text-2xl font-bold text-emerald-600">${formatNumberFC(totalMontant)} FC</p></div></div><div class="space-y-3">${cassiersVentes.map((item, idx) => `<div class="bg-gray-50 rounded-lg p-3 hover:bg-gray-100 transition"><div class="flex justify-between items-start"><div class="flex-1"><div class="font-medium text-gray-800">${escapeHtml(item.produit)}</div><div class="text-xs text-gray-500 mt-1"><i class="fas fa-user mr-1"></i>${escapeHtml(item.client)} | <i class="fas fa-clock mr-1"></i>${item.heure}</div></div><div class="text-right"><div class="font-bold text-purple-600">${item.quantite} cassier(s)</div><div class="text-xs text-gray-400">${item.nbBouteillesParCassier} bouteilles/cassier</div></div></div><div class="grid grid-cols-2 gap-2 mt-2 pt-2 border-t border-gray-200"><div class="flex justify-between items-center"><span class="text-xs text-gray-500">Total bouteilles</span><span class="text-sm font-semibold">${item.totalBouteilles} bouteilles</span></div><div class="flex justify-between items-center"><span class="text-xs text-gray-500">Montant total</span><span class="text-sm font-bold text-emerald-600">${formatNumberFC(item.sousTotal)} FC</span></div></div></div>`).join("")}</div></div><div class="sticky bottom-0 bg-white border-t border-gray-100 pt-3 pb-2 px-4 flex justify-end gap-2"><button onclick="genererRapportCassiers()" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg text-sm transition"><i class="fas fa-download mr-1"></i> Exporter CSV</button><button onclick="this.closest('.detail-modal').remove()" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm transition">Fermer</button></div></div>`;
+  document.body.appendChild(modal);
+  modal.addEventListener("click", (e) => {
+    if (e.target === modal) modal.remove();
+  });
+}
+function genererRapportBouteilles() {
+  if (!lastDailyVentesDetail) return;
+  const bouteillesVentes = [];
+  for (const vente of lastDailyVentesDetail) {
+    for (const produit of vente.produits) {
+      if (produit.type === "bouteille") {
+        bouteillesVentes.push({
+          produit: produit.nom,
+          quantite: produit.quantite,
+          prix: produit.prix,
+          sousTotal: produit.quantite * produit.prix,
+          client: vente.clientNom,
+          heure: vente.heure,
+        });
+      }
+    }
+  }
+  const separator = ";";
+  const headers = [
+    "Produit",
+    "Quantité",
+    "Prix unitaire (FC)",
+    "Sous-total (FC)",
+    "Client",
+    "Heure",
+  ];
+  const rows = bouteillesVentes.map((item) => [
+    item.produit,
+    item.quantite,
+    item.prix,
+    item.sousTotal,
+    item.client,
+    item.heure,
+  ]);
+  const csvContent = [headers, ...rows]
+    .map((row) => row.join(separator))
+    .join("\n");
+  const blob = new Blob(["\uFEFF" + csvContent], {
+    type: "text/csv;charset=utf-8;",
+  });
+  const link = document.createElement("a");
+  const url = URL.createObjectURL(blob);
+  link.href = url;
+  link.download = `bouteilles_${new Date().toISOString().slice(0, 10)}.csv`;
+  link.click();
+  URL.revokeObjectURL(url);
+  showTemporaryNotification("📥 Rapport bouteilles exporté");
+}
+function genererRapportCassiers() {
+  if (!lastDailyVentesDetail) return;
+  const cassiersVentes = [];
+  for (const vente of lastDailyVentesDetail) {
+    for (const produit of vente.produits) {
+      if (produit.type === "cassier") {
+        const nbBouteilles = produit.nbBouteillesParCassier || 24;
+        cassiersVentes.push({
+          produit: produit.nom,
+          quantite: produit.quantite,
+          prix: produit.prix,
+          nbBouteillesParCassier: nbBouteilles,
+          totalBouteilles: produit.quantite * nbBouteilles,
+          sousTotal: produit.quantite * produit.prix,
+          client: vente.clientNom,
+          heure: vente.heure,
+        });
+      }
+    }
+  }
+  const separator = ";";
+  const headers = [
+    "Produit",
+    "Nb cassiers",
+    "Prix cassier (FC)",
+    "Bouteilles/cassier",
+    "Total bouteilles",
+    "Sous-total (FC)",
+    "Client",
+    "Heure",
+  ];
+  const rows = cassiersVentes.map((item) => [
+    item.produit,
+    item.quantite,
+    item.prix,
+    item.nbBouteillesParCassier,
+    item.totalBouteilles,
+    item.sousTotal,
+    item.client,
+    item.heure,
+  ]);
+  const csvContent = [headers, ...rows]
+    .map((row) => row.join(separator))
+    .join("\n");
+  const blob = new Blob(["\uFEFF" + csvContent], {
+    type: "text/csv;charset=utf-8;",
+  });
+  const link = document.createElement("a");
+  const url = URL.createObjectURL(blob);
+  link.href = url;
+  link.download = `cassiers_${new Date().toISOString().slice(0, 10)}.csv`;
+  link.click();
+  URL.revokeObjectURL(url);
+  showTemporaryNotification("📥 Rapport cassiers exporté");
+}
+window.showBouteillesDetail = showBouteillesDetail;
+window.showCassiersDetail = showCassiersDetail;
+window.genererRapportBouteilles = genererRapportBouteilles;
+window.genererRapportCassiers = genererRapportCassiers;
+function initDetailCards() {
+  const bouteillesCard = document.getElementById("bouteillesCard");
+  const cassiersCard = document.getElementById("cassiersCard");
+  if (bouteillesCard) {
+    bouteillesCard.classList.add("stat-card-clickable");
+    bouteillesCard.title = "Cliquer pour voir le détail des bouteilles vendues";
+    bouteillesCard.addEventListener("click", showBouteillesDetail);
+  }
+  if (cassiersCard) {
+    cassiersCard.classList.add("stat-card-clickable");
+    cassiersCard.title = "Cliquer pour voir le détail des cassiers vendus";
+    cassiersCard.addEventListener("click", showCassiersDetail);
+  }
+}
 async function initDailyStats() {
   const dateInput = document.getElementById("dailyStatsDate");
   if (dateInput) {
     const today = new Date().toISOString().split("T")[0];
     dateInput.value = today;
-    dateInput.addEventListener("change", () => getDailyStats(dateInput.value));
+    dateInput.addEventListener("change", () => {
+      getDailyStats(dateInput.value);
+      setTimeout(() => initDetailCards(), 500);
+    });
   }
   const refreshBtn = document.getElementById("refreshDailyStats");
-  if (refreshBtn)
+  if (refreshBtn) {
     refreshBtn.addEventListener("click", () => {
       getDailyStats(dateInput?.value);
       getWeeklyTrend();
-      showTemporaryNotification("📊 Actualisé");
+      setTimeout(() => initDetailCards(), 500);
+      showTemporaryNotification("📊 Statistiques actualisées");
     });
+  }
   await getDailyStats();
   await getWeeklyTrend();
+  initDetailCards();
 }
+
 // ============================================
-// API PRODUITS
+// API PRODUITS (suite)
 // ============================================
 async function chargerProduits() {
   try {
@@ -654,7 +880,7 @@ async function supprimerProduitAPI(id) {
 }
 
 // ============================================
-// UI PRODUITS
+// UI PRODUITS (raccourcie)
 // ============================================
 const tabBracongo = document.getElementById("tabBracongo");
 const tabBralima = document.getElementById("tabBralima");
@@ -1118,7 +1344,7 @@ function initGestionProduits() {
 }
 
 // ============================================
-// CLIENTS
+// CLIENTS (raccourcie)
 // ============================================
 const button = document.getElementById("searchBtn");
 const clientIdInput = document.getElementById("clientId");
@@ -1310,7 +1536,7 @@ function displayClientsTable() {
   tbody.innerHTML = "";
   if (clientsToShow.length === 0) {
     tbody.innerHTML =
-      '<tr><td colspan="4" class="px-4 py-8 text-center text-gray-400">Aucun client trouvé</td></tr>';
+      '<tr><td colspan="4" class="px-4 py-8 text-center text-gray-400">Aucun client trouvé</td><table>';
   } else {
     clientsToShow.forEach((client) => {
       const tr = document.createElement("tr");
@@ -1596,17 +1822,15 @@ if (clientInput)
   });
 
 // ============================================
-// HISTORIQUE AVEC FILTRES CORRIGÉS
+// HISTORIQUE AVEC FILTRES
 // ============================================
 const showHistoriqueBtn = document.getElementById("showHistoriqueBtn");
 const historiqueClientIdElem = document.getElementById("historiqueClientId");
 const historiqueMessageDiv = document.getElementById("historiqueMessage");
 const historiqueTableElem = document.getElementById("historiqueTable");
 const historiqueTableBody = document.getElementById("historiqueTableBody");
-
 if (showHistoriqueBtn)
   showHistoriqueBtn.addEventListener("click", afficherHistorique);
-
 window.showVenteDetail = async function (venteId) {
   try {
     const response = await fetch(`${VENTES_URL}/${venteId}`);
@@ -1702,10 +1926,10 @@ function displayVentesMulti(ventes, clientData) {
   document.getElementById("totalPrix").textContent =
     formatNumberFC(totalPrix) + " FC";
   historiqueTableElem.classList.remove("hidden");
-  const oldFilter = document.getElementById("filterContainer");
+  const oldFilter = document.getElementById("filterContainerHisto");
   if (oldFilter) oldFilter.remove();
   const filterContainer = document.createElement("div");
-  filterContainer.id = "filterContainer";
+  filterContainer.id = "filterContainerHisto";
   filterContainer.className =
     "mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200";
   filterContainer.innerHTML = `<div class="flex flex-wrap items-center justify-between gap-4"><div><strong><i class="fas fa-filter mr-1"></i> 🔍 Filtrer :</strong></div><div class="flex flex-wrap gap-3"><label class="inline-flex items-center gap-2"><input type="radio" name="filterTypeHisto" value="all" checked class="text-emerald-600"> 📅 Toutes</label><label class="inline-flex items-center gap-2"><input type="radio" name="filterTypeHisto" value="today" class="text-emerald-600"> 📆 Aujourd'hui</label><label class="inline-flex items-center gap-2"><input type="radio" name="filterTypeHisto" value="week" class="text-emerald-600"> 📊 Semaine</label><label class="inline-flex items-center gap-2"><input type="radio" name="filterTypeHisto" value="month" class="text-emerald-600"> 📈 Mois</label><button id="applyFilterHistoBtn" class="bg-emerald-600 text-white px-3 py-1 rounded text-sm">Appliquer</button><button id="resetFilterHistoBtn" class="bg-gray-500 text-white px-3 py-1 rounded text-sm">Réinitialiser</button></div></div>`;
