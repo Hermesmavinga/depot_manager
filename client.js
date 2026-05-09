@@ -37,9 +37,7 @@ function redirectToVente(clientId = null) {
   const navItems = document.querySelectorAll(".nav-item");
   let ventesNavItem = null;
   navItems.forEach((item) => {
-    if (item.dataset.section === "ventes") {
-      ventesNavItem = item;
-    }
+    if (item.dataset.section === "ventes") ventesNavItem = item;
   });
   const sections = {
     dashboard: document.getElementById("dashboardSection"),
@@ -57,9 +55,8 @@ function redirectToVente(clientId = null) {
     ventesNavItem.classList.add("bg-emerald-600", "text-white");
     ventesNavItem.classList.remove("text-gray-300");
     const pageTitle = document.getElementById("currentPageTitle");
-    if (pageTitle) {
+    if (pageTitle)
       pageTitle.textContent = ventesNavItem.querySelector("span").textContent;
-    }
   }
   Object.values(sections).forEach((section) => {
     if (section) section.classList.add("hidden");
@@ -190,9 +187,9 @@ function nettoyerVente(vente) {
     total = produitsListe.reduce((sum, p) => sum + p.prix * p.quantite, 0);
   return { produits: produitsListe, total: total };
 }
-function afficherProduitsListe(produits) {
-  if (!produits || produits.length === 0) return "Aucun produit";
-  return produits
+function afficherProduitsListe(prods) {
+  if (!prods || prods.length === 0) return "Aucun produit";
+  return prods
     .map(
       (p) =>
         `<div class="text-sm">${escapeHtml(p.nom)} - ${p.quantite} x ${formatNumberFC(p.prix)} FC</div>`,
@@ -267,15 +264,12 @@ async function loadDashboardStats() {
     ]);
     const ventes = await ventesRes.json();
     const clients = await clientsRes.json();
-    let quantiteTotale = 0;
-    let caTotal = 0;
+    let quantiteTotale = 0,
+      caTotal = 0;
     ventes.forEach((v) => {
-      const venteNettoyee = nettoyerVente(v);
-      caTotal += venteNettoyee.total;
-      quantiteTotale += venteNettoyee.produits.reduce(
-        (s, p) => s + p.quantite,
-        0,
-      );
+      const vn = nettoyerVente(v);
+      caTotal += vn.total;
+      quantiteTotale += vn.produits.reduce((s, p) => s + p.quantite, 0);
     });
     document.getElementById("statVentes").textContent = ventes.length;
     document.getElementById("statQuantite").textContent = quantiteTotale;
@@ -284,8 +278,8 @@ async function loadDashboardStats() {
       formatNumberFC(caTotal) + " FC";
     const produitsMap = new Map();
     ventes.forEach((v) => {
-      const venteNettoyee = nettoyerVente(v);
-      venteNettoyee.produits.forEach((p) => {
+      const vn = nettoyerVente(v);
+      vn.produits.forEach((p) => {
         if (!produitsMap.has(p.nom))
           produitsMap.set(p.nom, { nom: p.nom, quantite: 0 });
         produitsMap.get(p.nom).quantite += p.quantite;
@@ -294,13 +288,13 @@ async function loadDashboardStats() {
     const topProduits = Array.from(produitsMap.values())
       .sort((a, b) => b.quantite - a.quantite)
       .slice(0, 5);
-    const topProduitsDiv = document.getElementById("topProduitsList");
-    if (topProduitsDiv) {
+    const topDiv = document.getElementById("topProduitsList");
+    if (topDiv) {
       if (topProduits.length === 0) {
-        topProduitsDiv.innerHTML =
+        topDiv.innerHTML =
           '<div class="px-6 py-8 text-center text-gray-400"><i class="fas fa-chart-simple text-3xl mb-2 block"></i><p>Aucune donnée</p></div>';
       } else {
-        topProduitsDiv.innerHTML = topProduits
+        topDiv.innerHTML = topProduits
           .map(
             (p, i) =>
               `<div class="flex justify-between items-center px-6 py-3 hover:bg-gray-50"><span class="font-medium text-gray-700"><span class="text-emerald-600 font-bold mr-2">${i + 1}.</span> ${escapeHtml(p.nom)}</span><span class="bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full text-sm font-semibold">${p.quantite} unités</span></div>`,
@@ -309,7 +303,7 @@ async function loadDashboardStats() {
       }
     }
   } catch (error) {
-    console.error("Erreur chargement dashboard:", error);
+    console.error(error);
   }
 }
 
@@ -323,51 +317,47 @@ async function getDailyStats(date = null) {
     const targetDate = date ? new Date(date) : new Date();
     const dateStr = targetDate.toISOString().split("T")[0];
     const ventesDuJour = allVentes.filter((vente) => {
-      const venteDate = parseDate(vente.date);
-      return venteDate.toDateString() === targetDate.toDateString();
+      const vd = parseDate(vente.date);
+      return vd.toDateString() === targetDate.toDateString();
     });
-    let totalVentes = ventesDuJour.length;
-    let totalMontant = 0,
+    let totalVentes = ventesDuJour.length,
+      totalMontant = 0,
       totalBouteilles = 0,
       totalCassiers = 0,
-      totalEquivalentBouteilles = 0;
+      totalEquivalent = 0;
     const ventesDetail = [];
     for (const vente of ventesDuJour) {
-      const venteNettoyee = nettoyerVente(vente);
-      totalMontant += venteNettoyee.total;
-      let bouteillesCount = 0,
-        cassiersCount = 0,
-        equivalentCount = 0;
-      for (const produit of venteNettoyee.produits) {
-        const isCassier = produit.prix > 50000 || produit.quantite > 10;
-        if (isCassier) {
-          cassiersCount += produit.quantite;
-          equivalentCount += produit.quantite * 24;
+      const vn = nettoyerVente(vente);
+      totalMontant += vn.total;
+      let bc = 0,
+        cc = 0,
+        eq = 0;
+      for (const p of vn.produits) {
+        if (p.prix > 50000 || p.quantite > 10) {
+          cc += p.quantite;
+          eq += p.quantite * 24;
         } else {
-          bouteillesCount += produit.quantite;
-          equivalentCount += produit.quantite;
+          bc += p.quantite;
+          eq += p.quantite;
         }
       }
-      totalBouteilles += bouteillesCount;
-      totalCassiers += cassiersCount;
-      totalEquivalentBouteilles += equivalentCount;
+      totalBouteilles += bc;
+      totalCassiers += cc;
+      totalEquivalent += eq;
       let clientInfo = { nom: "Client inconnu", id: vente.clientId };
       try {
-        const clientRes = await fetch(
-          `${CLIENTS_URL}/${String(vente.clientId)}`,
-        );
-        if (clientRes.ok) clientInfo = await clientRes.json();
+        const cr = await fetch(`${CLIENTS_URL}/${String(vente.clientId)}`);
+        if (cr.ok) clientInfo = await cr.json();
       } catch (e) {}
       ventesDetail.push({
         id: vente.id,
         heure: formatDate(vente.date).split(" à ")[1] || formatDate(vente.date),
         clientNom: clientInfo.nom,
         clientId: vente.clientId,
-        produits: venteNettoyee.produits,
-        bouteilles: bouteillesCount,
-        cassiers: cassiersCount,
-        total: venteNettoyee.total,
-        date: vente.date,
+        produits: vn.produits,
+        bouteilles: bc,
+        cassiers: cc,
+        total: vn.total,
       });
     }
     document.getElementById("dailyTotalVentes").textContent = totalVentes;
@@ -376,7 +366,7 @@ async function getDailyStats(date = null) {
     document.getElementById("dailyBouteilles").textContent = totalBouteilles;
     document.getElementById("dailyCassiers").textContent = totalCassiers;
     document.getElementById("dailyEquivalentBouteilles").textContent =
-      totalEquivalentBouteilles;
+      totalEquivalent;
     displayDailySalesDetail(ventesDetail, dateStr);
     await checkInconsistencies(ventesDuJour, allVentes);
     return {
@@ -384,11 +374,11 @@ async function getDailyStats(date = null) {
       totalMontant,
       totalBouteilles,
       totalCassiers,
-      totalEquivalentBouteilles,
+      totalEquivalent,
       ventesDetail,
     };
   } catch (error) {
-    console.error("Erreur chargement stats journalières:", error);
+    console.error(error);
     return null;
   }
 }
@@ -404,110 +394,88 @@ function displayDailySalesDetail(ventesDetail, dateStr) {
     if (footer) footer.classList.add("hidden");
     return;
   }
-  let totalBouteillesGlobal = 0,
-    totalCassiersGlobal = 0,
-    totalMontantGlobal = 0;
+  let tb = 0,
+    tc = 0,
+    tm = 0;
   tbody.innerHTML = ventesDetail
-    .map((vente, index) => {
-      totalBouteillesGlobal += vente.bouteilles;
-      totalCassiersGlobal += vente.cassiers;
-      totalMontantGlobal += vente.total;
-      const produitsHtml = vente.produits
-        .map(
-          (p) =>
-            `<div class="text-xs">${escapeHtml(p.nom)} (${p.quantite})</div>`,
-        )
-        .join("");
-      const rowClass = index % 2 === 0 ? "bg-white" : "bg-gray-50";
-      return `<tr class="${rowClass} hover:bg-gray-100 transition"><td class="px-4 py-3 text-sm font-mono">${vente.heure}</td><td class="px-4 py-3"><div class="font-medium text-gray-800">${escapeHtml(vente.clientNom)}</div><div class="text-xs text-gray-400">ID: ${vente.clientId}</div></div></td><td class="px-4 py-3 text-sm">${produitsHtml}</td><td class="px-4 py-3 text-center text-sm font-medium text-orange-600">${vente.bouteilles}</td><td class="px-4 py-3 text-center text-sm font-medium text-purple-600">${vente.cassiers}</td><td class="px-4 py-3 text-right text-sm font-bold text-emerald-600">${formatNumberFC(vente.total)} FC</td><td class="px-4 py-3 text-center"><button onclick="genererFactureVenteSpecifique('${vente.id}')" class="bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded text-xs transition"><i class="fas fa-receipt"></i> Facture</button></td></tr>`;
+    .map((v, i) => {
+      tb += v.bouteilles;
+      tc += v.cassiers;
+      tm += v.total;
+      return `<tr class="${i % 2 === 0 ? "bg-white" : "bg-gray-50"} hover:bg-gray-100 transition"><td class="px-4 py-3 text-sm font-mono">${v.heure}</td><td class="px-4 py-3"><div class="font-medium">${escapeHtml(v.clientNom)}</div><div class="text-xs text-gray-400">ID: ${v.clientId}</div></td><td class="px-4 py-3 text-sm">${v.produits.map((p) => `<div class="text-xs">${escapeHtml(p.nom)} (${p.quantite})</div>`).join("")}</td><td class="px-4 py-3 text-center text-orange-600">${v.bouteilles}</td><td class="px-4 py-3 text-center text-purple-600">${v.cassiers}</td><td class="px-4 py-3 text-right font-bold text-emerald-600">${formatNumberFC(v.total)} FC</td><td class="px-4 py-3 text-center"><button onclick="genererFactureVenteSpecifique('${v.id}')" class="bg-blue-600 text-white px-2 py-1 rounded text-xs">🧾 Facture</button></td></tr>`;
     })
     .join("");
   if (footer) {
     footer.classList.remove("hidden");
-    document.getElementById("footerTotalBouteilles").textContent =
-      totalBouteillesGlobal;
-    document.getElementById("footerTotalCassiers").textContent =
-      totalCassiersGlobal;
+    document.getElementById("footerTotalBouteilles").textContent = tb;
+    document.getElementById("footerTotalCassiers").textContent = tc;
     document.getElementById("footerTotalMontant").textContent =
-      formatNumberFC(totalMontantGlobal) + " FC";
+      formatNumberFC(tm) + " FC";
   }
 }
 window.genererFactureVenteSpecifique = async function (venteId) {
   try {
-    const response = await fetch(`${VENTES_URL}/${venteId}`);
-    if (!response.ok) throw new Error("Vente non trouvée");
-    const vente = await response.json();
-    const clientRes = await fetch(`${CLIENTS_URL}/${String(vente.clientId)}`);
-    const client = clientRes.ok
-      ? await clientRes.json()
-      : { nom: "Client inconnu", telephone: "N/A", id: vente.clientId };
-    genererFacturePanier(vente, client);
-  } catch (error) {
-    showTemporaryNotification("❌ Erreur génération facture", "error");
+    const v = await (await fetch(`${VENTES_URL}/${venteId}`)).json();
+    const c = await (
+      await fetch(`${CLIENTS_URL}/${String(v.clientId)}`)
+    ).json();
+    genererFacturePanier(v, c);
+  } catch (e) {
+    showTemporaryNotification("❌ Erreur", "error");
   }
 };
 async function checkInconsistencies(ventesDuJour, allVentes) {
   const alerts = [];
-  for (const vente of ventesDuJour) {
-    const venteNettoyee = nettoyerVente(vente);
-    for (const produit of venteNettoyee.produits) {
-      if (produit.prix < 1000 && produit.prix > 0) {
+  for (const v of ventesDuJour) {
+    const vn = nettoyerVente(v);
+    for (const p of vn.produits) {
+      if (p.prix < 1000 && p.prix > 0)
         alerts.push({
           level: "warning",
-          message: `⚠️ Prix suspect (${formatNumberFC(produit.prix)} FC) pour "${produit.nom}" - Vente #${vente.id}`,
-          venteId: vente.id,
+          message: `⚠️ Prix suspect (${formatNumberFC(p.prix)} FC) - Vente #${v.id}`,
+          venteId: v.id,
         });
-      }
     }
   }
-  for (const vente of ventesDuJour) {
-    const venteNettoyee = nettoyerVente(vente);
-    let totalQuantite = venteNettoyee.produits.reduce(
-      (sum, p) => sum + p.quantite,
-      0,
-    );
-    if (totalQuantite > 100) {
+  for (const v of ventesDuJour) {
+    const vn = nettoyerVente(v);
+    const qt = vn.produits.reduce((s, p) => s + p.quantite, 0);
+    if (qt > 100)
       alerts.push({
         level: "warning",
-        message: `⚠️ Quantité anormalement élevée (${totalQuantite} unités) - Vente #${vente.id}`,
-        venteId: vente.id,
+        message: `⚠️ Quantité anormale (${qt} unités) - Vente #${v.id}`,
+        venteId: v.id,
       });
-    }
   }
   const ventesParClient = {};
-  for (const vente of allVentes) {
-    const clientId = String(vente.clientId);
-    if (!ventesParClient[clientId]) ventesParClient[clientId] = [];
-    ventesParClient[clientId].push(vente);
+  for (const v of allVentes) {
+    const cid = String(v.clientId);
+    if (!ventesParClient[cid]) ventesParClient[cid] = [];
+    ventesParClient[cid].push(v);
   }
-  for (const [clientId, ventes] of Object.entries(ventesParClient)) {
+  for (const [cid, ventes] of Object.entries(ventesParClient)) {
     for (let i = 0; i < ventes.length - 1; i++) {
       const v1 = ventes[i],
         v2 = ventes[i + 1];
-      const date1 = parseDate(v1.date),
-        date2 = parseDate(v2.date);
-      const diffMinutes = Math.abs(date2 - date1) / 1000 / 60;
-      if (diffMinutes < 2 && Math.abs(v1.total - v2.total) < 100) {
+      const diff =
+        Math.abs(parseDate(v2.date) - parseDate(v1.date)) / 1000 / 60;
+      if (diff < 2 && Math.abs(v1.total - v2.total) < 100) {
         alerts.push({
           level: "critical",
-          message: `🚨 Série de ventes rapides (${Math.round(diffMinutes)} min) pour client #${clientId}`,
+          message: `🚨 Ventes rapides (${Math.round(diff)} min) - Client #${cid}`,
           venteId: v1.id,
         });
         break;
       }
     }
   }
-  displayAlerts(alerts);
-  return alerts;
-}
-function displayAlerts(alerts) {
   const container = document.getElementById("alertsContainer");
   if (!container) return;
   if (alerts.length === 0) {
-    container.innerHTML = `<div class="text-center text-gray-400 py-4"><i class="fas fa-check-circle text-2xl mb-2 block text-emerald-500"></i><p>✅ Aucune anomalie détectée - Tout est conforme</p><p class="text-xs mt-1">Dernière vérification: ${new Date().toLocaleTimeString()}</p></div>`;
+    container.innerHTML = `<div class="text-center text-gray-400 py-4"><i class="fas fa-check-circle text-2xl mb-2 block text-emerald-500"></i><p>✅ Aucune anomalie détectée</p><p class="text-xs">${new Date().toLocaleTimeString()}</p></div>`;
     return;
   }
-  container.innerHTML = `<div class="space-y-2">${alerts.map((alert) => `<div class="flex items-start gap-3 p-3 rounded-lg ${alert.level === "critical" ? "bg-red-50 border-l-4 border-red-500" : "bg-yellow-50 border-l-4 border-yellow-500"}"><i class="fas ${alert.level === "critical" ? "fa-skull-crosswalk text-red-500" : "fa-exclamation-triangle text-yellow-500"} mt-0.5"></i><div class="flex-1"><p class="text-sm ${alert.level === "critical" ? "text-red-700" : "text-yellow-700"}">${alert.message}</p>${alert.venteId ? `<p class="text-xs text-gray-500 mt-1">ID Vente: ${alert.venteId}</p>` : ""}</div>${alert.venteId ? `<button onclick="genererFactureVenteSpecifique('${alert.venteId}')" class="text-xs bg-gray-200 hover:bg-gray-300 px-2 py-1 rounded">🔍 Voir</button>` : ""}</div>`).join("")}</div>`;
+  container.innerHTML = `<div class="space-y-2">${alerts.map((a) => `<div class="flex items-start gap-3 p-3 rounded-lg ${a.level === "critical" ? "bg-red-50 border-l-4 border-red-500" : "bg-yellow-50 border-l-4 border-yellow-500"}"><i class="fas ${a.level === "critical" ? "fa-skull-crosswalk text-red-500" : "fa-exclamation-triangle text-yellow-500"} mt-0.5"></i><div class="flex-1"><p class="text-sm ${a.level === "critical" ? "text-red-700" : "text-yellow-700"}">${a.message}</p>${a.venteId ? `<p class="text-xs text-gray-500">ID: ${a.venteId}</p>` : ""}</div>${a.venteId ? `<button onclick="genererFactureVenteSpecifique('${a.venteId}')" class="text-xs bg-gray-200 px-2 py-1 rounded">🔍</button>` : ""}</div>`).join("")}</div>`;
 }
 async function getWeeklyTrend() {
   try {
@@ -519,37 +487,35 @@ async function getWeeklyTrend() {
       const date = new Date();
       date.setDate(today.getDate() - i);
       date.setHours(0, 0, 0, 0);
-      const ventesDuJour = allVentes.filter((vente) => {
-        const venteDate = parseDate(vente.date);
-        return venteDate.toDateString() === date.toDateString();
-      });
+      const ventesDuJour = allVentes.filter(
+        (v) => parseDate(v.date).toDateString() === date.toDateString(),
+      );
       let total = 0,
-        bouteilles = 0,
-        cassiers = 0;
-      for (const vente of ventesDuJour) {
-        const venteNettoyee = nettoyerVente(vente);
-        total += venteNettoyee.total;
-        for (const produit of venteNettoyee.produits) {
-          if (produit.prix > 50000) cassiers += produit.quantite;
-          else bouteilles += produit.quantite;
+        b = 0,
+        c = 0;
+      for (const v of ventesDuJour) {
+        const vn = nettoyerVente(v);
+        total += vn.total;
+        for (const p of vn.produits) {
+          if (p.prix > 50000) c += p.quantite;
+          else b += p.quantite;
         }
       }
       stats.push({
-        date: date,
+        date,
         dateStr: date.toLocaleDateString("fr-FR", {
           weekday: "short",
           day: "numeric",
         }),
-        total: total,
-        bouteilles: bouteilles,
-        cassiers: cassiers,
-        ventes: ventesDuJour.length,
+        total,
+        bouteilles: b,
+        cassiers: c,
       });
     }
     updateWeeklyChart(stats);
     return stats;
-  } catch (error) {
-    console.error("Erreur tendances hebdomadaires:", error);
+  } catch (e) {
+    console.error(e);
     return null;
   }
 }
@@ -564,19 +530,19 @@ function updateWeeklyChart(stats) {
       labels: stats.map((s) => s.dateStr),
       datasets: [
         {
-          label: "Chiffre d'affaires (FC)",
+          label: "CA (FC)",
           data: stats.map((s) => s.total),
           borderColor: "#10b981",
-          backgroundColor: "rgba(16, 185, 129, 0.1)",
+          backgroundColor: "rgba(16,185,129,0.1)",
           tension: 0.3,
           fill: true,
           yAxisID: "y",
         },
         {
-          label: "Bouteilles vendues",
+          label: "Bouteilles",
           data: stats.map((s) => s.bouteilles),
           borderColor: "#f97316",
-          backgroundColor: "rgba(249, 115, 22, 0.1)",
+          backgroundColor: "rgba(249,115,22,0.1)",
           tension: 0.3,
           fill: true,
           yAxisID: "y1",
@@ -591,19 +557,18 @@ function updateWeeklyChart(stats) {
         legend: { position: "top" },
         tooltip: {
           callbacks: {
-            label: (ctx) =>
-              `${ctx.dataset.label}: ${formatNumberFC(ctx.raw)} ${ctx.dataset.label.includes("FC") ? "FC" : ""}`,
+            label: (ctx) => `${ctx.dataset.label}: ${formatNumberFC(ctx.raw)}`,
           },
         },
       },
       scales: {
         y: {
-          title: { display: true, text: "Montant (FC)", color: "#10b981" },
+          title: { display: true, text: "Montant (FC)" },
           ticks: { callback: (val) => formatNumberFC(val) },
         },
         y1: {
           position: "right",
-          title: { display: true, text: "Quantité", color: "#f97316" },
+          title: { display: true, text: "Quantité" },
           grid: { drawOnChartArea: false },
         },
       },
@@ -615,23 +580,18 @@ async function initDailyStats() {
   if (dateInput) {
     const today = new Date().toISOString().split("T")[0];
     dateInput.value = today;
-    dateInput.addEventListener("change", () => {
-      getDailyStats(dateInput.value);
-    });
+    dateInput.addEventListener("change", () => getDailyStats(dateInput.value));
   }
   const refreshBtn = document.getElementById("refreshDailyStats");
-  if (refreshBtn) {
+  if (refreshBtn)
     refreshBtn.addEventListener("click", () => {
-      const date = dateInput ? dateInput.value : null;
-      getDailyStats(date);
+      getDailyStats(dateInput?.value);
       getWeeklyTrend();
-      showTemporaryNotification("📊 Statistiques actualisées");
+      showTemporaryNotification("📊 Actualisé");
     });
-  }
   await getDailyStats();
   await getWeeklyTrend();
 }
-
 // ============================================
 // API PRODUITS
 // ============================================
@@ -1636,15 +1596,17 @@ if (clientInput)
   });
 
 // ============================================
-// HISTORIQUE
+// HISTORIQUE AVEC FILTRES CORRIGÉS
 // ============================================
 const showHistoriqueBtn = document.getElementById("showHistoriqueBtn");
 const historiqueClientIdElem = document.getElementById("historiqueClientId");
 const historiqueMessageDiv = document.getElementById("historiqueMessage");
 const historiqueTableElem = document.getElementById("historiqueTable");
 const historiqueTableBody = document.getElementById("historiqueTableBody");
+
 if (showHistoriqueBtn)
   showHistoriqueBtn.addEventListener("click", afficherHistorique);
+
 window.showVenteDetail = async function (venteId) {
   try {
     const response = await fetch(`${VENTES_URL}/${venteId}`);
@@ -1652,15 +1614,12 @@ window.showVenteDetail = async function (venteId) {
     const vente = await response.json();
     let clientNom = "Client inconnu";
     try {
-      const clientRes = await fetch(`${CLIENTS_URL}/${String(vente.clientId)}`);
-      if (clientRes.ok) {
-        const client = await clientRes.json();
-        clientNom = client.nom;
-      }
+      const cr = await fetch(`${CLIENTS_URL}/${String(vente.clientId)}`);
+      if (cr.ok) clientNom = (await cr.json()).nom;
     } catch (e) {}
-    const venteNettoyee = nettoyerVente(vente);
-    const produits = venteNettoyee.produits;
-    const total = venteNettoyee.total;
+    const vn = nettoyerVente(vente);
+    const produits = vn.produits;
+    const total = vn.total;
     let produitsHtml = produits
       .map(
         (p) =>
@@ -1673,176 +1632,161 @@ window.showVenteDetail = async function (venteId) {
       "fixed inset-0 bg-black/50 z-50 flex items-center justify-center";
     modal.innerHTML = `<div class="bg-white rounded-xl shadow-xl max-w-md w-full mx-4 animate-fadeIn"><div class="px-6 py-4 border-b bg-gradient-to-r from-blue-50 to-white"><h3 class="text-lg font-semibold text-blue-800"><i class="fas fa-receipt text-blue-600 mr-2"></i> Détails de la vente</h3></div><div class="p-6 space-y-3"><div class="grid grid-cols-2 gap-2 text-sm"><p class="text-gray-500">🆔 ID Vente :</p><p class="font-mono font-medium">${vente.id}</p><p class="text-gray-500">👤 Client :</p><p class="font-medium">${escapeHtml(clientNom)}</p><p class="text-gray-500">🆔 ID Client :</p><p class="font-mono">${vente.clientId}</p></div><div class="border-t border-gray-100 pt-3"><p class="text-gray-500 text-sm mb-2">📦 Produits :</p><ul class="space-y-1 max-h-48 overflow-y-auto">${produitsHtml || '<li class="text-gray-400 text-center py-2">Aucun produit</li>'}</ul></div><div class="border-t border-gray-100 pt-3"><div class="flex justify-between items-center"><span class="text-gray-500">📊 Total articles :</span><span class="font-semibold">${totalArticles}</span></div><div class="flex justify-between items-center mt-2"><span class="text-gray-500">💰 Montant total :</span><span class="text-xl font-bold text-emerald-600">${formatNumberFC(total)} FC</span></div><div class="flex justify-between items-center mt-2"><span class="text-gray-500">📅 Date :</span><span class="text-sm">${formatDate(vente.date)}</span></div></div></div><div class="px-6 py-4 border-t flex justify-end gap-3"><button onclick="genererFactureVente('${vente.id}', '${vente.clientId}')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg transition text-sm"><i class="fas fa-print mr-1"></i> Imprimer facture</button><button onclick="this.closest('.fixed').remove()" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg transition text-sm">Fermer</button></div></div>`;
     document.body.appendChild(modal);
-  } catch (error) {
-    showTemporaryNotification("❌ Erreur chargement détails", "error");
+  } catch (e) {
+    showTemporaryNotification("❌ Erreur", "error");
   }
 };
 window.genererFactureVente = async function (venteId, clientId) {
   try {
-    const [venteRes, clientRes] = await Promise.all([
-      fetch(`${VENTES_URL}/${venteId}`),
-      fetch(`${CLIENTS_URL}/${String(clientId)}`),
-    ]);
-    if (!venteRes.ok) throw new Error("Vente non trouvée");
-    const vente = await venteRes.json();
-    const client = clientRes.ok
-      ? await clientRes.json()
-      : { nom: "Client inconnu", telephone: "N/A", id: clientId };
-    genererFacturePanier(vente, client);
-  } catch (error) {
-    showTemporaryNotification("❌ Erreur génération facture", "error");
+    const v = await (await fetch(`${VENTES_URL}/${venteId}`)).json();
+    const c = await (await fetch(`${CLIENTS_URL}/${String(clientId)}`)).json();
+    genererFacturePanier(v, c);
+  } catch (e) {
+    showTemporaryNotification("❌ Erreur", "error");
   }
 };
 async function afficherHistorique() {
   const clientId = historiqueClientIdElem.value.trim();
   if (!clientId) {
     historiqueMessageDiv.innerHTML =
-      '<span class="text-red-600">⚠️ Veuillez entrer un ID client</span>';
+      '<span class="text-red-600">⚠️ Entrez un ID client</span>';
     return;
   }
   try {
-    const clientResponse = await fetch(`${CLIENTS_URL}/${String(clientId)}`);
-    if (!clientResponse.ok) {
-      historiqueMessageDiv.innerHTML = `<span class="text-red-600">❌ Client avec l'ID "${clientId}" non trouvé</span>`;
+    const cr = await fetch(`${CLIENTS_URL}/${String(clientId)}`);
+    if (!cr.ok) {
+      historiqueMessageDiv.innerHTML = `<span class="text-red-600">❌ Client "${clientId}" non trouvé</span>`;
       return;
     }
-    const clientData = await clientResponse.json();
+    const clientData = await cr.json();
     const ventesRes = await fetch(VENTES_URL);
     const allVentes = await ventesRes.json();
     const ventes = allVentes.filter(
       (v) => String(v.clientId) === String(clientId),
     );
     if (ventes.length === 0) {
-      historiqueMessageDiv.innerHTML = `<span class="text-blue-600">📭 Aucune vente trouvée pour ${clientData.nom}</span>`;
+      historiqueMessageDiv.innerHTML = `<span class="text-blue-600">📭 Aucune vente pour ${clientData.nom}</span>`;
       historiqueTableElem.classList.add("hidden");
       return;
     }
-    historiqueMessageDiv.innerHTML = `<span class="text-emerald-600">✅ ${ventes.length} vente(s) trouvée(s) pour ${escapeHtml(clientData.nom)} (ID: ${clientData.id})</span>`;
+    window.currentVentesData = ventes;
+    window.currentClientData = clientData;
+    historiqueMessageDiv.innerHTML = `<span class="text-emerald-600">✅ ${ventes.length} vente(s) pour ${escapeHtml(clientData.nom)} (ID: ${clientData.id})</span>`;
     displayVentesMulti(ventes, clientData);
-  } catch (error) {
-    historiqueMessageDiv.innerHTML = `<span class="text-red-600">❌ Erreur: ${error.message}</span>`;
+  } catch (e) {
+    historiqueMessageDiv.innerHTML = `<span class="text-red-600">❌ Erreur: ${e.message}</span>`;
   }
 }
 function displayVentesMulti(ventes, clientData) {
   if (!historiqueTableBody) return;
   historiqueTableBody.innerHTML = "";
-  let totalQuantite = 0;
-  let totalPrix = 0;
+  let totalQuantite = 0,
+    totalPrix = 0;
   ventes
     .sort((a, b) => parseDate(b.date) - parseDate(a.date))
-    .forEach((v, index) => {
-      const venteNettoyee = nettoyerVente(v);
-      const produitsListe = venteNettoyee.produits;
-      const total = venteNettoyee.total;
-      let quantiteTotale = produitsListe.reduce(
-        (sum, p) => sum + p.quantite,
-        0,
-      );
-      const prixMoyen = quantiteTotale > 0 ? total / quantiteTotale : 0;
-      if (isNaN(total) || !isFinite(total)) return;
+    .forEach((v, idx) => {
+      const vn = nettoyerVente(v);
+      const produitsListe = vn.produits;
+      const total = vn.total;
+      let qt = produitsListe.reduce((s, p) => s + p.quantite, 0);
+      const prixMoyen = qt > 0 ? total / qt : 0;
+      if (isNaN(total)) return;
       const row = document.createElement("tr");
-      row.className = index % 2 === 0 ? "bg-gray-50" : "";
-      row.innerHTML = `<td class="px-4 py-3 text-sm font-mono">${v.id.substring(0, 8)}<\/td><td class="px-4 py-3 text-sm">${afficherProduitsListe(produitsListe)}<\/td><td class="px-4 py-3 text-sm text-center font-medium">${quantiteTotale}<\/td><td class="px-4 py-3 text-sm text-right">${formatNumberFC(prixMoyen)} FC<\/td><td class="px-4 py-3 text-sm text-right font-bold text-emerald-600">${formatNumberFC(total)} FC<\/td><td class="px-4 py-3 text-sm">${formatDate(v.date)}<\/td><td class="px-4 py-3 text-sm text-center"><button onclick="showVenteDetail('${v.id}')" class="bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded text-xs transition mr-1">📄 Détails</button><button onclick="genererFactureVente('${v.id}', '${clientData.id}')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-2 py-1 rounded text-xs transition">🧾 Facture</button><\/td>`;
+      row.className = idx % 2 === 0 ? "bg-gray-50" : "";
+      row.innerHTML = `<td class="px-4 py-3 text-sm font-mono">${v.id.substring(0, 8)}<\/td><td class="px-4 py-3 text-sm">${afficherProduitsListe(produitsListe)}<\/td><td class="px-4 py-3 text-center font-medium">${qt}<\/td><td class="px-4 py-3 text-right">${formatNumberFC(prixMoyen)} FC<\/td><td class="px-4 py-3 text-right font-bold text-emerald-600">${formatNumberFC(total)} FC<\/td><td class="px-4 py-3 text-sm">${formatDate(v.date)}<\/td><td class="px-4 py-3 text-center"><button onclick="showVenteDetail('${v.id}')" class="bg-blue-600 text-white px-2 py-1 rounded text-xs mr-1">📄 Détails</button><button onclick="genererFactureVente('${v.id}', '${clientData.id}')" class="bg-emerald-600 text-white px-2 py-1 rounded text-xs">🧾 Facture</button><\/td>`;
       historiqueTableBody.appendChild(row);
-      totalQuantite += quantiteTotale;
+      totalQuantite += qt;
       totalPrix += total;
     });
   document.getElementById("totalQuantite").textContent = totalQuantite;
   document.getElementById("totalPrix").textContent =
     formatNumberFC(totalPrix) + " FC";
   historiqueTableElem.classList.remove("hidden");
-  let filterContainer = document.getElementById("filterContainer");
-  if (!filterContainer) {
-    filterContainer = document.createElement("div");
-    filterContainer.id = "filterContainer";
-    filterContainer.className =
-      "mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200";
-    filterContainer.innerHTML = `<div class="flex flex-wrap items-center justify-between gap-4"><div><strong class="text-gray-700"><i class="fas fa-filter mr-1"></i> 🔍 Filtrer les ventes :</strong></div><div class="flex flex-wrap gap-3"><label class="inline-flex items-center gap-2 cursor-pointer"><input type="radio" name="filterType" value="all" checked class="text-emerald-600 w-4 h-4"> <span class="text-sm">📅 Toutes</span></label><label class="inline-flex items-center gap-2 cursor-pointer"><input type="radio" name="filterType" value="today" class="text-emerald-600 w-4 h-4"> <span class="text-sm">📆 Aujourd'hui</span></label><label class="inline-flex items-center gap-2 cursor-pointer"><input type="radio" name="filterType" value="week" class="text-emerald-600 w-4 h-4"> <span class="text-sm">📊 Cette semaine</span></label><label class="inline-flex items-center gap-2 cursor-pointer"><input type="radio" name="filterType" value="month" class="text-emerald-600 w-4 h-4"> <span class="text-sm">📈 Ce mois</span></label><button id="applyFilterBtn" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-1.5 rounded-lg transition text-sm"><i class="fas fa-check mr-1"></i> Appliquer</button><button id="resetFilterBtn" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-1.5 rounded-lg transition text-sm"><i class="fas fa-undo-alt mr-1"></i> Réinitialiser</button></div></div>`;
-    const historiqueContainer =
-      document.getElementById("historiqueTable").parentElement;
-    historiqueContainer.appendChild(filterContainer);
-  }
-  const applyFilterBtn = document.getElementById("applyFilterBtn");
-  const resetFilterBtn = document.getElementById("resetFilterBtn");
-  if (applyFilterBtn) {
-    const newBtn = applyFilterBtn.cloneNode(true);
-    applyFilterBtn.parentNode.replaceChild(newBtn, applyFilterBtn);
-    newBtn.addEventListener("click", () => appliquerFiltre(ventes, clientData));
-  }
-  if (resetFilterBtn) {
-    const newResetBtn = resetFilterBtn.cloneNode(true);
-    resetFilterBtn.parentNode.replaceChild(newResetBtn, resetFilterBtn);
-    newResetBtn.addEventListener("click", () => {
-      const allRadio = document.querySelector(
-        'input[name="filterType"][value="all"]',
-      );
-      if (allRadio) allRadio.checked = true;
+  const oldFilter = document.getElementById("filterContainer");
+  if (oldFilter) oldFilter.remove();
+  const filterContainer = document.createElement("div");
+  filterContainer.id = "filterContainer";
+  filterContainer.className =
+    "mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200";
+  filterContainer.innerHTML = `<div class="flex flex-wrap items-center justify-between gap-4"><div><strong><i class="fas fa-filter mr-1"></i> 🔍 Filtrer :</strong></div><div class="flex flex-wrap gap-3"><label class="inline-flex items-center gap-2"><input type="radio" name="filterTypeHisto" value="all" checked class="text-emerald-600"> 📅 Toutes</label><label class="inline-flex items-center gap-2"><input type="radio" name="filterTypeHisto" value="today" class="text-emerald-600"> 📆 Aujourd'hui</label><label class="inline-flex items-center gap-2"><input type="radio" name="filterTypeHisto" value="week" class="text-emerald-600"> 📊 Semaine</label><label class="inline-flex items-center gap-2"><input type="radio" name="filterTypeHisto" value="month" class="text-emerald-600"> 📈 Mois</label><button id="applyFilterHistoBtn" class="bg-emerald-600 text-white px-3 py-1 rounded text-sm">Appliquer</button><button id="resetFilterHistoBtn" class="bg-gray-500 text-white px-3 py-1 rounded text-sm">Réinitialiser</button></div></div>`;
+  const histContainer =
+    document.getElementById("historiqueTable").parentElement;
+  histContainer.appendChild(filterContainer);
+  document
+    .getElementById("applyFilterHistoBtn")
+    ?.addEventListener("click", () => {
+      const val = document.querySelector(
+        'input[name="filterTypeHisto"]:checked',
+      ).value;
+      appliquerFiltreHisto(val, ventes, clientData);
+    });
+  document
+    .getElementById("resetFilterHistoBtn")
+    ?.addEventListener("click", () => {
+      document.querySelector(
+        'input[name="filterTypeHisto"][value="all"]',
+      ).checked = true;
       displayVentesMulti(ventes, clientData);
       showTemporaryNotification("📋 Filtre réinitialisé");
     });
-  }
-  const existingButtons = document.querySelector(".action-buttons-container");
-  if (existingButtons) existingButtons.remove();
-  const actionButtons = document.createElement("div");
-  actionButtons.className =
-    "action-buttons-container flex gap-3 mt-4 justify-end";
-  actionButtons.innerHTML = `<button id="exportCsvActionBtn" class="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg transition flex items-center gap-2"><i class="fas fa-file-excel"></i> Exporter CSV</button><button id="factureMensuelleActionBtn" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg transition flex items-center gap-2"><i class="fas fa-file-invoice"></i> Facture mensuelle</button>`;
-  const historiqueContainerActions =
-    document.getElementById("historiqueTable").parentElement;
-  historiqueContainerActions.appendChild(actionButtons);
+  const oldActions = document.querySelector(".action-buttons-container");
+  if (oldActions) oldActions.remove();
+  const actionDiv = document.createElement("div");
+  actionDiv.className = "action-buttons-container flex gap-3 mt-4 justify-end";
+  actionDiv.innerHTML = `<button id="exportCsvBtn" class="bg-orange-600 text-white px-4 py-2 rounded-lg flex items-center gap-2"><i class="fas fa-file-excel"></i> Exporter CSV</button><button id="factureMensuelleBtn" class="bg-purple-600 text-white px-4 py-2 rounded-lg flex items-center gap-2"><i class="fas fa-file-invoice"></i> Facture mensuelle</button>`;
+  histContainer.appendChild(actionDiv);
   document
-    .getElementById("exportCsvActionBtn")
+    .getElementById("exportCsvBtn")
     ?.addEventListener("click", () => exportToCSV(ventes, clientData));
   document
-    .getElementById("factureMensuelleActionBtn")
+    .getElementById("factureMensuelleBtn")
     ?.addEventListener("click", () =>
       genererFactureMensuelleMulti(ventes, clientData),
     );
 }
-function appliquerFiltre(ventesOriginales, clientData) {
-  const filterType = document.querySelector(
-    'input[name="filterType"]:checked',
-  ).value;
+function appliquerFiltreHisto(filterType, ventesOriginales, clientData) {
   const now = new Date();
-  let ventesFiltrees = [...ventesOriginales];
+  let filtrees = [];
+  let msg = "";
   switch (filterType) {
     case "today":
-      ventesFiltrees = ventesOriginales.filter((v) => {
-        const dateVente = parseDate(v.date);
-        return dateVente.toDateString() === now.toDateString();
-      });
+      filtrees = ventesOriginales.filter(
+        (v) => parseDate(v.date).toDateString() === now.toDateString(),
+      );
+      msg = "aujourd'hui";
       break;
     case "week":
       const weekAgo = new Date();
       weekAgo.setDate(weekAgo.getDate() - 7);
       weekAgo.setHours(0, 0, 0, 0);
-      ventesFiltrees = ventesOriginales.filter(
-        (v) => parseDate(v.date) >= weekAgo,
-      );
+      filtrees = ventesOriginales.filter((v) => parseDate(v.date) >= weekAgo);
+      msg = "cette semaine";
       break;
     case "month":
-      const currentYear = now.getFullYear(),
-        currentMonth = now.getMonth();
-      ventesFiltrees = ventesOriginales.filter((v) => {
-        const dateVente = parseDate(v.date);
-        if (isNaN(dateVente.getTime())) return false;
+      const year = now.getFullYear(),
+        month = now.getMonth();
+      filtrees = ventesOriginales.filter((v) => {
+        const d = parseDate(v.date);
         return (
-          dateVente.getMonth() === currentMonth &&
-          dateVente.getFullYear() === currentYear
+          !isNaN(d.getTime()) &&
+          d.getMonth() === month &&
+          d.getFullYear() === year
         );
       });
+      msg = "ce mois";
       break;
     default:
-      break;
+      filtrees = [...ventesOriginales];
+      msg = "toutes";
   }
-  if (ventesFiltrees.length === 0) {
-    historiqueMessageDiv.innerHTML = `<span class="text-blue-600">📭 Aucune vente trouvée pour cette période</span>`;
-    if (historiqueTableBody) historiqueTableBody.innerHTML = "";
+  if (filtrees.length === 0) {
+    historiqueMessageDiv.innerHTML = `<span class="text-blue-600">📭 Aucune vente pour ${msg}</span>`;
+    historiqueTableBody.innerHTML = "";
     document.getElementById("totalQuantite").textContent = "0";
     document.getElementById("totalPrix").textContent = "0 FC";
   } else {
-    displayVentesMulti(ventesFiltrees, clientData);
-    historiqueMessageDiv.innerHTML = `<span class="text-emerald-600">✅ ${ventesFiltrees.length} vente(s) trouvée(s) pour cette période</span>`;
+    displayVentesMulti(filtrees, clientData);
+    historiqueMessageDiv.innerHTML = `<span class="text-emerald-600">✅ ${filtrees.length} vente(s) pour ${msg}</span>`;
   }
 }
 
@@ -1851,32 +1795,30 @@ function appliquerFiltre(ventesOriginales, clientData) {
 // ============================================
 async function chargerClientsPourRapport() {
   try {
-    const response = await fetch(CLIENTS_URL);
-    const clients = await response.json();
-    const select = document.getElementById("rapportClientSelect");
-    if (select) {
-      select.innerHTML = '<option value="">-- Tous les clients --</option>';
+    const r = await fetch(CLIENTS_URL);
+    const clients = await r.json();
+    const sel = document.getElementById("rapportClientSelect");
+    if (sel) {
+      sel.innerHTML = '<option value="">-- Tous les clients --</option>';
       clients.forEach((c) => {
         const opt = document.createElement("option");
         opt.value = c.id;
         opt.textContent = `${escapeHtml(c.nom)} (${c.id})`;
-        select.appendChild(opt);
+        sel.appendChild(opt);
       });
     }
-  } catch (e) {
-    console.error("Erreur chargement clients rapport", e);
-  }
+  } catch (e) {}
 }
 async function genererRapportMensuel() {
   const clientId = document.getElementById("rapportClientSelect")?.value;
   const mois = parseInt(document.getElementById("rapportMoisSelect")?.value);
   const annee = parseInt(document.getElementById("rapportAnneeSelect")?.value);
-  showTemporaryNotification("⏳ Génération du rapport...");
+  showTemporaryNotification("⏳ Génération...");
   try {
-    const ventesRes = await fetch(VENTES_URL);
-    const clientsRes = await fetch(CLIENTS_URL);
-    const toutesVentes = await ventesRes.json();
-    const tousClients = await clientsRes.json();
+    const vr = await fetch(VENTES_URL);
+    const cr = await fetch(CLIENTS_URL);
+    const toutesVentes = await vr.json();
+    const tousClients = await cr.json();
     let ventesFiltrees = toutesVentes.filter((v) => {
       const d = parseDate(v.date);
       return (
@@ -1890,7 +1832,7 @@ async function genererRapportMensuel() {
         (v) => String(v.clientId) === String(clientId),
       );
     if (ventesFiltrees.length === 0) {
-      showTemporaryNotification("📭 Aucune donnée pour cette période", "error");
+      showTemporaryNotification("📭 Aucune donnée", "error");
       document.getElementById("rapportTable")?.classList.add("hidden");
       document.getElementById("rapportResume")?.classList.add("hidden");
       document.getElementById("rapportEmpty")?.classList.remove("hidden");
@@ -1900,15 +1842,13 @@ async function genererRapportMensuel() {
     const totaux = new Map();
     ventesFiltrees.forEach((v) => {
       const id = String(v.clientId);
-      const venteNettoyee = nettoyerVente(v);
-      const total = venteNettoyee.total;
+      const vn = nettoyerVente(v);
       if (!totaux.has(id)) totaux.set(id, { nb: 0, total: 0 });
       const t = totaux.get(id);
       t.nb++;
-      t.total += total;
+      t.total += vn.total;
     });
     const tbody = document.getElementById("rapportTableBody");
-    const table = document.getElementById("rapportTable");
     if (tbody) {
       tbody.innerHTML = "";
       let totalGlobal = 0,
@@ -1919,8 +1859,8 @@ async function genererRapportMensuel() {
         totalGlobal += data.total;
         nbGlobal += data.nb;
         const tr = document.createElement("tr");
-        tr.className = "border-b border-gray-100 hover:bg-gray-50";
-        tr.innerHTML = `<td class="px-4 py-3"><div class="font-medium">${client ? escapeHtml(client.nom) : "Client " + id}</div><div class="text-xs text-gray-400">ID: ${id}</div></div></td><td class="px-4 py-3 text-center">${data.nb}</td><td class="px-4 py-3 text-right">${formatNumberFC(data.total)} FC</td><td class="px-4 py-3 text-right text-orange-600">${formatNumberFC(remise)} FC</td><td class="px-4 py-3 text-right font-bold text-emerald-600">${formatNumberFC(data.total - remise)} FC</td><td class="px-4 py-3 text-center"><button onclick="showTemporaryNotification('Facture mensuelle en cours...')" class="bg-purple-600 hover:bg-purple-700 text-white px-2 py-1 rounded text-xs transition">🧾 Facture</button></td>`;
+        tr.className = "border-b hover:bg-gray-50";
+        tr.innerHTML = `<td class="px-4 py-3"><div class="font-medium">${client ? escapeHtml(client.nom) : "Client " + id}</div><div class="text-xs text-gray-400">ID: ${id}</div></td><td class="px-4 py-3 text-center">${data.nb}</td><td class="px-4 py-3 text-right">${formatNumberFC(data.total)} FC</td><td class="px-4 py-3 text-right text-orange-600">${formatNumberFC(remise)} FC</td><td class="px-4 py-3 text-right font-bold text-emerald-600">${formatNumberFC(data.total - remise)} FC</td><td class="px-4 py-3 text-center"><button onclick="showTemporaryNotification('Facture client')" class="bg-purple-600 text-white px-2 py-1 rounded text-xs">🧾</button></td>`;
         tbody.appendChild(tr);
       }
       document.getElementById("rapportFootNbVentes").textContent = nbGlobal;
@@ -1930,7 +1870,7 @@ async function genererRapportMensuel() {
         formatNumberFC(totalGlobal * 0.05) + " FC";
       document.getElementById("rapportFootNet").textContent =
         formatNumberFC(totalGlobal * 0.95) + " FC";
-      if (table) table.classList.remove("hidden");
+      document.getElementById("rapportTable")?.classList.remove("hidden");
       const resume = document.getElementById("rapportResume");
       if (resume) {
         resume.classList.remove("hidden");
@@ -1941,28 +1881,22 @@ async function genererRapportMensuel() {
           formatNumberFC(totalGlobal * 0.05) + " FC";
       }
     }
-    showTemporaryNotification("✅ Rapport généré avec succès !");
+    showTemporaryNotification("✅ Rapport généré");
   } catch (e) {
-    console.error(e);
-    showTemporaryNotification(
-      "❌ Erreur lors de la génération du rapport",
-      "error",
-    );
+    showTemporaryNotification("❌ Erreur", "error");
   }
 }
 function initRapports() {
-  const genererBtn = document.getElementById("genererRapportBtn");
-  if (genererBtn) genererBtn.addEventListener("click", genererRapportMensuel);
-  const exporterBtn = document.getElementById("exporterRapportBtn");
-  if (exporterBtn) {
-    exporterBtn.addEventListener("click", () => {
-      showTemporaryNotification("📥 Export CSV - Fonctionnalité à compléter");
-    });
-  }
-  const anneeSelect = document.getElementById("rapportAnneeSelect");
-  if (anneeSelect) anneeSelect.value = new Date().getFullYear();
-  const moisSelect = document.getElementById("rapportMoisSelect");
-  if (moisSelect) moisSelect.value = new Date().getMonth() + 1;
+  document
+    .getElementById("genererRapportBtn")
+    ?.addEventListener("click", genererRapportMensuel);
+  document
+    .getElementById("exporterRapportBtn")
+    ?.addEventListener("click", () => showTemporaryNotification("Export CSV"));
+  const annee = document.getElementById("rapportAnneeSelect");
+  if (annee) annee.value = new Date().getFullYear();
+  const mois = document.getElementById("rapportMoisSelect");
+  if (mois) mois.value = new Date().getMonth() + 1;
   chargerClientsPourRapport();
 }
 
@@ -1971,268 +1905,222 @@ function initRapports() {
 // ============================================
 function genererFacturePanier(vente, client) {
   if (typeof window.jspdf === "undefined") {
-    showTemporaryNotification(
-      "❌ Erreur: Bibliothèque PDF non chargée",
-      "error",
-    );
+    showTemporaryNotification("❌ Erreur PDF", "error");
     return;
   }
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
-  const pageWidth = doc.internal.pageSize.getWidth();
-  const marginX = 20;
-  const rightX = pageWidth - marginX;
-  const venteNettoyee = nettoyerVente(vente);
-  const total = venteNettoyee.total;
-  const produits = venteNettoyee.produits;
-  const dateFacture = new Date().toLocaleString("fr-FR");
+  const w = doc.internal.pageSize.getWidth();
+  const m = 20;
+  const rt = w - m;
+  const vn = nettoyerVente(vente);
+  const total = vn.total,
+    produits = vn.produits;
+  const dateF = new Date().toLocaleString("fr-FR");
   doc.setFontSize(22);
   doc.setFont("helvetica", "bold");
-  doc.text("FACTURE", pageWidth / 2, 20, { align: "center" });
+  doc.text("FACTURE", w / 2, 20, { align: "center" });
   doc.setFontSize(9);
   doc.setFont("helvetica", "normal");
-  doc.text("VentesPro SARL", marginX, 35);
-  doc.text("Kinshasa, RDC", marginX, 45);
-  doc.text(`Facture N°: ${vente.id || "N/A"}`, rightX - 40, 35, {
-    align: "right",
-  });
-  doc.text(`Date: ${dateFacture}`, rightX - 40, 40, { align: "right" });
-  doc.line(marginX, 55, rightX, 55);
+  doc.text("VentesPro SARL", m, 35);
+  doc.text("Kinshasa, RDC", m, 45);
+  doc.text(`Facture N°: ${vente.id || "N/A"}`, rt - 40, 35, { align: "right" });
+  doc.text(`Date: ${dateF}`, rt - 40, 40, { align: "right" });
+  doc.line(m, 55, rt, 55);
   doc.setFontSize(11);
   doc.setFont("helvetica", "bold");
-  doc.text("Client :", marginX, 68);
+  doc.text("Client :", m, 68);
   doc.setFont("helvetica", "normal");
   doc.setFontSize(10);
-  doc.text(client.nom, marginX + 30, 68);
-  doc.text(`Téléphone: ${client.telephone || "N/A"}`, marginX, 75);
-  doc.text(`ID Client: ${client.id}`, marginX, 82);
-  doc.line(marginX, 90, rightX, 90);
+  doc.text(client.nom, m + 30, 68);
+  doc.text(`Tél: ${client.telephone || "N/A"}`, m, 75);
+  doc.text(`ID: ${client.id}`, m, 82);
+  doc.line(m, 90, rt, 90);
   doc.setFontSize(11);
   doc.setFont("helvetica", "bold");
-  doc.text("Détails des produits", marginX, 102);
+  doc.text("Détails", m, 102);
   doc.setFontSize(9);
   doc.setFont("helvetica", "bold");
-  doc.text("Produit", marginX, 112);
+  doc.text("Produit", m, 112);
   doc.text("Qté", 100, 112);
   doc.text("Prix unit.", 130, 112);
   doc.text("Total", 165, 112);
-  doc.line(marginX, 114, rightX, 114);
-  let yPosition = 122;
+  doc.line(m, 114, rt, 114);
+  let y = 122;
   doc.setFont("helvetica", "normal");
   doc.setFontSize(9);
-  produits.forEach((item) => {
-    const sousTotal = item.prix * item.quantite;
-    doc.text(item.nom.substring(0, 30), marginX, yPosition);
-    doc.text(item.quantite.toString(), 100, yPosition);
-    doc.text(`${formatNumberFC(item.prix)} FC`, 130, yPosition);
-    doc.text(`${formatNumberFC(sousTotal)} FC`, 165, yPosition);
-    yPosition += 7;
+  produits.forEach((p) => {
+    const st = p.prix * p.quantite;
+    doc.text(p.nom.substring(0, 30), m, y);
+    doc.text(p.quantite.toString(), 100, y);
+    doc.text(`${formatNumberFC(p.prix)} FC`, 130, y);
+    doc.text(`${formatNumberFC(st)} FC`, 165, y);
+    y += 7;
   });
-  yPosition += 5;
-  doc.line(marginX, yPosition, rightX, yPosition);
-  yPosition += 8;
+  y += 5;
+  doc.line(m, y, rt, y);
+  y += 8;
   doc.setFont("helvetica", "bold");
   doc.setFontSize(11);
-  doc.text("TOTAL À PAYER :", 130, yPosition);
+  doc.text("TOTAL À PAYER :", 130, y);
   doc.setFontSize(14);
   doc.setTextColor(76, 175, 80);
-  doc.text(`${formatNumberFC(total)} FC`, rightX, yPosition, {
-    align: "right",
-  });
+  doc.text(`${formatNumberFC(total)} FC`, rt, y, { align: "right" });
   doc.setFontSize(8);
   doc.setTextColor(100, 100, 100);
-  doc.text("Merci de votre confiance !", pageWidth / 2, 280, {
-    align: "center",
-  });
+  doc.text("Merci de votre confiance !", w / 2, 280, { align: "center" });
   doc.save(
     `facture_${client.nom.replace(/\s/g, "_")}_${vente.id || Date.now()}.pdf`,
   );
-  showTemporaryNotification("✅ Facture générée !");
+  showTemporaryNotification("✅ Facture générée");
 }
 function genererFactureMensuelleMulti(ventes, client) {
   if (typeof window.jspdf === "undefined") {
-    showTemporaryNotification(
-      "❌ Erreur: Bibliothèque PDF non chargée",
-      "error",
-    );
+    showTemporaryNotification("❌ Erreur PDF", "error");
     return;
   }
-  const maintenant = new Date();
-  const moisActuel = maintenant.getMonth();
-  const anneeActuelle = maintenant.getFullYear();
+  const now = new Date();
+  const moisActuel = now.getMonth(),
+    anneeActuelle = now.getFullYear();
   const ventesDuMois = ventes.filter((v) => {
-    const dateVente = parseDate(v.date);
-    if (isNaN(dateVente.getTime())) return false;
+    const d = parseDate(v.date);
     return (
-      dateVente.getMonth() === moisActuel &&
-      dateVente.getFullYear() === anneeActuelle
+      !isNaN(d.getTime()) &&
+      d.getMonth() === moisActuel &&
+      d.getFullYear() === anneeActuelle
     );
   });
   if (ventesDuMois.length === 0) {
-    showTemporaryNotification(
-      "📭 Aucune vente ce mois-ci pour ce client",
-      "error",
-    );
+    showTemporaryNotification("📭 Aucune vente ce mois", "error");
     return;
   }
   let total = 0;
   ventesDuMois.forEach((v) => {
-    const venteNettoyee = nettoyerVente(v);
-    total += venteNettoyee.total;
+    const vn = nettoyerVente(v);
+    total += vn.total;
   });
-  const remise = total * 0.05;
-  const totalFinal = total - remise;
-  const dateFacture = new Date().toLocaleString("fr-FR");
-  const moisTexte = maintenant.toLocaleString("fr-FR", {
+  const remise = total * 0.05,
+    totalFinal = total - remise;
+  const dateF = new Date().toLocaleString("fr-FR");
+  const moisTexte = now.toLocaleString("fr-FR", {
     month: "long",
     year: "numeric",
   });
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
-  const pageWidth = doc.internal.pageSize.getWidth();
-  const marginX = 20;
-  const rightX = pageWidth - marginX;
+  const w = doc.internal.pageSize.getWidth();
+  const m = 20,
+    rt = w - m;
   doc.setFontSize(20);
   doc.setFont("helvetica", "bold");
-  doc.text("FACTURE MENSUELLE", pageWidth / 2, 20, { align: "center" });
+  doc.text("FACTURE MENSUELLE", w / 2, 20, { align: "center" });
   doc.setFontSize(9);
   doc.setFont("helvetica", "normal");
-  doc.text("VentesPro SARL", marginX, 35);
-  doc.text("Kinshasa, RDC", marginX, 45);
-  doc.text(`Période: ${moisTexte}`, rightX - 40, 35, { align: "right" });
-  doc.text(`Date: ${dateFacture}`, rightX - 40, 40, { align: "right" });
-  doc.line(marginX, 55, rightX, 55);
+  doc.text("VentesPro SARL", m, 35);
+  doc.text("Kinshasa, RDC", m, 45);
+  doc.text(`Période: ${moisTexte}`, rt - 40, 35, { align: "right" });
+  doc.text(`Date: ${dateF}`, rt - 40, 40, { align: "right" });
+  doc.line(m, 55, rt, 55);
   doc.setFontSize(11);
   doc.setFont("helvetica", "bold");
-  doc.text("Client :", marginX, 68);
+  doc.text("Client :", m, 68);
   doc.setFont("helvetica", "normal");
   doc.setFontSize(10);
-  doc.text(client.nom, marginX + 30, 68);
-  doc.text(`Téléphone: ${client.telephone || "N/A"}`, marginX, 75);
-  doc.text(`ID Client: ${client.id}`, marginX, 82);
-  doc.line(marginX, 90, rightX, 90);
+  doc.text(client.nom, m + 30, 68);
+  doc.text(`Tél: ${client.telephone || "N/A"}`, m, 75);
+  doc.text(`ID: ${client.id}`, m, 82);
+  doc.line(m, 90, rt, 90);
   doc.setFontSize(11);
   doc.setFont("helvetica", "bold");
-  doc.text(`Récapitulatif des achats - ${moisTexte}`, marginX, 102);
+  doc.text(`Achats - ${moisTexte}`, m, 102);
   doc.setFontSize(9);
   doc.setFont("helvetica", "bold");
-  doc.text("Date", marginX, 112);
+  doc.text("Date", m, 112);
   doc.text("Produits", 55, 112);
   doc.text("Total", 160, 112);
-  doc.line(marginX, 114, rightX, 114);
-  let yPosition = 122;
+  doc.line(m, 114, rt, 114);
+  let y = 122;
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8);
-  ventesDuMois.forEach((vente, index) => {
-    const venteNettoyee = nettoyerVente(vente);
-    let produitsListe = venteNettoyee.produits
-      .map((p) => `${p.nom}(${p.quantite})`)
-      .join(", ");
-    const dateStr = formatDate(vente.date);
-    doc.text(dateStr.substring(0, 10), marginX, yPosition);
-    doc.text(produitsListe.substring(0, 45), 55, yPosition);
-    doc.text(`${formatNumberFC(venteNettoyee.total)} FC`, 160, yPosition);
-    yPosition += 6;
-    if (yPosition > 250 && index < ventesDuMois.length - 1) {
+  ventesDuMois.forEach((v, idx) => {
+    const vn = nettoyerVente(v);
+    const prods = vn.produits.map((p) => `${p.nom}(${p.quantite})`).join(", ");
+    const dateStr = formatDate(v.date);
+    doc.text(dateStr.substring(0, 10), m, y);
+    doc.text(prods.substring(0, 45), 55, y);
+    doc.text(`${formatNumberFC(vn.total)} FC`, 160, y);
+    y += 6;
+    if (y > 250 && idx < ventesDuMois.length - 1) {
       doc.addPage();
-      yPosition = 20;
+      y = 20;
     }
   });
-  yPosition += 8;
-  doc.line(marginX, yPosition, rightX, yPosition);
-  yPosition += 8;
+  y += 5;
+  doc.line(m, y, rt, y);
+  y += 8;
   doc.setFont("helvetica", "normal");
   doc.setFontSize(10);
-  doc.text("Sous-total:", 130, yPosition);
-  doc.text(`${formatNumberFC(total)} FC`, rightX, yPosition, {
-    align: "right",
-  });
-  yPosition += 7;
-  doc.text("Remise (5%):", 130, yPosition);
-  doc.text(`-${formatNumberFC(remise)} FC`, rightX, yPosition, {
-    align: "right",
-  });
-  yPosition += 10;
+  doc.text("Sous-total:", 130, y);
+  doc.text(`${formatNumberFC(total)} FC`, rt, y, { align: "right" });
+  y += 7;
+  doc.text("Remise (5%):", 130, y);
+  doc.text(`-${formatNumberFC(remise)} FC`, rt, y, { align: "right" });
+  y += 10;
   doc.setFont("helvetica", "bold");
   doc.setFontSize(12);
-  doc.text("TOTAL À PAYER :", 130, yPosition);
+  doc.text("TOTAL À PAYER :", 130, y);
   doc.setFontSize(14);
   doc.setTextColor(76, 175, 80);
-  doc.text(`${formatNumberFC(totalFinal)} FC`, rightX, yPosition, {
-    align: "right",
-  });
+  doc.text(`${formatNumberFC(totalFinal)} FC`, rt, y, { align: "right" });
   doc.setFontSize(8);
   doc.setTextColor(100, 100, 100);
-  doc.text("Merci de votre confiance !", pageWidth / 2, 280, {
-    align: "center",
-  });
+  doc.text("Merci de votre confiance !", w / 2, 280, { align: "center" });
   doc.save(
     `facture_mensuelle_${client.nom.replace(/\s/g, "_")}_${moisTexte.replace(/\s/g, "_")}.pdf`,
   );
-  showTemporaryNotification("✅ Facture mensuelle générée !");
+  showTemporaryNotification("✅ Facture mensuelle générée");
 }
 function exportToCSV(ventes, client) {
   if (!ventes || ventes.length === 0) {
-    showTemporaryNotification("📭 Aucune donnée à exporter", "error");
+    showTemporaryNotification("📭 Aucune donnée", "error");
     return;
   }
-  let separator = ";";
-  const formatField = (field) => {
-    if (field === undefined || field === null) return "";
-    const stringField = String(field);
-    if (
-      stringField.includes(separator) ||
-      stringField.includes('"') ||
-      stringField.includes("\n")
-    ) {
-      return `"${stringField.replace(/"/g, '""')}"`;
-    }
-    return stringField;
+  const sep = ";";
+  const fmt = (f) => {
+    if (f === undefined || f === null) return "";
+    const s = String(f);
+    if (s.includes(sep) || s.includes('"') || s.includes("\n"))
+      return `"${s.replace(/"/g, '""')}"`;
+    return s;
   };
   const headers = [
     "ID Vente",
     "Produits",
-    "Quantité totale",
+    "Qté totale",
     "Total (FC)",
     "Date",
-  ].map((h) => formatField(h));
+  ].map(fmt);
   const rows = ventes.map((v) => {
-    const venteNettoyee = nettoyerVente(v);
-    let produitsListe = "",
-      quantiteTotale = 0;
-    if (venteNettoyee.produits.length > 0) {
-      produitsListe = venteNettoyee.produits
-        .map((p) => `${p.nom}(${p.quantite})`)
-        .join(", ");
-      quantiteTotale = venteNettoyee.produits.reduce(
-        (sum, p) => sum + p.quantite,
-        0,
-      );
+    const vn = nettoyerVente(v);
+    let prods = "",
+      qt = 0;
+    if (vn.produits.length > 0) {
+      prods = vn.produits.map((p) => `${p.nom}(${p.quantite})`).join(", ");
+      qt = vn.produits.reduce((s, p) => s + p.quantite, 0);
     }
-    return [
-      v.id,
-      produitsListe,
-      quantiteTotale,
-      formatNumberFC(venteNettoyee.total),
-      formatDate(v.date),
-    ].map((field) => formatField(field));
+    return [v.id, prods, qt, formatNumberFC(vn.total), formatDate(v.date)].map(
+      fmt,
+    );
   });
-  const csvContent = [headers, ...rows]
-    .map((row) => row.join(separator))
-    .join("\n");
-  const blob = new Blob(["\uFEFF" + csvContent], {
-    type: "text/csv;charset=utf-8;",
-  });
+  const csv = [headers, ...rows].map((r) => r.join(sep)).join("\n");
+  const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
   const link = document.createElement("a");
   const url = URL.createObjectURL(blob);
-  link.setAttribute("href", url);
-  link.setAttribute(
-    "download",
-    `ventes_${client.nom.replace(/\s/g, "_")}_${new Date().toISOString().slice(0, 10)}.csv`,
-  );
+  link.href = url;
+  link.download = `ventes_${client.nom.replace(/\s/g, "_")}_${new Date().toISOString().slice(0, 10)}.csv`;
   link.click();
   URL.revokeObjectURL(url);
-  showTemporaryNotification("📥 Export CSV effectué !");
+  showTemporaryNotification("📥 Export CSV effectué");
 }
 
 // ============================================
