@@ -11,6 +11,7 @@ const API_BASE_URL = isLocal
 const CLIENTS_URL = `${API_BASE_URL}/clients`;
 const VENTES_URL = `${API_BASE_URL}/ventes`;
 const PRODUITS_URL = `${API_BASE_URL}/produits`;
+const ACHATS_URL = `${API_BASE_URL}/achats`;
 
 // ============================================
 // VARIABLES GLOBALES
@@ -33,6 +34,8 @@ let lastDailyVentesDetail = [];
 let currentClientData = null;
 let currentClientVentes = [];
 let currentFilterYear = "all";
+let achatsList = [];
+let currentEditAchatId = null;
 
 // ============================================
 // REDIRECTION VERS LA SECTION VENTES
@@ -50,6 +53,7 @@ function redirectToVente(clientId = null) {
     ventes: document.getElementById("ventesSection"),
     historique: document.getElementById("historiqueSection"),
     rapports: document.getElementById("rapportsSection"),
+    achats: document.getElementById("achatsSection"),
   };
   if (ventesNavItem) {
     navItems.forEach((nav) => {
@@ -212,6 +216,7 @@ const sections = {
   ventes: document.getElementById("ventesSection"),
   historique: document.getElementById("historiqueSection"),
   rapports: document.getElementById("rapportsSection"),
+  achats: document.getElementById("achatsSection"),
 };
 const sidebar = document.getElementById("sidebar");
 const mobileMenuBtn = document.getElementById("mobileMenuBtn");
@@ -1116,6 +1121,367 @@ window.genererFactureVente = async function (venteId, clientId) {
     showTemporaryNotification("❌ Erreur", "error");
   }
 };
+
+// ============================================
+// ACHATS FOURNISSEURS
+// ============================================
+async function chargerAchats() {
+  try {
+    const response = await fetch(ACHATS_URL);
+    if (!response.ok) throw new Error("Erreur chargement achats");
+    achatsList = await response.json();
+    return achatsList;
+  } catch (error) {
+    console.error("Erreur chargement achats:", error);
+    achatsList = [];
+    return [];
+  }
+}
+async function sauvegarderAchat(achatData) {
+  const response = await fetch(ACHATS_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(achatData),
+  });
+  if (!response.ok) throw new Error("Erreur sauvegarde achat");
+  return await response.json();
+}
+async function mettreAJourAchat(id, achatData) {
+  const response = await fetch(`${ACHATS_URL}/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(achatData),
+  });
+  if (!response.ok) throw new Error("Erreur mise à jour achat");
+  return await response.json();
+}
+async function supprimerAchat(id) {
+  const response = await fetch(`${ACHATS_URL}/${id}`, { method: "DELETE" });
+  if (!response.ok) throw new Error("Erreur suppression achat");
+  return true;
+}
+async function afficherAchats() {
+  await chargerAchats();
+  const fournisseur =
+    document.getElementById("filtreFournisseurAchat")?.value || "all";
+  const mois = document.getElementById("filtreMoisAchat")?.value || "all";
+  let achatsFiltres = [...achatsList];
+  if (fournisseur !== "all")
+    achatsFiltres = achatsFiltres.filter((a) => a.fournisseur === fournisseur);
+  if (mois !== "all")
+    achatsFiltres = achatsFiltres.filter((a) => {
+      const dateAchat = new Date(a.date);
+      const moisKey = `${dateAchat.getFullYear()}-${String(dateAchat.getMonth() + 1).padStart(2, "0")}`;
+      return moisKey === mois;
+    });
+  achatsFiltres.sort((a, b) => new Date(b.date) - new Date(a.date));
+  let totalGeneral = 0;
+  achatsFiltres.forEach((a) => {
+    totalGeneral += a.total;
+  });
+  const remiseTotale = totalGeneral * 0.05;
+  const netTotal = totalGeneral - remiseTotale;
+  document.getElementById("statsTotalAchats").textContent =
+    formatNumberFC(totalGeneral) + " FC";
+  document.getElementById("statsTotalRemise").textContent =
+    formatNumberFC(remiseTotale) + " FC";
+  document.getElementById("statsTotalNet").textContent =
+    formatNumberFC(netTotal) + " FC";
+  document.getElementById("statsNbAchats").textContent = achatsFiltres.length;
+  const tbody = document.getElementById("achatsTableBody");
+  const footer = document.getElementById("achatsTableFooter");
+  if (achatsFiltres.length === 0) {
+    tbody.innerHTML =
+      '<tr><td colspan="7" class="px-4 py-8 text-center text-gray-400">📭 Aucun achat trouvé</td></tr>';
+    footer.classList.add("hidden");
+    return;
+  }
+  tbody.innerHTML = achatsFiltres
+    .map((achat, index) => {
+      const dateObj = new Date(achat.date);
+      const dateStr = dateObj.toLocaleDateString("fr-FR");
+      const typeLabel =
+        achat.type === "cassier" ? "📦 Cassier" : "🍾 Bouteille";
+      const typeClass =
+        achat.type === "cassier"
+          ? "bg-purple-100 text-purple-700"
+          : "bg-blue-100 text-blue-700";
+      const fournisseurLabel =
+        achat.fournisseur === "BRACONGO" ? "🍺 BRACONGO" : "🍻 BRALIMA";
+      return `<tr class="${index % 2 === 0 ? "bg-white" : "bg-gray-50"} hover:bg-gray-100 transition"><td class="px-4 py-3 text-sm">${dateStr}</td><td class="px-4 py-3 text-sm font-medium">${fournisseurLabel}</td><td class="px-4 py-3 text-sm"><span class="inline-block px-2 py-0.5 rounded text-xs font-medium ${typeClass} mr-1">${typeLabel}</span>${escapeHtml(achat.produit)}</td><td class="px-4 py-3 text-center text-sm font-medium">${achat.quantite}</td><td class="px-4 py-3 text-right text-sm">${formatNumberFC(achat.prix)} FC</td><td class="px-4 py-3 text-right text-sm font-bold text-emerald-600">${formatNumberFC(achat.total)} FC</td><td class="px-4 py-3 text-center"><button onclick="ouvrirEditAchat('${achat.id}')" class="text-blue-600 hover:text-blue-800 mr-2 transition"><i class="fas fa-edit"></i></button><button onclick="supprimerAchatConfirm('${achat.id}')" class="text-red-600 hover:text-red-800 transition"><i class="fas fa-trash"></i></button></td></tr>`;
+    })
+    .join("");
+  footer.classList.remove("hidden");
+  document.getElementById("footerTotalAchats").textContent =
+    formatNumberFC(totalGeneral) + " FC";
+}
+async function mettreAJourFiltreMoisAchats() {
+  await chargerAchats();
+  const moisSet = new Set();
+  achatsList.forEach((achat) => {
+    const date = new Date(achat.date);
+    const moisKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+    const moisNom = date.toLocaleDateString("fr-FR", {
+      month: "long",
+      year: "numeric",
+    });
+    moisSet.add(JSON.stringify({ key: moisKey, nom: moisNom }));
+  });
+  const moisArray = Array.from(moisSet).map((m) => JSON.parse(m));
+  moisArray.sort((a, b) => b.key.localeCompare(a.key));
+  const selectMois = document.getElementById("filtreMoisAchat");
+  if (selectMois) {
+    selectMois.innerHTML = '<option value="all">📅 Tous les mois</option>';
+    moisArray.forEach((mois) => {
+      const option = document.createElement("option");
+      option.value = mois.key;
+      option.textContent = mois.nom;
+      selectMois.appendChild(option);
+    });
+  }
+}
+function ouvrirAjoutAchat() {
+  document.getElementById("achatFournisseur").value = "BRACONGO";
+  document.getElementById("achatProduit").value = "";
+  document.getElementById("achatType").value = "bouteille";
+  document.getElementById("achatQuantite").value = "1";
+  document.getElementById("achatPrix").value = "";
+  document.getElementById("achatDate").value = new Date()
+    .toISOString()
+    .split("T")[0];
+  mettreAJourProduitsAchat();
+  document.getElementById("ajoutAchatModal").classList.remove("hidden");
+  document.getElementById("ajoutAchatModal").classList.add("flex");
+}
+async function mettreAJourProduitsAchat() {
+  const fournisseur = document.getElementById("achatFournisseur").value;
+  const type = document.getElementById("achatType").value;
+  const selectProduit = document.getElementById("achatProduit");
+  await chargerProduits();
+  selectProduit.innerHTML =
+    '<option value="">-- Sélectionnez un produit --</option>';
+  if (type === "bouteille") {
+    Object.entries(produits[fournisseur].bouteille).forEach(([nom, data]) => {
+      const option = document.createElement("option");
+      option.value = nom;
+      option.textContent = `${nom} (${data.format}) - ${formatNumberFC(data.prix)} FC`;
+      selectProduit.appendChild(option);
+    });
+  } else {
+    Object.entries(produits[fournisseur].cassier).forEach(([nom, data]) => {
+      const option = document.createElement("option");
+      option.value = nom;
+      option.textContent = `${nom} (${data.format}) - ${formatNumberFC(data.prixCassier)} FC (cassier)`;
+      selectProduit.appendChild(option);
+    });
+  }
+  selectProduit.onchange = () => {
+    const produitNom = selectProduit.value;
+    if (produitNom) {
+      if (type === "bouteille") {
+        const prix = produits[fournisseur].bouteille[produitNom]?.prix;
+        if (prix) document.getElementById("achatPrix").value = prix;
+      } else {
+        const prix = produits[fournisseur].cassier[produitNom]?.prixCassier;
+        if (prix) document.getElementById("achatPrix").value = prix;
+      }
+    }
+  };
+}
+async function saveAchat() {
+  const fournisseur = document.getElementById("achatFournisseur").value;
+  const produit = document.getElementById("achatProduit").value;
+  const type = document.getElementById("achatType").value;
+  const quantite = parseInt(document.getElementById("achatQuantite").value);
+  const prix = parseFloat(document.getElementById("achatPrix").value);
+  const date = document.getElementById("achatDate").value;
+  if (!produit || !quantite || !prix || !date) {
+    showTemporaryNotification("❌ Veuillez remplir tous les champs", "error");
+    return;
+  }
+  const total = quantite * prix;
+  try {
+    await sauvegarderAchat({
+      fournisseur,
+      produit,
+      type,
+      quantite,
+      prix,
+      total,
+      date,
+    });
+    showTemporaryNotification("✅ Achat enregistré avec succès");
+    fermerModalAchat();
+    await afficherAchats();
+    await mettreAJourFiltreMoisAchats();
+  } catch (error) {
+    showTemporaryNotification(`❌ Erreur: ${error.message}`, "error");
+  }
+}
+function fermerModalAchat() {
+  document.getElementById("ajoutAchatModal").classList.add("hidden");
+  document.getElementById("ajoutAchatModal").classList.remove("flex");
+}
+async function ouvrirEditAchat(id) {
+  currentEditAchatId = id;
+  const achat = achatsList.find((a) => a.id === id);
+  if (!achat) return;
+  document.getElementById("editAchatId").value = achat.id;
+  document.getElementById("editAchatFournisseur").value = achat.fournisseur;
+  document.getElementById("editAchatProduit").value = achat.produit;
+  document.getElementById("editAchatType").value = achat.type;
+  document.getElementById("editAchatQuantite").value = achat.quantite;
+  document.getElementById("editAchatPrix").value = achat.prix;
+  document.getElementById("editAchatDate").value = achat.date.split("T")[0];
+  document.getElementById("editAchatModal").classList.remove("hidden");
+  document.getElementById("editAchatModal").classList.add("flex");
+}
+async function updateAchat() {
+  const id = document.getElementById("editAchatId").value;
+  const fournisseur = document.getElementById("editAchatFournisseur").value;
+  const produit = document.getElementById("editAchatProduit").value;
+  const type = document.getElementById("editAchatType").value;
+  const quantite = parseInt(document.getElementById("editAchatQuantite").value);
+  const prix = parseFloat(document.getElementById("editAchatPrix").value);
+  const date = document.getElementById("editAchatDate").value;
+  if (!produit || !quantite || !prix || !date) {
+    showTemporaryNotification("❌ Veuillez remplir tous les champs", "error");
+    return;
+  }
+  const total = quantite * prix;
+  try {
+    await mettreAJourAchat(id, {
+      fournisseur,
+      produit,
+      type,
+      quantite,
+      prix,
+      total,
+      date,
+    });
+    showTemporaryNotification("✅ Achat modifié avec succès");
+    fermerModalEditAchat();
+    await afficherAchats();
+    await mettreAJourFiltreMoisAchats();
+  } catch (error) {
+    showTemporaryNotification(`❌ Erreur: ${error.message}`, "error");
+  }
+}
+async function supprimerAchatConfirm(id) {
+  if (confirm("⚠️ Êtes-vous sûr de vouloir supprimer cet achat ?")) {
+    try {
+      await supprimerAchat(id);
+      showTemporaryNotification("✅ Achat supprimé");
+      await afficherAchats();
+      await mettreAJourFiltreMoisAchats();
+    } catch (error) {
+      showTemporaryNotification(`❌ Erreur: ${error.message}`, "error");
+    }
+  }
+}
+function fermerModalEditAchat() {
+  document.getElementById("editAchatModal").classList.add("hidden");
+  document.getElementById("editAchatModal").classList.remove("flex");
+  currentEditAchatId = null;
+}
+function exporterAchatsCSV() {
+  const fournisseur =
+    document.getElementById("filtreFournisseurAchat")?.value || "all";
+  const mois = document.getElementById("filtreMoisAchat")?.value || "all";
+  let achatsFiltres = [...achatsList];
+  if (fournisseur !== "all")
+    achatsFiltres = achatsFiltres.filter((a) => a.fournisseur === fournisseur);
+  if (mois !== "all")
+    achatsFiltres = achatsFiltres.filter((a) => {
+      const dateAchat = new Date(a.date);
+      const moisKey = `${dateAchat.getFullYear()}-${String(dateAchat.getMonth() + 1).padStart(2, "0")}`;
+      return moisKey === mois;
+    });
+  if (achatsFiltres.length === 0) {
+    showTemporaryNotification("📭 Aucune donnée à exporter", "error");
+    return;
+  }
+  const separator = ";";
+  const headers = [
+    "Date",
+    "Fournisseur",
+    "Produit",
+    "Type",
+    "Quantité",
+    "Prix unitaire (FC)",
+    "Total (FC)",
+    "Remise 5% (FC)",
+    "Net (FC)",
+  ];
+  const rows = achatsFiltres.map((a) => {
+    const remise = a.total * 0.05;
+    const net = a.total - remise;
+    const dateObj = new Date(a.date);
+    const dateStr = dateObj.toLocaleDateString("fr-FR");
+    return [
+      dateStr,
+      a.fournisseur,
+      a.produit,
+      a.type,
+      a.quantite,
+      a.prix,
+      a.total,
+      remise,
+      net,
+    ];
+  });
+  const csvContent = [headers, ...rows]
+    .map((row) => row.join(separator))
+    .join("\n");
+  const blob = new Blob(["\uFEFF" + csvContent], {
+    type: "text/csv;charset=utf-8;",
+  });
+  const link = document.createElement("a");
+  const url = URL.createObjectURL(blob);
+  link.href = url;
+  const suffixe = fournisseur !== "all" ? `_${fournisseur}` : "";
+  link.download = `achats_fournisseurs${suffixe}_${new Date().toISOString().slice(0, 10)}.csv`;
+  link.click();
+  URL.revokeObjectURL(url);
+  showTemporaryNotification("📥 Export CSV effectué");
+}
+function initAchats() {
+  document
+    .getElementById("ajouterAchatBtn")
+    ?.addEventListener("click", ouvrirAjoutAchat);
+  document.getElementById("saveAchatBtn")?.addEventListener("click", saveAchat);
+  document
+    .getElementById("closeAchatModalBtn")
+    ?.addEventListener("click", fermerModalAchat);
+  document
+    .getElementById("closeEditAchatModalBtn")
+    ?.addEventListener("click", fermerModalEditAchat);
+  document
+    .getElementById("updateAchatBtn")
+    ?.addEventListener("click", updateAchat);
+  document.getElementById("deleteAchatBtn")?.addEventListener("click", () => {
+    if (currentEditAchatId && confirm("⚠️ Supprimer cet achat ?")) {
+      supprimerAchatConfirm(currentEditAchatId);
+      fermerModalEditAchat();
+    }
+  });
+  document
+    .getElementById("appliquerFiltreAchat")
+    ?.addEventListener("click", afficherAchats);
+  document
+    .getElementById("exporterAchatsCsv")
+    ?.addEventListener("click", exporterAchatsCSV);
+  document
+    .getElementById("achatFournisseur")
+    ?.addEventListener("change", mettreAJourProduitsAchat);
+  document
+    .getElementById("achatType")
+    ?.addEventListener("change", mettreAJourProduitsAchat);
+  mettreAJourFiltreMoisAchats();
+  afficherAchats();
+}
+window.ouvrirEditAchat = ouvrirEditAchat;
+window.supprimerAchatConfirm = supprimerAchatConfirm;
 
 // ============================================
 // API PRODUITS (suite)
@@ -2377,7 +2743,7 @@ async function genererRapportMensuel() {
         nbGlobal += data.nb;
         const tr = document.createElement("tr");
         tr.className = "border-b hover:bg-gray-50";
-        tr.innerHTML = `<td class="px-4 py-3"><div class="font-medium">${client ? escapeHtml(client.nom) : "Client " + id}</div><div class="text-xs text-gray-400">ID: ${id}</div></td><td class="px-4 py-3 text-center">${data.nb}</td><td class="px-4 py-3 text-right">${formatNumberFC(data.total)} FC</td><td class="px-4 py-3 text-right text-orange-600">${formatNumberFC(remise)} FC</td><td class="px-4 py-3 text-right font-bold text-emerald-600">${formatNumberFC(data.total - remise)} FC</td><td class="px-4 py-3 text-center"><button onclick="showTemporaryNotification('Facture client')" class="bg-purple-600 text-white px-2 py-1 rounded text-xs">🧾</button></td>`;
+        tr.innerHTML = `<td class="px-4 py-3"><div class="font-medium">${client ? escapeHtml(client.nom) : "Client " + id}</div><div class="text-xs text-gray-400">ID: ${id}</div></td><td class="px-4 py-3 text-center">${data.nb}</td><td class="px-4 py-3 text-right">${formatNumberFC(data.total)} FC</td><td class="px-4 py-3 text-right text-orange-600">${formatNumberFC(remise)} FC</td><td class="px-4 py-3 text-right font-bold text-emerald-600">${formatNumberFC(data.total - remise)} FC<td><td class="px-4 py-3 text-center"><button onclick="showTemporaryNotification('Facture client')" class="bg-purple-600 text-white px-2 py-1 rounded text-xs">🧾</button></td>`;
         tbody.appendChild(tr);
       }
       document.getElementById("rapportFootNbVentes").textContent = nbGlobal;
@@ -2648,4 +3014,5 @@ initGestionProduits();
 initGestionClients();
 initRapports();
 initDailyStats();
+initAchats();
 showTemporaryNotification("Bienvenue sur VentesPro !");

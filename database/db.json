@@ -1297,5 +1297,37 @@
       "id": "5nwUCKu"
     }
   ],
+  "achats": [
+    {
+      "fournisseur": "BRACONGO",
+      "produit": "Nkoy",
+      "type": "cassier",
+      "quantite": 7,
+      "prix": 50000,
+      "total": 350000,
+      "date": "2026-05-09",
+      "id": 1
+    },
+    {
+      "fournisseur": "BRALIMA",
+      "produit": "Primus",
+      "type": "cassier",
+      "quantite": 6,
+      "prix": 60000,
+      "total": 360000,
+      "date": "2026-05-09",
+      "id": 2
+    },
+    {
+      "fournisseur": "BRACONGO",
+      "produit": "Skol",
+      "type": "cassier",
+      "quantite": 10,
+      "prix": 40000,
+      "total": 400000,
+      "date": "2026-05-09",
+      "id": 3
+    }
+  ],
   "$schema": "./node_modules/json-server/schema.json"
 }
