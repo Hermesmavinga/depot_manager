@@ -337,6 +337,14 @@
       "fournisseur": "BRACONGO",
       "nbBouteilles": 24,
       "id": "c6RGCKx"
+    },
+    {
+      "nom": "kkkkk",
+      "prix": 20000,
+      "format": "44 cl",
+      "type": "bouteille",
+      "fournisseur": "BRACONGO",
+      "id": "K1XHrrx"
     }
   ],
   "ventes": [
@@ -1295,6 +1303,26 @@
       "total": 2500,
       "date": "2026-05-09T12:49:55.380Z",
       "id": "5nwUCKu"
+    },
+    {
+      "clientId": "1",
+      "produits": [
+        {
+          "nom": "Nkoy",
+          "quantite": 1,
+          "prix": 2500,
+          "type": "bouteille"
+        },
+        {
+          "nom": "Nkoy",
+          "quantite": 1,
+          "prix": 2500,
+          "type": "bouteille"
+        }
+      ],
+      "total": 5000,
+      "date": "2026-05-09T17:00:12.897Z",
+      "id": "gkFX8UL"
     }
   ],
   "achats": [
