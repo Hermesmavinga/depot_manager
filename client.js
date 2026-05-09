@@ -30,6 +30,9 @@ let allClients = [];
 let filteredClients = [];
 let weeklyChart = null;
 let lastDailyVentesDetail = [];
+let currentClientData = null;
+let currentClientVentes = [];
+let currentFilterYear = "all";
 
 // ============================================
 // REDIRECTION VERS LA SECTION VENTES
@@ -401,7 +404,7 @@ function displayDailySalesDetail(ventesDetail, dateStr) {
   if (!tbody) return;
   if (ventesDetail.length === 0) {
     tbody.innerHTML =
-      '<tr><td colspan="7" class="px-4 py-8 text-center text-gray-400">📭 Aucune vente enregistrée ce jour</td></table>';
+      '<tr><td colspan="7" class="px-4 py-8 text-center text-gray-400">📭 Aucune vente enregistrée ce jour</td></tr>';
     if (footer) footer.classList.add("hidden");
     return;
   }
@@ -588,7 +591,7 @@ function updateWeeklyChart(stats) {
 }
 
 // ============================================
-// POPUPS DE DÉTAIL POUR BOUTEILLES ET CASSIERS (AVEC SCROLL)
+// POPUPS DE DÉTAIL POUR BOUTEILLES ET CASSIERS
 // ============================================
 function showBouteillesDetail() {
   if (!lastDailyVentesDetail || lastDailyVentesDetail.length === 0) {
@@ -817,6 +820,302 @@ async function initDailyStats() {
   await getWeeklyTrend();
   initDetailCards();
 }
+
+// ============================================
+// POPUP DÉTAILS CLIENT AVEC HISTORIQUE ET FILTRE ANNÉE
+// ============================================
+async function showClientDetails(clientId) {
+  try {
+    const clientRes = await fetch(`${CLIENTS_URL}/${String(clientId)}`);
+    if (!clientRes.ok) throw new Error("Client non trouvé");
+    const client = await clientRes.json();
+    const ventesRes = await fetch(VENTES_URL);
+    const allVentes = await ventesRes.json();
+    const ventesClient = allVentes.filter(
+      (v) => String(v.clientId) === String(clientId),
+    );
+    if (ventesClient.length === 0) {
+      showTemporaryNotification(`📭 Aucune vente pour ${client.nom}`, "info");
+      return;
+    }
+    currentClientData = client;
+    currentClientVentes = ventesClient;
+    const anneesDisponibles = [
+      ...new Set(ventesClient.map((v) => parseDate(v.date).getFullYear())),
+    ].sort((a, b) => b - a);
+    const modal = document.createElement("div");
+    modal.className = "client-detail-modal";
+    modal.innerHTML = `<div class="client-detail-content"><div class="sticky top-0 bg-gradient-to-r from-emerald-600 to-teal-600 text-white px-6 py-4 rounded-t-2xl flex justify-between items-center"><div><i class="fas fa-user-circle text-2xl mr-2"></i><span class="font-bold text-lg">${escapeHtml(client.nom)}</span><p class="text-xs opacity-90 mt-1">ID: ${client.id} | 📞 ${client.telephone}</p></div><button onclick="this.closest('.client-detail-modal').remove()" class="text-white hover:bg-white/20 rounded-full w-8 h-8 flex items-center justify-center"><i class="fas fa-times"></i></button></div><div class="p-5 flex-1 overflow-y-auto" style="max-height: calc(85vh - 180px);"><div class="bg-gray-50 rounded-xl p-3 mb-4 flex flex-wrap items-center justify-between gap-3"><div class="flex items-center gap-2"><i class="fas fa-calendar-alt text-emerald-600"></i><span class="text-sm font-medium text-gray-700">Filtrer par année :</span></div><div class="flex flex-wrap gap-2"><button onclick="filterClientYear('all')" class="year-filter-btn px-3 py-1.5 rounded-lg text-sm transition ${currentFilterYear === "all" ? "bg-emerald-600 text-white" : "bg-gray-200 text-gray-700 hover:bg-gray-300"}">📅 Toutes</button>${anneesDisponibles.map((annee) => `<button onclick="filterClientYear('${annee}')" class="year-filter-btn px-3 py-1.5 rounded-lg text-sm transition ${currentFilterYear === String(annee) ? "bg-emerald-600 text-white" : "bg-gray-200 text-gray-700 hover:bg-gray-300"}">${annee}</button>`).join("")}</div></div><div id="clientStatsContent">${renderClientStats(ventesClient, currentFilterYear)}</div></div><div class="sticky bottom-0 bg-white border-t border-gray-100 pt-3 pb-2 px-5 flex justify-end gap-2"><button onclick="exporterHistoriqueClientFiltre()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm transition"><i class="fas fa-download mr-1"></i> Exporter CSV</button><button onclick="genererFactureClientParAnnee()" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg text-sm transition"><i class="fas fa-file-invoice mr-1"></i> Facture PDF</button><button onclick="this.closest('.client-detail-modal').remove()" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm transition">Fermer</button></div></div>`;
+    document.body.appendChild(modal);
+    modal.addEventListener("click", (e) => {
+      if (e.target === modal) modal.remove();
+    });
+  } catch (error) {
+    showTemporaryNotification(`❌ Erreur: ${error.message}`, "error");
+  }
+}
+function filterClientYear(year) {
+  currentFilterYear = year;
+  document.querySelectorAll(".year-filter-btn").forEach((btn) => {
+    btn.classList.remove("bg-emerald-600", "text-white");
+    btn.classList.add("bg-gray-200", "text-gray-700");
+  });
+  const activeBtn = Array.from(
+    document.querySelectorAll(".year-filter-btn"),
+  ).find(
+    (btn) => btn.textContent.trim() === (year === "all" ? "📅 Toutes" : year),
+  );
+  if (activeBtn) {
+    activeBtn.classList.remove("bg-gray-200", "text-gray-700");
+    activeBtn.classList.add("bg-emerald-600", "text-white");
+  }
+  const contentDiv = document.getElementById("clientStatsContent");
+  if (contentDiv)
+    contentDiv.innerHTML = renderClientStats(currentClientVentes, year);
+}
+function renderClientStats(ventesClient, filterYear) {
+  let ventesFiltrees = ventesClient;
+  if (filterYear !== "all")
+    ventesFiltrees = ventesClient.filter(
+      (v) => parseDate(v.date).getFullYear() === parseInt(filterYear),
+    );
+  if (ventesFiltrees.length === 0)
+    return `<div class="text-center text-gray-400 py-8"><i class="fas fa-inbox text-4xl mb-3 block"></i><p>Aucune vente pour cette période</p></div>`;
+  const ventesParMois = {};
+  let totalGeneral = 0,
+    totalVentes = ventesFiltrees.length;
+  ventesFiltrees.forEach((vente) => {
+    const date = parseDate(vente.date);
+    const moisKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+    const moisNom = date.toLocaleDateString("fr-FR", {
+      month: "long",
+      year: "numeric",
+    });
+    const vn = nettoyerVente(vente);
+    const montant = vn.total;
+    if (!ventesParMois[moisKey])
+      ventesParMois[moisKey] = {
+        nom: moisNom,
+        key: moisKey,
+        annee: date.getFullYear(),
+        ventes: [],
+        total: 0,
+        remise: 0,
+        net: 0,
+      };
+    ventesParMois[moisKey].ventes.push({
+      id: vente.id,
+      date: vente.date,
+      montant: montant,
+      produits: vn.produits,
+    });
+    ventesParMois[moisKey].total += montant;
+    totalGeneral += montant;
+  });
+  for (const mois in ventesParMois) {
+    ventesParMois[mois].remise = ventesParMois[mois].total * 0.05;
+    ventesParMois[mois].net =
+      ventesParMois[mois].total - ventesParMois[mois].remise;
+  }
+  const moisTries = Object.entries(ventesParMois).sort((a, b) =>
+    b[0].localeCompare(a[0]),
+  );
+  const remiseTotale = totalGeneral * 0.05;
+  const netTotal = totalGeneral - remiseTotale;
+  let ventesHtml = "";
+  for (const [key, mois] of moisTries) {
+    const ventesListeHtml = mois.ventes
+      .map(
+        (v) =>
+          `<div class="sale-item"><div><div class="font-medium text-gray-800">Vente #${v.id.substring(0, 8)}</div><div class="text-xs text-gray-500">${formatDate(v.date)}</div><div class="text-xs text-gray-400 mt-1">${v.produits.map((p) => `${escapeHtml(p.nom)} (${p.quantite})`).join(", ")}</div></div><div class="text-right"><div class="font-bold text-emerald-600">${formatNumberFC(v.montant)} FC</div><button onclick="genererFactureVente('${v.id}', '${currentClientData.id}')" class="text-blue-600 text-xs hover:text-blue-800 mt-1">🧾 Facture</button></div></div>`,
+      )
+      .join("");
+    ventesHtml += `<div class="month-group"><div class="month-header" onclick="this.nextElementSibling.classList.toggle('show')"><span><i class="fas fa-calendar-alt mr-2"></i>${mois.nom}</span><span class="flex gap-4"><span class="text-white/80 text-sm">Total: ${formatNumberFC(mois.total)} FC</span><i class="fas fa-chevron-down"></i></span></div><div class="month-details"><div class="grid grid-cols-3 gap-3 mb-4 pb-3 border-b border-gray-200"><div class="text-center"><p class="text-xs text-gray-500">Ventes</p><p class="font-bold text-gray-700">${mois.ventes.length}</p></div><div class="text-center"><p class="text-xs text-gray-500">Remise 5%</p><p class="font-bold text-orange-600">${formatNumberFC(mois.remise)} FC</p></div><div class="text-center"><p class="text-xs text-gray-500">Net à payer</p><p class="font-bold text-emerald-600">${formatNumberFC(mois.net)} FC</p></div></div><div class="space-y-2 max-h-64 overflow-y-auto">${ventesListeHtml}</div></div></div>`;
+  }
+  return `<div class="client-stats-grid"><div class="client-stat-card"><i class="fas fa-shopping-cart text-emerald-600 text-xl mb-2"></i><p class="text-2xl font-bold text-gray-800">${totalVentes}</p><p class="text-xs text-gray-500">Total ventes</p></div><div class="client-stat-card"><i class="fas fa-chart-line text-blue-600 text-xl mb-2"></i><p class="text-2xl font-bold text-gray-800">${formatNumberFC(totalGeneral)} FC</p><p class="text-xs text-gray-500">Montant total</p></div><div class="client-stat-card"><i class="fas fa-percent text-orange-600 text-xl mb-2"></i><p class="text-2xl font-bold text-orange-600">${formatNumberFC(remiseTotale)} FC</p><p class="text-xs text-gray-500">Remise totale (5%)</p></div><div class="client-stat-card"><i class="fas fa-money-bill-wave text-emerald-600 text-xl mb-2"></i><p class="text-2xl font-bold text-emerald-600">${formatNumberFC(netTotal)} FC</p><p class="text-xs text-gray-500">Net à payer</p></div></div><h4 class="font-semibold text-gray-800 mb-3"><i class="fas fa-history text-emerald-600 mr-2"></i>Historique des achats par mois</h4><div class="space-y-3 max-h-96 overflow-y-auto pr-1">${ventesHtml || '<div class="text-center text-gray-400 py-8">Aucune vente trouvée</div>'}</div>`;
+}
+async function exporterHistoriqueClientFiltre() {
+  try {
+    let ventesClient = currentClientVentes;
+    if (currentFilterYear !== "all")
+      ventesClient = ventesClient.filter(
+        (v) => parseDate(v.date).getFullYear() === parseInt(currentFilterYear),
+      );
+    if (ventesClient.length === 0) {
+      showTemporaryNotification("Aucune donnée à exporter", "error");
+      return;
+    }
+    const separator = ";";
+    const headers = [
+      "ID Vente",
+      "Date",
+      "Montant (FC)",
+      "Remise 5% (FC)",
+      "Net (FC)",
+      "Produits",
+    ];
+    const rows = ventesClient.map((vente) => {
+      const vn = nettoyerVente(vente);
+      const remise = vn.total * 0.05;
+      const net = vn.total - remise;
+      const produits = vn.produits
+        .map((p) => `${p.nom}(${p.quantite})`)
+        .join(", ");
+      return [
+        vente.id,
+        formatDate(vente.date),
+        vn.total,
+        remise,
+        net,
+        produits,
+      ];
+    });
+    const csvContent = [headers, ...rows]
+      .map((row) => row.join(separator))
+      .join("\n");
+    const blob = new Blob(["\uFEFF" + csvContent], {
+      type: "text/csv;charset=utf-8;",
+    });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    const suffixe = currentFilterYear !== "all" ? `_${currentFilterYear}` : "";
+    link.download = `client_${currentClientData.nom.replace(/\s/g, "_")}${suffixe}_ventes.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+    showTemporaryNotification("📥 Export CSV effectué");
+  } catch (error) {
+    showTemporaryNotification("❌ Erreur export", "error");
+  }
+}
+async function genererFactureClientParAnnee() {
+  try {
+    const client = currentClientData;
+    let ventesClient = currentClientVentes;
+    if (currentFilterYear !== "all")
+      ventesClient = ventesClient.filter(
+        (v) => parseDate(v.date).getFullYear() === parseInt(currentFilterYear),
+      );
+    if (ventesClient.length === 0) {
+      showTemporaryNotification("Aucune vente pour cette période", "error");
+      return;
+    }
+    if (typeof window.jspdf === "undefined") {
+      showTemporaryNotification("❌ Erreur PDF", "error");
+      return;
+    }
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    const w = doc.internal.pageSize.getWidth();
+    const m = 20;
+    const rt = w - m;
+    let totalGeneral = 0;
+    const ventesParMois = {};
+    ventesClient.forEach((vente) => {
+      const date = parseDate(vente.date);
+      const moisKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+      const moisNom = date.toLocaleDateString("fr-FR", {
+        month: "long",
+        year: "numeric",
+      });
+      const vn = nettoyerVente(vente);
+      totalGeneral += vn.total;
+      if (!ventesParMois[moisKey])
+        ventesParMois[moisKey] = { nom: moisNom, total: 0, nbVentes: 0 };
+      ventesParMois[moisKey].total += vn.total;
+      ventesParMois[moisKey].nbVentes++;
+    });
+    const remiseTotale = totalGeneral * 0.05;
+    const netTotal = totalGeneral - remiseTotale;
+    const dateFacture = new Date().toLocaleString("fr-FR");
+    const titrePeriode =
+      currentFilterYear !== "all"
+        ? `Année ${currentFilterYear}`
+        : "Toutes les années";
+    doc.setFontSize(18);
+    doc.setFont("helvetica", "bold");
+    doc.text("FACTURE RÉCAPITULATIVE", w / 2, 20, { align: "center" });
+    doc.setFontSize(10);
+    doc.text(`Période: ${titrePeriode}`, w / 2, 28, { align: "center" });
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    doc.text("VentesPro SARL", m, 40);
+    doc.text("Kinshasa, RDC", m, 48);
+    doc.text(`Date: ${dateFacture}`, rt - 40, 40, { align: "right" });
+    doc.line(m, 55, rt, 55);
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "bold");
+    doc.text("Client :", m, 68);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.text(client.nom, m + 30, 68);
+    doc.text(`Téléphone: ${client.telephone}`, m, 75);
+    doc.text(`ID Client: ${client.id}`, m, 82);
+    doc.line(m, 90, rt, 90);
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "bold");
+    doc.text("Récapitulatif par mois", m, 102);
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "bold");
+    doc.text("Mois", m, 112);
+    doc.text("Nb ventes", 80, 112);
+    doc.text("Total", 130, 112);
+    doc.text("Remise 5%", 160, 112);
+    doc.line(m, 114, rt, 114);
+    let y = 122;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    for (const [key, mois] of Object.entries(ventesParMois)) {
+      const remiseMois = mois.total * 0.05;
+      doc.text(mois.nom, m, y);
+      doc.text(mois.nbVentes.toString(), 80, y);
+      doc.text(`${formatNumberFC(mois.total)} FC`, 130, y);
+      doc.text(`${formatNumberFC(remiseMois)} FC`, 160, y);
+      y += 7;
+      if (y > 250) {
+        doc.addPage();
+        y = 20;
+      }
+    }
+    y += 10;
+    doc.line(m, y, rt, y);
+    y += 8;
+    doc.setFont("helvetica", "bold");
+    doc.text("TOTAL GÉNÉRAL :", m, y);
+    doc.text(`${formatNumberFC(totalGeneral)} FC`, 130, y);
+    y += 7;
+    doc.text("Remise globale (5%) :", m, y);
+    doc.text(`-${formatNumberFC(remiseTotale)} FC`, 130, y);
+    y += 10;
+    doc.setFontSize(14);
+    doc.setTextColor(76, 175, 80);
+    doc.text("NET À PAYER :", m, y);
+    doc.text(`${formatNumberFC(netTotal)} FC`, 130, y);
+    doc.setFontSize(8);
+    doc.setTextColor(100, 100, 100);
+    doc.text("Merci de votre confiance !", w / 2, 280, { align: "center" });
+    const suffixeFichier =
+      currentFilterYear !== "all" ? `_${currentFilterYear}` : "";
+    doc.save(
+      `facture_client_${client.nom.replace(/\s/g, "_")}${suffixeFichier}.pdf`,
+    );
+    showTemporaryNotification("✅ Facture générée");
+  } catch (error) {
+    showTemporaryNotification(`❌ Erreur: ${error.message}`, "error");
+  }
+}
+window.showClientDetails = showClientDetails;
+window.filterClientYear = filterClientYear;
+window.exporterHistoriqueClientFiltre = exporterHistoriqueClientFiltre;
+window.genererFactureClientParAnnee = genererFactureClientParAnnee;
+window.genererFactureVente = async function (venteId, clientId) {
+  try {
+    const v = await (await fetch(`${VENTES_URL}/${venteId}`)).json();
+    const c = await (await fetch(`${CLIENTS_URL}/${String(clientId)}`)).json();
+    genererFacturePanier(v, c);
+  } catch (e) {
+    showTemporaryNotification("❌ Erreur", "error");
+  }
+};
 
 // ============================================
 // API PRODUITS (suite)
@@ -1536,12 +1835,15 @@ function displayClientsTable() {
   tbody.innerHTML = "";
   if (clientsToShow.length === 0) {
     tbody.innerHTML =
-      '<tr><td colspan="4" class="px-4 py-8 text-center text-gray-400">Aucun client trouvé</td><table>';
+      '<tr><td colspan="4" class="px-4 py-8 text-center text-gray-400">Aucun client trouvé</td></tr>';
   } else {
     clientsToShow.forEach((client) => {
       const tr = document.createElement("tr");
       tr.className = "border-b border-gray-100 hover:bg-gray-50";
-      tr.innerHTML = `<td class="px-4 py-3 text-sm font-mono">${client.id}<\/td><td class="px-4 py-3 text-sm">${escapeHtml(client.nom)}<\/td><td class="px-4 py-3 text-sm">${escapeHtml(client.telephone)}<\/td><td class="px-4 py-3 text-sm text-center"><button onclick="fillVenteForm('${client.id}')" class="bg-emerald-600 text-white px-3 py-1 rounded text-xs hover:bg-emerald-700 mr-2 transition">🛒 Vendre</button><button class="edit-client-btn text-blue-600 hover:text-blue-800 mr-3 transition" data-id="${client.id}" data-nom="${escapeHtml(client.nom)}" data-telephone="${escapeHtml(client.telephone)}"><i class="fas fa-edit"></i> Modifier</button><button class="delete-client-btn text-red-600 hover:text-red-800 transition" data-id="${client.id}" data-nom="${escapeHtml(client.nom)}"><i class="fas fa-trash"></i> Supprimer</button><\/td>`;
+      tr.innerHTML = `<td class="px-4 py-3 text-sm font-mono">${client.id}<\/td>
+                      <td class="px-4 py-3 text-sm"><button onclick="showClientDetails('${client.id}')" class="text-blue-600 hover:text-blue-800 hover:underline font-medium">${escapeHtml(client.nom)}<\/button><\/td>
+                      <td class="px-4 py-3 text-sm">${escapeHtml(client.telephone)}<\/td>
+                      <td class="px-4 py-3 text-sm text-center"><button onclick="fillVenteForm('${client.id}')" class="bg-emerald-600 text-white px-3 py-1 rounded text-xs hover:bg-emerald-700 mr-2 transition">🛒 Vendre</button><button class="edit-client-btn text-blue-600 hover:text-blue-800 mr-3 transition" data-id="${client.id}" data-nom="${escapeHtml(client.nom)}" data-telephone="${escapeHtml(client.telephone)}"><i class="fas fa-edit"></i> Modifier</button><button class="delete-client-btn text-red-600 hover:text-red-800 transition" data-id="${client.id}" data-nom="${escapeHtml(client.nom)}"><i class="fas fa-trash"></i> Supprimer</button><\/td>`;
       tbody.appendChild(tr);
     });
   }
@@ -1856,15 +2158,6 @@ window.showVenteDetail = async function (venteId) {
       "fixed inset-0 bg-black/50 z-50 flex items-center justify-center";
     modal.innerHTML = `<div class="bg-white rounded-xl shadow-xl max-w-md w-full mx-4 animate-fadeIn"><div class="px-6 py-4 border-b bg-gradient-to-r from-blue-50 to-white"><h3 class="text-lg font-semibold text-blue-800"><i class="fas fa-receipt text-blue-600 mr-2"></i> Détails de la vente</h3></div><div class="p-6 space-y-3"><div class="grid grid-cols-2 gap-2 text-sm"><p class="text-gray-500">🆔 ID Vente :</p><p class="font-mono font-medium">${vente.id}</p><p class="text-gray-500">👤 Client :</p><p class="font-medium">${escapeHtml(clientNom)}</p><p class="text-gray-500">🆔 ID Client :</p><p class="font-mono">${vente.clientId}</p></div><div class="border-t border-gray-100 pt-3"><p class="text-gray-500 text-sm mb-2">📦 Produits :</p><ul class="space-y-1 max-h-48 overflow-y-auto">${produitsHtml || '<li class="text-gray-400 text-center py-2">Aucun produit</li>'}</ul></div><div class="border-t border-gray-100 pt-3"><div class="flex justify-between items-center"><span class="text-gray-500">📊 Total articles :</span><span class="font-semibold">${totalArticles}</span></div><div class="flex justify-between items-center mt-2"><span class="text-gray-500">💰 Montant total :</span><span class="text-xl font-bold text-emerald-600">${formatNumberFC(total)} FC</span></div><div class="flex justify-between items-center mt-2"><span class="text-gray-500">📅 Date :</span><span class="text-sm">${formatDate(vente.date)}</span></div></div></div><div class="px-6 py-4 border-t flex justify-end gap-3"><button onclick="genererFactureVente('${vente.id}', '${vente.clientId}')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg transition text-sm"><i class="fas fa-print mr-1"></i> Imprimer facture</button><button onclick="this.closest('.fixed').remove()" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg transition text-sm">Fermer</button></div></div>`;
     document.body.appendChild(modal);
-  } catch (e) {
-    showTemporaryNotification("❌ Erreur", "error");
-  }
-};
-window.genererFactureVente = async function (venteId, clientId) {
-  try {
-    const v = await (await fetch(`${VENTES_URL}/${venteId}`)).json();
-    const c = await (await fetch(`${CLIENTS_URL}/${String(clientId)}`)).json();
-    genererFacturePanier(v, c);
   } catch (e) {
     showTemporaryNotification("❌ Erreur", "error");
   }
