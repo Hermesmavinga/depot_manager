@@ -269,6 +269,11 @@
       "nom": "beni lomako",
       "telephone": "+243 828 790 728",
       "id": "RFM245i"
+    },
+    {
+      "nom": "aline",
+      "telephone": "+243 828 790 728",
+      "id": "ZLO_Xt8"
     }
   ],
   "produits": [
@@ -1351,6 +1356,20 @@
       "total": 2500,
       "date": "2026-05-12T12:09:05.683Z",
       "id": "mukZpjw"
+    },
+    {
+      "clientId": "ZLO_Xt8",
+      "produits": [
+        {
+          "nom": "Nkoy",
+          "quantite": 1,
+          "prix": 2500,
+          "type": "bouteille"
+        }
+      ],
+      "total": 2500,
+      "date": "2026-05-13T12:36:19.338Z",
+      "id": "x2UWNHY"
     }
   ],
   "achats": [
@@ -1395,6 +1414,30 @@
       "mois": 5,
       "annee": 2026,
       "id": 4
+    },
+    {
+      "fournisseur": "BRALIMA",
+      "produit": "Primus",
+      "quantite": 1,
+      "prixUnitaire": 60000,
+      "total": 60000,
+      "statut": "actif",
+      "date": "2026-05-13T12:34:36.030Z",
+      "mois": 5,
+      "annee": 2026,
+      "id": 5
+    },
+    {
+      "fournisseur": "BRALIMA",
+      "produit": "Heimeken",
+      "quantite": 1,
+      "prixUnitaire": 80000,
+      "total": 80000,
+      "statut": "actif",
+      "date": "2026-05-13T12:34:50.651Z",
+      "mois": 5,
+      "annee": 2026,
+      "id": 6
     }
   ],
   "$schema": "./node_modules/json-server/schema.json"

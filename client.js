@@ -2821,7 +2821,7 @@ function afficherListeAchats(
                 <td class="px-4 py-3 text-right">${formatNumberFC(achat.prixUnitaire)} FC</td>
                 <td class="px-4 py-3 text-right font-bold text-emerald-600">${formatNumberFC(achat.total)} FC</td>
                 <td class="px-4 py-3 text-center"><span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-700">Actif</span></td>
-              </tr>`;
+               </tr>`;
     })
     .join("");
 
@@ -2842,23 +2842,39 @@ function mettreAJourStatsAchats() {
 
   let totalGlobal = 0;
   let totalRemise = 0;
+  let totalNbAchats = 0;
+
+  const statsFournisseur = {
+    BRACONGO: { total: 0, remise: 0, net: 0, nb: 0 },
+    BRALIMA: { total: 0, remise: 0, net: 0, nb: 0 },
+  };
 
   ["BRACONGO", "BRALIMA"].forEach((fournisseur) => {
-    const stats = calculerTotalMois(fournisseur, moisActuel, anneeActuelle);
-    totalGlobal += stats.total;
-    totalRemise += stats.remise;
-  });
+    const achatsMois = achats[fournisseur].filter(
+      (a) =>
+        a.statut === "actif" &&
+        new Date(a.date).getMonth() + 1 === moisActuel &&
+        new Date(a.date).getFullYear() === anneeActuelle,
+    );
 
-  const nbAchats =
-    achats.BRACONGO.filter((a) => a.statut === "actif").length +
-    achats.BRALIMA.filter((a) => a.statut === "actif").length;
+    const total = achatsMois.reduce((sum, a) => sum + a.total, 0);
+    const remise = total * 0.05;
+    const net = total - remise;
+    const nb = achatsMois.length;
+
+    statsFournisseur[fournisseur] = { total, remise, net, nb };
+
+    totalGlobal += total;
+    totalRemise += remise;
+    totalNbAchats += nb;
+  });
 
   const statTotalAchats = document.getElementById("statTotalAchats");
   const statMontantAchats = document.getElementById("statMontantAchats");
   const statRemiseMois = document.getElementById("statRemiseMois");
   const statNetAPayer = document.getElementById("statNetAPayer");
 
-  if (statTotalAchats) statTotalAchats.textContent = nbAchats;
+  if (statTotalAchats) statTotalAchats.textContent = totalNbAchats;
   if (statMontantAchats)
     statMontantAchats.textContent = formatNumberFC(totalGlobal) + " FC";
   if (statRemiseMois)
@@ -2866,6 +2882,38 @@ function mettreAJourStatsAchats() {
   if (statNetAPayer)
     statNetAPayer.textContent =
       formatNumberFC(totalGlobal - totalRemise) + " FC";
+
+  const bracongoNb = document.getElementById("statBracongoNb");
+  const bracongoMontant = document.getElementById("statBracongoMontant");
+  const bracongoRemise = document.getElementById("statBracongoRemise");
+  const bracongoNet = document.getElementById("statBracongoNet");
+
+  if (bracongoNb) bracongoNb.textContent = statsFournisseur.BRACONGO.nb;
+  if (bracongoMontant)
+    bracongoMontant.textContent =
+      formatNumberFC(statsFournisseur.BRACONGO.total) + " FC";
+  if (bracongoRemise)
+    bracongoRemise.textContent =
+      formatNumberFC(statsFournisseur.BRACONGO.remise) + " FC";
+  if (bracongoNet)
+    bracongoNet.textContent =
+      formatNumberFC(statsFournisseur.BRACONGO.net) + " FC";
+
+  const bralimaNb = document.getElementById("statBralimaNb");
+  const bralimaMontant = document.getElementById("statBralimaMontant");
+  const bralimaRemise = document.getElementById("statBralimaRemise");
+  const bralimaNet = document.getElementById("statBralimaNet");
+
+  if (bralimaNb) bralimaNb.textContent = statsFournisseur.BRALIMA.nb;
+  if (bralimaMontant)
+    bralimaMontant.textContent =
+      formatNumberFC(statsFournisseur.BRALIMA.total) + " FC";
+  if (bralimaRemise)
+    bralimaRemise.textContent =
+      formatNumberFC(statsFournisseur.BRALIMA.remise) + " FC";
+  if (bralimaNet)
+    bralimaNet.textContent =
+      formatNumberFC(statsFournisseur.BRALIMA.net) + " FC";
 }
 
 function initPanierAchat(fournisseur) {
@@ -3178,11 +3226,71 @@ function initAchatsTabs() {
   }
 }
 
+function handleNouvelAchat() {
+  const activeFournisseur =
+    document.querySelector(".fournisseur-tab.active")?.dataset.fournisseur ||
+    "BRACONGO";
+
+  if (activeFournisseur === "BRACONGO") {
+    const bracongoAddTab = document.getElementById("bracongoAddTab");
+    const bracongoListeTab = document.getElementById("bracongoListeTab");
+    const bracongoListeContainer = document.getElementById(
+      "bracongoListeContainer",
+    );
+    const bracongoAddContainer = document.getElementById(
+      "bracongoAddContainer",
+    );
+
+    if (bracongoAddTab && bracongoListeTab) {
+      bracongoAddTab.classList.add(
+        "active",
+        "text-blue-600",
+        "border-blue-500",
+      );
+      bracongoListeTab.classList.remove(
+        "active",
+        "text-blue-600",
+        "border-blue-500",
+      );
+      bracongoListeTab.classList.add("text-gray-600");
+      if (bracongoListeContainer)
+        bracongoListeContainer.classList.add("hidden");
+      if (bracongoAddContainer) bracongoAddContainer.classList.remove("hidden");
+      initSelecteursProduitsAchats();
+    }
+  } else {
+    const bralimaAddTab = document.getElementById("bralimaAddTab");
+    const bralimaListeTab = document.getElementById("bralimaListeTab");
+    const bralimaListeContainer = document.getElementById(
+      "bralimaListeContainer",
+    );
+    const bralimaAddContainer = document.getElementById("bralimaAddContainer");
+
+    if (bralimaAddTab && bralimaListeTab) {
+      bralimaAddTab.classList.add("active", "text-blue-600", "border-blue-500");
+      bralimaListeTab.classList.remove(
+        "active",
+        "text-blue-600",
+        "border-blue-500",
+      );
+      bralimaListeTab.classList.add("text-gray-600");
+      if (bralimaListeContainer) bralimaListeContainer.classList.add("hidden");
+      if (bralimaAddContainer) bralimaAddContainer.classList.remove("hidden");
+      initSelecteursProduitsAchats();
+    }
+  }
+}
+
 async function initModuleAchats() {
   await chargerAchats();
   mettreAJourStatsAchats();
   afficherListeAchats("BRACONGO");
   afficherListeAchats("BRALIMA");
+
+  const nouvelAchatBtn = document.getElementById("nouvelAchatBtn");
+  if (nouvelAchatBtn) {
+    nouvelAchatBtn.addEventListener("click", handleNouvelAchat);
+  }
 
   const bracongoAjouterBtn = document.getElementById(
     "bracongoAjouterPanierBtn",
@@ -3317,10 +3425,6 @@ async function initModuleAchats() {
   }
 
   initAchatsTabs();
-
-  setInterval(() => {
-    mettreAJourStatsAchats();
-  }, 60000);
 }
 
 // ============================================
