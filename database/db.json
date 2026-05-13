@@ -266,9 +266,9 @@
       "id": "iVYomCu"
     },
     {
-      "nom": "kitoko",
+      "nom": "beni lomako",
       "telephone": "+243 828 790 728",
-      "id": "J_qRLqo"
+      "id": "RFM245i"
     }
   ],
   "produits": [
@@ -1323,6 +1323,34 @@
       "total": 5000,
       "date": "2026-05-09T17:00:12.897Z",
       "id": "gkFX8UL"
+    },
+    {
+      "clientId": "1",
+      "produits": [
+        {
+          "nom": "Nkoy",
+          "quantite": 1,
+          "prix": 2500,
+          "type": "bouteille"
+        }
+      ],
+      "total": 2500,
+      "date": "2026-05-11T22:29:29.704Z",
+      "id": "QhDtRhu"
+    },
+    {
+      "clientId": "RFM245i",
+      "produits": [
+        {
+          "nom": "Nkoy",
+          "quantite": 1,
+          "prix": 2500,
+          "type": "bouteille"
+        }
+      ],
+      "total": 2500,
+      "date": "2026-05-12T12:09:05.683Z",
+      "id": "mukZpjw"
     }
   ],
   "achats": [
@@ -1355,6 +1383,18 @@
       "total": 400000,
       "date": "2026-05-09",
       "id": 3
+    },
+    {
+      "fournisseur": "BRACONGO",
+      "produit": "Nkoy",
+      "quantite": 1,
+      "prixUnitaire": 2500,
+      "total": 2500,
+      "statut": "actif",
+      "date": "2026-05-13T11:38:31.642Z",
+      "mois": 5,
+      "annee": 2026,
+      "id": 4
     }
   ],
   "$schema": "./node_modules/json-server/schema.json"

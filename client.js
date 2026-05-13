@@ -11,6 +11,7 @@ const API_BASE_URL = isLocal
 const CLIENTS_URL = `${API_BASE_URL}/clients`;
 const VENTES_URL = `${API_BASE_URL}/ventes`;
 const PRODUITS_URL = `${API_BASE_URL}/produits`;
+const ACHATS_URL = `${API_BASE_URL}/achats`;
 
 // ============================================
 // VARIABLES GLOBALES
@@ -35,6 +36,19 @@ let currentClientVentes = [];
 let currentFilterYear = "all";
 
 // ============================================
+// VARIABLES POUR LES ACHATS
+// ============================================
+let achats = {
+  BRACONGO: [],
+  BRALIMA: [],
+};
+let panierAchats = {
+  BRACONGO: [],
+  BRALIMA: [],
+};
+let currentFournisseurAchat = "BRACONGO";
+
+// ============================================
 // REDIRECTION VERS LA SECTION VENTES
 // ============================================
 function redirectToVente(clientId = null) {
@@ -50,6 +64,7 @@ function redirectToVente(clientId = null) {
     ventes: document.getElementById("ventesSection"),
     historique: document.getElementById("historiqueSection"),
     rapports: document.getElementById("rapportsSection"),
+    achats: document.getElementById("achatsSection"),
   };
   if (ventesNavItem) {
     navItems.forEach((nav) => {
@@ -212,6 +227,7 @@ const sections = {
   ventes: document.getElementById("ventesSection"),
   historique: document.getElementById("historiqueSection"),
   rapports: document.getElementById("rapportsSection"),
+  achats: document.getElementById("achatsSection"),
 };
 const sidebar = document.getElementById("sidebar");
 const mobileMenuBtn = document.getElementById("mobileMenuBtn");
@@ -1118,7 +1134,7 @@ window.genererFactureVente = async function (venteId, clientId) {
 };
 
 // ============================================
-// API PRODUITS (suite)
+// API PRODUITS
 // ============================================
 async function chargerProduits() {
   try {
@@ -1179,7 +1195,7 @@ async function supprimerProduitAPI(id) {
 }
 
 // ============================================
-// UI PRODUITS (raccourcie)
+// UI PRODUITS
 // ============================================
 const tabBracongo = document.getElementById("tabBracongo");
 const tabBralima = document.getElementById("tabBralima");
@@ -1643,7 +1659,7 @@ function initGestionProduits() {
 }
 
 // ============================================
-// CLIENTS (raccourcie)
+// CLIENTS
 // ============================================
 const button = document.getElementById("searchBtn");
 const clientIdInput = document.getElementById("clientId");
@@ -2641,6 +2657,673 @@ function exportToCSV(ventes, client) {
 }
 
 // ============================================
+// MODULE ACHATS AVEC API (SYNCHRONISÉ)
+// ============================================
+
+async function chargerAchats() {
+  try {
+    const response = await fetch(ACHATS_URL);
+    if (!response.ok) throw new Error("Erreur chargement achats");
+    const achatsData = await response.json();
+
+    achats = {
+      BRACONGO: [],
+      BRALIMA: [],
+    };
+
+    achatsData.forEach((achat) => {
+      if (achat.fournisseur === "BRACONGO") {
+        achats.BRACONGO.push(achat);
+      } else if (achat.fournisseur === "BRALIMA") {
+        achats.BRALIMA.push(achat);
+      }
+    });
+
+    return achats;
+  } catch (error) {
+    console.error("Erreur chargement achats:", error);
+    return { BRACONGO: [], BRALIMA: [] };
+  }
+}
+
+async function ajouterAchat(fournisseur, item) {
+  const nouvelAchat = {
+    fournisseur: fournisseur,
+    produit: item.nom,
+    quantite: item.quantite,
+    prixUnitaire: item.prix,
+    total: item.quantite * item.prix,
+    statut: "actif",
+    date: new Date().toISOString(),
+    mois: new Date().getMonth() + 1,
+    annee: new Date().getFullYear(),
+  };
+
+  try {
+    const response = await fetch(ACHATS_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(nouvelAchat),
+    });
+
+    if (!response.ok) throw new Error("Erreur ajout achat");
+
+    const achatCree = await response.json();
+    achats[fournisseur].push(achatCree);
+    return achatCree;
+  } catch (error) {
+    console.error("Erreur:", error);
+    showTemporaryNotification("❌ Erreur lors de l'ajout de l'achat", "error");
+    return null;
+  }
+}
+
+async function archiverMois(fournisseur, mois, annee) {
+  try {
+    const response = await fetch(ACHATS_URL);
+    const tousAchats = await response.json();
+
+    const achatsArchiver = tousAchats.filter(
+      (a) =>
+        a.fournisseur === fournisseur &&
+        new Date(a.date).getMonth() + 1 === mois &&
+        new Date(a.date).getFullYear() === annee &&
+        a.statut === "actif",
+    );
+
+    if (achatsArchiver.length === 0) {
+      showTemporaryNotification(
+        `📭 Aucun achat à archiver pour ${mois}/${annee}`,
+        "error",
+      );
+      return false;
+    }
+
+    const total = achatsArchiver.reduce((sum, a) => sum + a.total, 0);
+    const remise = total * 0.05;
+
+    for (const achat of achatsArchiver) {
+      await fetch(`${ACHATS_URL}/${achat.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...achat, statut: "archive" }),
+      });
+    }
+
+    await chargerAchats();
+
+    showTemporaryNotification(
+      `✅ Mois ${mois}/${annee} archivé ! Remise : ${formatNumberFC(remise)} FC`,
+    );
+    return true;
+  } catch (error) {
+    console.error("Erreur archivage:", error);
+    showTemporaryNotification("❌ Erreur lors de l'archivage", "error");
+    return false;
+  }
+}
+
+function calculerTotalMois(fournisseur, mois, annee) {
+  const achatsMois = achats[fournisseur].filter(
+    (a) =>
+      a.statut === "actif" &&
+      new Date(a.date).getMonth() + 1 === mois &&
+      new Date(a.date).getFullYear() === annee,
+  );
+  const total = achatsMois.reduce((sum, a) => sum + a.total, 0);
+  const remise = total * 0.05;
+  return { total, remise, net: total - remise };
+}
+
+function afficherListeAchats(
+  fournisseur,
+  moisFiltre = null,
+  anneeFiltre = null,
+) {
+  const tbody = document.getElementById(
+    `${fournisseur.toLowerCase()}AchatsBody`,
+  );
+  const footer = document.getElementById(
+    `${fournisseur.toLowerCase()}AchatsFooter`,
+  );
+
+  if (!tbody) return;
+
+  let achatsFiltres = achats[fournisseur].filter((a) => a.statut === "actif");
+
+  if (moisFiltre && anneeFiltre) {
+    achatsFiltres = achatsFiltres.filter((a) => {
+      const dateAchat = new Date(a.date);
+      return (
+        dateAchat.getMonth() + 1 === moisFiltre &&
+        dateAchat.getFullYear() === anneeFiltre
+      );
+    });
+  }
+
+  if (achatsFiltres.length === 0) {
+    tbody.innerHTML =
+      '<tr><td colspan="6" class="text-center py-8 text-gray-400">📭 Aucun achat trouvé</td></tr>';
+    if (footer) footer.classList.add("hidden");
+    return;
+  }
+
+  let totalGeneral = 0;
+  tbody.innerHTML = achatsFiltres
+    .sort((a, b) => new Date(b.date) - new Date(a.date))
+    .map((achat, idx) => {
+      totalGeneral += achat.total;
+      const date = new Date(achat.date);
+      return `<tr class="${idx % 2 === 0 ? "bg-white" : "bg-gray-50"}">
+                <td class="px-4 py-3 text-sm">${date.toLocaleDateString("fr-FR")}</td>
+                <td class="px-4 py-3 font-medium">${escapeHtml(achat.produit)}</td>
+                <td class="px-4 py-3 text-center">${achat.quantite}</td>
+                <td class="px-4 py-3 text-right">${formatNumberFC(achat.prixUnitaire)} FC</td>
+                <td class="px-4 py-3 text-right font-bold text-emerald-600">${formatNumberFC(achat.total)} FC</td>
+                <td class="px-4 py-3 text-center"><span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-700">Actif</span></td>
+              </tr>`;
+    })
+    .join("");
+
+  if (footer) {
+    footer.classList.remove("hidden");
+    const footerTotal = document.getElementById(
+      `${fournisseur.toLowerCase()}FooterTotal`,
+    );
+    if (footerTotal)
+      footerTotal.textContent = formatNumberFC(totalGeneral) + " FC";
+  }
+}
+
+function mettreAJourStatsAchats() {
+  const now = new Date();
+  const moisActuel = now.getMonth() + 1;
+  const anneeActuelle = now.getFullYear();
+
+  let totalGlobal = 0;
+  let totalRemise = 0;
+
+  ["BRACONGO", "BRALIMA"].forEach((fournisseur) => {
+    const stats = calculerTotalMois(fournisseur, moisActuel, anneeActuelle);
+    totalGlobal += stats.total;
+    totalRemise += stats.remise;
+  });
+
+  const nbAchats =
+    achats.BRACONGO.filter((a) => a.statut === "actif").length +
+    achats.BRALIMA.filter((a) => a.statut === "actif").length;
+
+  const statTotalAchats = document.getElementById("statTotalAchats");
+  const statMontantAchats = document.getElementById("statMontantAchats");
+  const statRemiseMois = document.getElementById("statRemiseMois");
+  const statNetAPayer = document.getElementById("statNetAPayer");
+
+  if (statTotalAchats) statTotalAchats.textContent = nbAchats;
+  if (statMontantAchats)
+    statMontantAchats.textContent = formatNumberFC(totalGlobal) + " FC";
+  if (statRemiseMois)
+    statRemiseMois.textContent = formatNumberFC(totalRemise) + " FC";
+  if (statNetAPayer)
+    statNetAPayer.textContent =
+      formatNumberFC(totalGlobal - totalRemise) + " FC";
+}
+
+function initPanierAchat(fournisseur) {
+  const container = document.getElementById(
+    `${fournisseur.toLowerCase()}Panier`,
+  );
+  const panierActuel = panierAchats[fournisseur];
+
+  if (!container) return;
+
+  if (panierActuel.length === 0) {
+    container.innerHTML =
+      '<div class="text-center text-gray-400 py-4"><i class="fas fa-shopping-cart text-3xl mb-2 block"></i>Panier vide</div>';
+    return;
+  }
+
+  let total = 0;
+  let html = '<div class="space-y-2">';
+  panierActuel.forEach((item, index) => {
+    const sousTotal = item.prix * item.quantite;
+    total += sousTotal;
+    html += `<div class="flex justify-between items-center p-3 bg-white rounded-lg border border-gray-200">
+                <div>
+                  <span class="font-medium">${escapeHtml(item.nom)}</span>
+                  <div class="text-sm text-gray-500">${item.quantite} x ${formatNumberFC(item.prix)} FC</div>
+                </div>
+                <div class="text-right">
+                  <div class="font-bold text-emerald-600">${formatNumberFC(sousTotal)} FC</div>
+                  <button onclick="supprimerDuPanierAchat('${fournisseur}', ${index})" class="text-red-500 hover:text-red-700 text-xs">Supprimer</button>
+                </div>
+              </div>`;
+  });
+  html += `<div class="mt-3 pt-2 border-t text-right"><strong class="text-lg">Total: ${formatNumberFC(total)} FC</strong></div></div>`;
+  container.innerHTML = html;
+}
+
+window.supprimerDuPanierAchat = function (fournisseur, index) {
+  panierAchats[fournisseur].splice(index, 1);
+  initPanierAchat(fournisseur);
+};
+
+function ajouterAuPanierAchat(fournisseur) {
+  const produitSelect = document.getElementById(
+    `${fournisseur.toLowerCase()}ProduitSelect`,
+  );
+  const quantite = parseInt(
+    document.getElementById(`${fournisseur.toLowerCase()}Quantite`).value,
+  );
+
+  if (!produitSelect || !produitSelect.value) {
+    showTemporaryNotification("❌ Veuillez sélectionner un produit", "error");
+    return;
+  }
+
+  const [type, nom] = produitSelect.value.split("|");
+  let prix = 0;
+
+  if (type === "bouteille") {
+    if (produits[fournisseur].bouteille[nom]) {
+      prix = produits[fournisseur].bouteille[nom].prix;
+    }
+  } else if (type === "cassier") {
+    if (produits[fournisseur].cassier[nom]) {
+      prix = produits[fournisseur].cassier[nom].prixCassier;
+    }
+  }
+
+  if (prix === 0) {
+    showTemporaryNotification("❌ Prix non trouvé", "error");
+    return;
+  }
+
+  panierAchats[fournisseur].push({ nom, quantite, prix, type });
+  initPanierAchat(fournisseur);
+  showTemporaryNotification(`✅ ${nom} ajouté au panier`);
+
+  if (produitSelect) produitSelect.value = "";
+  const quantiteInput = document.getElementById(
+    `${fournisseur.toLowerCase()}Quantite`,
+  );
+  if (quantiteInput) quantiteInput.value = "1";
+}
+
+async function validerAchat(fournisseur) {
+  const panierActuel = panierAchats[fournisseur];
+
+  if (panierActuel.length === 0) {
+    showTemporaryNotification("❌ Panier vide", "error");
+    return;
+  }
+
+  let total = 0;
+  for (const item of panierActuel) {
+    await ajouterAchat(fournisseur, item);
+    total += item.prix * item.quantite;
+  }
+
+  panierAchats[fournisseur] = [];
+  initPanierAchat(fournisseur);
+  await chargerAchats();
+  afficherListeAchats(fournisseur);
+  mettreAJourStatsAchats();
+
+  showTemporaryNotification(
+    `✅ Achat validé ! Total: ${formatNumberFC(total)} FC`,
+  );
+}
+
+function exporterAchatsCSV(fournisseur, mois = null, annee = null) {
+  let achatsExporter = achats[fournisseur].filter((a) => a.statut === "actif");
+
+  if (mois && annee) {
+    achatsExporter = achatsExporter.filter((a) => {
+      const dateAchat = new Date(a.date);
+      return (
+        dateAchat.getMonth() + 1 === mois && dateAchat.getFullYear() === annee
+      );
+    });
+  }
+
+  if (achatsExporter.length === 0) {
+    showTemporaryNotification("📭 Aucune donnée à exporter", "error");
+    return;
+  }
+
+  const stats =
+    mois && annee ? calculerTotalMois(fournisseur, mois, annee) : null;
+  const separator = ";";
+  const headers = [
+    "Date",
+    "Produit",
+    "Quantité",
+    "Prix unitaire (FC)",
+    "Total (FC)",
+  ];
+  const rows = achatsExporter.map((a) => [
+    new Date(a.date).toLocaleDateString("fr-FR"),
+    a.produit,
+    a.quantite,
+    a.prixUnitaire,
+    a.total,
+  ]);
+
+  let csvContent = [headers, ...rows]
+    .map((row) => row.join(separator))
+    .join("\n");
+
+  if (stats) {
+    csvContent += `\n\n"Total général","${stats.total} FC"`;
+    csvContent += `\n"Remise 5%","${stats.remise} FC"`;
+    csvContent += `\n"Net à payer","${stats.net} FC"`;
+  }
+
+  const blob = new Blob(["\uFEFF" + csvContent], {
+    type: "text/csv;charset=utf-8;",
+  });
+  const link = document.createElement("a");
+  const url = URL.createObjectURL(blob);
+  link.href = url;
+  const suffixe = mois && annee ? `_${mois}_${annee}` : "";
+  link.download = `achats_${fournisseur.toLowerCase()}${suffixe}.csv`;
+  link.click();
+  URL.revokeObjectURL(url);
+  showTemporaryNotification("📥 Export CSV effectué");
+}
+
+function initSelecteursProduitsAchats() {
+  ["BRACONGO", "BRALIMA"].forEach((fournisseur) => {
+    const select = document.getElementById(
+      `${fournisseur.toLowerCase()}ProduitSelect`,
+    );
+    if (!select) return;
+
+    select.innerHTML =
+      '<option value="">-- Sélectionner un produit --</option>';
+
+    const bouteilleGroup = document.createElement("optgroup");
+    bouteilleGroup.label = "🍾 Bouteilles";
+    Object.entries(produits[fournisseur].bouteille).forEach(([nom, data]) => {
+      const option = document.createElement("option");
+      option.value = `bouteille|${nom}`;
+      option.textContent = `${nom} (${data.format}) - ${formatNumberFC(data.prix)} FC`;
+      bouteilleGroup.appendChild(option);
+    });
+    select.appendChild(bouteilleGroup);
+
+    const cassierGroup = document.createElement("optgroup");
+    cassierGroup.label = "📦 Cassiers";
+    Object.entries(produits[fournisseur].cassier).forEach(([nom, data]) => {
+      const option = document.createElement("option");
+      option.value = `cassier|${nom}`;
+      option.textContent = `${nom} (${data.format}) - ${formatNumberFC(data.prixCassier)} FC (${data.nbBouteilles} bouteilles)`;
+      cassierGroup.appendChild(option);
+    });
+    select.appendChild(cassierGroup);
+  });
+}
+
+function initAchatsTabs() {
+  const fournisseurBtns = document.querySelectorAll(".fournisseur-tab");
+  const bracongoContainer = document.getElementById("bracongoAchatsContainer");
+  const bralimaContainer = document.getElementById("bralimaAchatsContainer");
+
+  fournisseurBtns.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      fournisseurBtns.forEach((b) => {
+        b.classList.remove("border-blue-600", "text-blue-600");
+        b.classList.add("text-gray-600", "border-transparent");
+      });
+      btn.classList.add("border-blue-600", "text-blue-600");
+      btn.classList.remove("text-gray-600", "border-transparent");
+
+      const fournisseur = btn.dataset.fournisseur;
+      currentFournisseurAchat = fournisseur;
+
+      if (fournisseur === "BRACONGO") {
+        bracongoContainer.classList.remove("hidden");
+        bralimaContainer.classList.add("hidden");
+      } else {
+        bracongoContainer.classList.add("hidden");
+        bralimaContainer.classList.remove("hidden");
+      }
+    });
+  });
+
+  const bracongoListeTab = document.getElementById("bracongoListeTab");
+  const bracongoAddTab = document.getElementById("bracongoAddTab");
+  const bracongoListeContainer = document.getElementById(
+    "bracongoListeContainer",
+  );
+  const bracongoAddContainer = document.getElementById("bracongoAddContainer");
+
+  if (bracongoListeTab) {
+    bracongoListeTab.addEventListener("click", () => {
+      bracongoListeTab.classList.add(
+        "active",
+        "text-blue-600",
+        "border-blue-500",
+      );
+      bracongoAddTab.classList.remove(
+        "active",
+        "text-blue-600",
+        "border-blue-500",
+      );
+      bracongoAddTab.classList.add("text-gray-600");
+      bracongoListeContainer.classList.remove("hidden");
+      bracongoAddContainer.classList.add("hidden");
+      afficherListeAchats("BRACONGO");
+    });
+  }
+
+  if (bracongoAddTab) {
+    bracongoAddTab.addEventListener("click", () => {
+      bracongoAddTab.classList.add(
+        "active",
+        "text-blue-600",
+        "border-blue-500",
+      );
+      bracongoListeTab.classList.remove(
+        "active",
+        "text-blue-600",
+        "border-blue-500",
+      );
+      bracongoListeTab.classList.add("text-gray-600");
+      bracongoListeContainer.classList.add("hidden");
+      bracongoAddContainer.classList.remove("hidden");
+      initSelecteursProduitsAchats();
+    });
+  }
+
+  const bralimaListeTab = document.getElementById("bralimaListeTab");
+  const bralimaAddTab = document.getElementById("bralimaAddTab");
+  const bralimaListeContainer = document.getElementById(
+    "bralimaListeContainer",
+  );
+  const bralimaAddContainer = document.getElementById("bralimaAddContainer");
+
+  if (bralimaListeTab) {
+    bralimaListeTab.addEventListener("click", () => {
+      bralimaListeTab.classList.add(
+        "active",
+        "text-blue-600",
+        "border-blue-500",
+      );
+      bralimaAddTab.classList.remove(
+        "active",
+        "text-blue-600",
+        "border-blue-500",
+      );
+      bralimaAddTab.classList.add("text-gray-600");
+      bralimaListeContainer.classList.remove("hidden");
+      bralimaAddContainer.classList.add("hidden");
+      afficherListeAchats("BRALIMA");
+    });
+  }
+
+  if (bralimaAddTab) {
+    bralimaAddTab.addEventListener("click", () => {
+      bralimaAddTab.classList.add("active", "text-blue-600", "border-blue-500");
+      bralimaListeTab.classList.remove(
+        "active",
+        "text-blue-600",
+        "border-blue-500",
+      );
+      bralimaListeTab.classList.add("text-gray-600");
+      bralimaListeContainer.classList.add("hidden");
+      bralimaAddContainer.classList.remove("hidden");
+      initSelecteursProduitsAchats();
+    });
+  }
+}
+
+async function initModuleAchats() {
+  await chargerAchats();
+  mettreAJourStatsAchats();
+  afficherListeAchats("BRACONGO");
+  afficherListeAchats("BRALIMA");
+
+  const bracongoAjouterBtn = document.getElementById(
+    "bracongoAjouterPanierBtn",
+  );
+  if (bracongoAjouterBtn) {
+    bracongoAjouterBtn.addEventListener("click", () =>
+      ajouterAuPanierAchat("BRACONGO"),
+    );
+  }
+
+  const bracongoValiderBtn = document.getElementById("bracongoValiderAchatBtn");
+  if (bracongoValiderBtn) {
+    bracongoValiderBtn.addEventListener("click", () =>
+      validerAchat("BRACONGO"),
+    );
+  }
+
+  const bracongoFiltrerBtn = document.getElementById("bracongoFiltrerBtn");
+  if (bracongoFiltrerBtn) {
+    bracongoFiltrerBtn.addEventListener("click", () => {
+      const moisInput = document.getElementById("bracongoFiltreMois");
+      if (moisInput && moisInput.value) {
+        const [annee, mois] = moisInput.value.split("-");
+        afficherListeAchats("BRACONGO", parseInt(mois), parseInt(annee));
+      } else {
+        afficherListeAchats("BRACONGO");
+      }
+    });
+  }
+
+  const bracongoArchiverBtn = document.getElementById("bracongoArchiverBtn");
+  if (bracongoArchiverBtn) {
+    bracongoArchiverBtn.addEventListener("click", () => {
+      const moisInput = document.getElementById("bracongoFiltreMois");
+      if (!moisInput || !moisInput.value) {
+        showTemporaryNotification(
+          "❌ Veuillez sélectionner un mois à archiver",
+          "error",
+        );
+        return;
+      }
+      const [annee, mois] = moisInput.value.split("-");
+      if (
+        confirm(
+          `Archiver les achats de ${mois}/${annee} pour BRACONGO ?\nUne remise de 5% sera appliquée.`,
+        )
+      ) {
+        archiverMois("BRACONGO", parseInt(mois), parseInt(annee));
+        setTimeout(() => {
+          afficherListeAchats("BRACONGO");
+          mettreAJourStatsAchats();
+        }, 500);
+      }
+    });
+  }
+
+  const bracongoExporterBtn = document.getElementById("bracongoExporterBtn");
+  if (bracongoExporterBtn) {
+    bracongoExporterBtn.addEventListener("click", () => {
+      const moisInput = document.getElementById("bracongoFiltreMois");
+      if (moisInput && moisInput.value) {
+        const [annee, mois] = moisInput.value.split("-");
+        exporterAchatsCSV("BRACONGO", parseInt(mois), parseInt(annee));
+      } else {
+        exporterAchatsCSV("BRACONGO");
+      }
+    });
+  }
+
+  const bralimaAjouterBtn = document.getElementById("bralimaAjouterPanierBtn");
+  if (bralimaAjouterBtn) {
+    bralimaAjouterBtn.addEventListener("click", () =>
+      ajouterAuPanierAchat("BRALIMA"),
+    );
+  }
+
+  const bralimaValiderBtn = document.getElementById("bralimaValiderAchatBtn");
+  if (bralimaValiderBtn) {
+    bralimaValiderBtn.addEventListener("click", () => validerAchat("BRALIMA"));
+  }
+
+  const bralimaFiltrerBtn = document.getElementById("bralimaFiltrerBtn");
+  if (bralimaFiltrerBtn) {
+    bralimaFiltrerBtn.addEventListener("click", () => {
+      const moisInput = document.getElementById("bralimaFiltreMois");
+      if (moisInput && moisInput.value) {
+        const [annee, mois] = moisInput.value.split("-");
+        afficherListeAchats("BRALIMA", parseInt(mois), parseInt(annee));
+      } else {
+        afficherListeAchats("BRALIMA");
+      }
+    });
+  }
+
+  const bralimaArchiverBtn = document.getElementById("bralimaArchiverBtn");
+  if (bralimaArchiverBtn) {
+    bralimaArchiverBtn.addEventListener("click", () => {
+      const moisInput = document.getElementById("bralimaFiltreMois");
+      if (!moisInput || !moisInput.value) {
+        showTemporaryNotification(
+          "❌ Veuillez sélectionner un mois à archiver",
+          "error",
+        );
+        return;
+      }
+      const [annee, mois] = moisInput.value.split("-");
+      if (
+        confirm(
+          `Archiver les achats de ${mois}/${annee} pour BRALIMA ?\nUne remise de 5% sera appliquée.`,
+        )
+      ) {
+        archiverMois("BRALIMA", parseInt(mois), parseInt(annee));
+        setTimeout(() => {
+          afficherListeAchats("BRALIMA");
+          mettreAJourStatsAchats();
+        }, 500);
+      }
+    });
+  }
+
+  const bralimaExporterBtn = document.getElementById("bralimaExporterBtn");
+  if (bralimaExporterBtn) {
+    bralimaExporterBtn.addEventListener("click", () => {
+      const moisInput = document.getElementById("bralimaFiltreMois");
+      if (moisInput && moisInput.value) {
+        const [annee, mois] = moisInput.value.split("-");
+        exporterAchatsCSV("BRALIMA", parseInt(mois), parseInt(annee));
+      } else {
+        exporterAchatsCSV("BRALIMA");
+      }
+    });
+  }
+
+  initAchatsTabs();
+
+  setInterval(() => {
+    mettreAJourStatsAchats();
+  }, 60000);
+}
+
+// ============================================
 // INITIALISATION
 // ============================================
 loadDashboardStats();
@@ -2648,4 +3331,9 @@ initGestionProduits();
 initGestionClients();
 initRapports();
 initDailyStats();
+setTimeout(() => {
+  if (typeof produits !== "undefined" && produits.BRACONGO) {
+    initModuleAchats();
+  }
+}, 1000);
 showTemporaryNotification("Bienvenue sur VentesPro !");
