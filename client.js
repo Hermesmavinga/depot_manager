@@ -432,7 +432,7 @@ function displayDailySalesDetail(ventesDetail, dateStr) {
       tb += v.bouteilles;
       tc += v.cassiers;
       tm += v.total;
-      return `<tr class="${i % 2 === 0 ? "bg-white" : "bg-gray-50"} hover:bg-gray-100 transition"><td class="px-4 py-3 text-sm font-mono">${v.heure}</td><td class="px-4 py-3"><div class="font-medium">${escapeHtml(v.clientNom)}</div><div class="text-xs text-gray-400">ID: ${v.clientId}</div></td><td class="px-4 py-3 text-sm">${v.produits.map((p) => `<div class="text-xs">${escapeHtml(p.nom)} (${p.quantite})</div>`).join("")}</td><td class="px-4 py-3 text-center text-orange-600">${v.bouteilles}</td><td class="px-4 py-3 text-center text-purple-600">${v.cassiers}</td><td class="px-4 py-3 text-right font-bold text-emerald-600">${formatNumberFC(v.total)} FC</td><td class="px-4 py-3 text-center"><button onclick="genererFactureVenteSpecifique('${v.id}')" class="bg-blue-600 text-white px-2 py-1 rounded text-xs">🧾 Facture</button></td></tr>`;
+      return `<tr class="${i % 2 === 0 ? "bg-white" : "bg-gray-50"} hover:bg-gray-100 transition"><td class="px-4 py-3 text-sm font-mono">${v.heure}<td><td class="px-4 py-3"><div class="font-medium">${escapeHtml(v.clientNom)}</div><div class="text-xs text-gray-400">ID: ${v.clientId}</div></td><td class="px-4 py-3 text-sm">${v.produits.map((p) => `<div class="text-xs">${escapeHtml(p.nom)} (${p.quantite})</div>`).join("")}</td><td class="px-4 py-3 text-center text-orange-600">${v.bouteilles}</td><td class="px-4 py-3 text-center text-purple-600">${v.cassiers}</td><td class="px-4 py-3 text-right font-bold text-emerald-600">${formatNumberFC(v.total)} FC</td><td class="px-4 py-3 text-center"><button onclick="genererFactureVenteSpecifique('${v.id}')" class="bg-blue-600 text-white px-2 py-1 rounded text-xs">🧾 Facture</button></td></tr>`;
     })
     .join("");
   if (footer) {
@@ -836,7 +836,6 @@ async function initDailyStats() {
   await getWeeklyTrend();
   initDetailCards();
 }
-
 // ============================================
 // POPUP DÉTAILS CLIENT AVEC HISTORIQUE ET FILTRE ANNÉE
 // ============================================
@@ -1499,17 +1498,52 @@ async function handleDeleteClick(e) {
   const btn = e.currentTarget;
   const id = btn.getAttribute("data-id");
   const nom = btn.getAttribute("data-nom");
+
+  if (!id) {
+    showTemporaryNotification("❌ ID produit non trouvé", "error");
+    return;
+  }
+
   if (confirm(`⚠️ Supprimer "${nom}" ?`)) {
     try {
-      await supprimerProduitAPI(id);
+      const url = `${PRODUITS_URL}/${encodeURIComponent(id)}`;
+      const response = await fetch(url, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      if (response.status === 404) {
+        showTemporaryNotification(
+          `⚠️ Le produit "${nom}" n'existe plus`,
+          "warning",
+        );
+        await chargerProduits();
+        mettreAJourSelecteurProduits();
+        afficherListeProduits();
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error(`Erreur ${response.status}`);
+      }
+
       await chargerProduits();
       mettreAJourSelecteurProduits();
       afficherListeProduits();
+
       panier = panier.filter((item) => item.nom !== nom);
       afficherPanier();
+
       showTemporaryNotification(`✅ "${nom}" supprimé`);
     } catch (error) {
-      showTemporaryNotification(`❌ Erreur: ${error.message}`, "error");
+      console.error("Erreur suppression produit:", error);
+      await chargerProduits();
+      mettreAJourSelecteurProduits();
+      afficherListeProduits();
+      showTemporaryNotification(
+        `⚠️ Vérifiez si "${nom}" a été supprimé`,
+        "info",
+      );
     }
   }
 }
@@ -1657,7 +1691,6 @@ function initGestionProduits() {
     });
   if (produitSelect) produitSelect.addEventListener("change", updatePrix);
 }
-
 // ============================================
 // CLIENTS
 // ============================================
@@ -1825,13 +1858,24 @@ function initClientsTabs() {
   }
 }
 async function loadClientsList() {
+  const tbody = document.getElementById("clientsTableBody");
+  if (tbody) {
+    tbody.innerHTML =
+      '<tr><td colspan="4" class="px-4 py-8 text-center text-gray-400">⏳ Chargement...</td></tr>';
+  }
   try {
     const response = await fetch(CLIENTS_URL);
+    if (!response.ok) throw new Error("Erreur chargement clients");
     allClients = await response.json();
     filteredClients = [...allClients];
     displayClientsTable();
   } catch (error) {
+    console.error("Erreur chargement clients:", error);
     showTemporaryNotification("❌ Erreur chargement clients", "error");
+    if (tbody) {
+      tbody.innerHTML =
+        '<tr><td colspan="4" class="px-4 py-8 text-center text-red-400">❌ Erreur de chargement</td></tr>';
+    }
   }
 }
 function displayClientsTable() {
@@ -1936,19 +1980,43 @@ async function handleDeleteClient(e) {
   const btn = e.currentTarget;
   const clientId = btn.getAttribute("data-id");
   const clientNom = btn.getAttribute("data-nom");
+
+  if (!clientId) {
+    showTemporaryNotification("❌ ID client non trouvé", "error");
+    return;
+  }
+
   if (
     confirm(`⚠️ Êtes-vous sûr de vouloir supprimer le client "${clientNom}" ?`)
   ) {
     try {
-      const response = await fetch(`${CLIENTS_URL}/${clientId}`, {
+      const url = `${CLIENTS_URL}/${encodeURIComponent(clientId)}`;
+      const response = await fetch(url, {
         method: "DELETE",
+        headers: { "Content-Type": "application/json" },
       });
-      if (!response.ok) throw new Error("Erreur suppression");
+
+      if (response.status === 404) {
+        showTemporaryNotification(
+          `⚠️ Le client "${clientNom}" n'existe plus`,
+          "warning",
+        );
+        await loadClientsList();
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error(`Erreur ${response.status}`);
+      }
+
       showTemporaryNotification(`✅ Client "${clientNom}" supprimé !`);
-      loadClientsList();
+      await loadClientsList();
       loadDashboardStats();
     } catch (error) {
-      showTemporaryNotification(`❌ Erreur: ${error.message}`, "error");
+      console.error("Erreur suppression client:", error);
+      await loadClientsList();
+      loadDashboardStats();
+      showTemporaryNotification(`⚠️ Client peut-être déjà supprimé`, "info");
     }
   }
 }
@@ -2322,7 +2390,6 @@ function appliquerFiltreHisto(filterType, ventesOriginales, clientData) {
     historiqueMessageDiv.innerHTML = `<span class="text-emerald-600">✅ ${filtrees.length} vente(s) pour ${msg}</span>`;
   }
 }
-
 // ============================================
 // RAPPORTS MENSUELS
 // ============================================
@@ -2821,7 +2888,7 @@ function afficherListeAchats(
                 <td class="px-4 py-3 text-right">${formatNumberFC(achat.prixUnitaire)} FC</td>
                 <td class="px-4 py-3 text-right font-bold text-emerald-600">${formatNumberFC(achat.total)} FC</td>
                 <td class="px-4 py-3 text-center"><span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-700">Actif</span></td>
-               </tr>`;
+              </tr>`;
     })
     .join("");
 
