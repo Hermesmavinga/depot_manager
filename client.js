@@ -49,6 +49,12 @@ let panierAchats = {
 let currentFournisseurAchat = "BRACONGO";
 
 // ============================================
+// VARIABLES POUR L'ÉCHÉANCIER
+// ============================================
+let echeanciers = [];
+let remisesMensuelles = {};
+
+// ============================================
 // FONCTIONS UTILITAIRES
 // ============================================
 function showNotification(message, type = "success") {
@@ -165,6 +171,545 @@ function formatId(id) {
 }
 
 // ============================================
+// ÉCHÉANCIER DE PAIEMENT ET REMISE MENSUELLE
+// ============================================
+
+async function genererEcheancier(clientId, mois, annee) {
+  try {
+    const ventesRes = await fetch(VENTES_URL);
+    const toutesVentes = await ventesRes.json();
+    const ventesMois = toutesVentes.filter((v) => {
+      const d = parseDate(v.date);
+      return (
+        String(v.clientId) === String(clientId) &&
+        d.getMonth() + 1 === mois &&
+        d.getFullYear() === annee
+      );
+    });
+
+    if (ventesMois.length === 0) {
+      showTemporaryNotification("📭 Aucune vente pour cette période", "error");
+      return null;
+    }
+
+    let totalAchats = 0;
+    ventesMois.forEach((v) => {
+      const vn = nettoyerVente(v);
+      totalAchats += vn.total;
+    });
+
+    const remise = totalAchats * 0.05;
+    const netAPayer = totalAchats - remise;
+
+    const clientRes = await fetch(`${CLIENTS_URL}/${String(clientId)}`);
+    const client = await clientRes.json();
+
+    const echeancier = {
+      id: Date.now(),
+      clientId: clientId,
+      clientNom: client.nom,
+      mois: mois,
+      annee: annee,
+      dateLimite: new Date(annee, mois, 10),
+      totalAchats: totalAchats,
+      remise: remise,
+      netAPayer: netAPayer,
+      statut: "en_attente",
+      dateCreation: new Date().toISOString(),
+      ventes: ventesMois.map((v) => v.id),
+    };
+
+    echeanciers.push(echeancier);
+    sauvegarderEcheanciers();
+    afficherRecapitulatifEcheancier(echeancier);
+    mettreAJourWidgetEcheancier();
+    mettreAJourStatsEcheancier();
+
+    return echeancier;
+  } catch (error) {
+    showTemporaryNotification(`❌ Erreur: ${error.message}`, "error");
+    return null;
+  }
+}
+
+function afficherRecapitulatifEcheancier(echeancier) {
+  const modal = document.createElement("div");
+  modal.className =
+    "fixed inset-0 bg-black/50 z-50 flex items-center justify-center";
+  modal.innerHTML = `
+    <div class="bg-white rounded-xl shadow-xl w-full max-w-2xl mx-4 animate-fadeIn">
+      <div class="px-6 py-4 border-b bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-t-xl">
+        <h3 class="text-lg font-semibold">
+          <i class="fas fa-file-invoice-dollar mr-2"></i> Échéancier de paiement
+        </h3>
+      </div>
+      <div class="p-6 space-y-4">
+        <div class="grid grid-cols-2 gap-4">
+          <div class="bg-gray-50 p-3 rounded-lg">
+            <p class="text-xs text-gray-500">Client</p>
+            <p class="font-semibold">${escapeHtml(echeancier.clientNom)}</p>
+            <p class="text-xs text-gray-400">Code: ${echeancier.clientId}</p>
+          </div>
+          <div class="bg-gray-50 p-3 rounded-lg">
+            <p class="text-xs text-gray-500">Période</p>
+            <p class="font-semibold">${new Date(echeancier.annee, echeancier.mois - 1, 1).toLocaleDateString("fr-FR", { month: "long", year: "numeric" })}</p>
+          </div>
+        </div>
+        
+        <div class="border-t border-gray-200 pt-4">
+          <div class="flex justify-between items-center py-2">
+            <span class="text-gray-600">Total des achats :</span>
+            <span class="font-bold text-gray-800">${formatNumberFC(echeancier.totalAchats)} FC</span>
+          </div>
+          <div class="flex justify-between items-center py-2 bg-green-50 rounded-lg px-3 -mx-3">
+            <span class="text-green-700">✨ Remise 5% :</span>
+            <span class="font-bold text-green-700">- ${formatNumberFC(echeancier.remise)} FC</span>
+          </div>
+          <div class="flex justify-between items-center py-2 border-t border-gray-200 mt-2 pt-3">
+            <span class="text-gray-800 font-bold text-lg">Net à payer :</span>
+            <span class="font-bold text-emerald-600 text-2xl">${formatNumberFC(echeancier.netAPayer)} FC</span>
+          </div>
+        </div>
+        
+        <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+          <p class="text-sm text-yellow-800">
+            <i class="fas fa-calendar-alt mr-2"></i>
+            Date limite de paiement : <strong>${new Date(echeancier.dateLimite).toLocaleDateString("fr-FR")}</strong>
+          </p>
+          <p class="text-xs text-yellow-600 mt-1">Passé cette date, la remise ne sera plus applicable.</p>
+        </div>
+        
+        <div class="flex gap-3 mt-4">
+          <button onclick="marquerCommePaye('${echeancier.id}')" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-2 rounded-lg transition">
+            <i class="fas fa-check-circle mr-2"></i> Marquer comme payé
+          </button>
+          <button onclick="imprimerEcheancier('${echeancier.id}')" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg transition">
+            <i class="fas fa-print mr-2"></i> Imprimer
+          </button>
+          <button onclick="this.closest('.fixed').remove()" class="px-4 bg-gray-200 hover:bg-gray-300 rounded-lg transition">Fermer</button>
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+}
+
+async function marquerCommePaye(echeancierId) {
+  const echeancier = echeanciers.find((e) => e.id == echeancierId);
+  if (!echeancier) return;
+
+  if (
+    confirm(
+      `Confirmer le paiement de ${formatNumberFC(echeancier.netAPayer)} FC pour ${echeancier.clientNom} ?`,
+    )
+  ) {
+    echeancier.statut = "paye";
+    echeancier.datePaiement = new Date().toISOString();
+    sauvegarderEcheanciers();
+    showTemporaryNotification(
+      `✅ Paiement enregistré pour ${echeancier.clientNom}`,
+    );
+    document.querySelector(".fixed.bg-black\\/50")?.remove();
+    mettreAJourWidgetEcheancier();
+    mettreAJourStatsEcheancier();
+    if (typeof afficherListeEcheanciers === "function") {
+      afficherListeEcheanciers();
+    }
+  }
+}
+
+function imprimerEcheancier(echeancierId) {
+  const echeancier = echeanciers.find((e) => e.id == echeancierId);
+  if (!echeancier) return;
+
+  const printWindow = window.open("", "_blank");
+  printWindow.document.write(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Échéancier - ${echeancier.clientNom}</title>
+      <meta charset="UTF-8">
+      <style>
+        body { font-family: Arial, sans-serif; margin: 40px; }
+        .header { text-align: center; margin-bottom: 30px; }
+        .header h1 { color: #10b981; }
+        .info { margin-bottom: 20px; border: 1px solid #ddd; padding: 15px; border-radius: 8px; }
+        .total { font-size: 18px; font-weight: bold; margin-top: 20px; padding-top: 10px; border-top: 2px solid #10b981; }
+        .remise { color: #22c55e; }
+        .net { color: #10b981; font-size: 24px; }
+        .footer { text-align: center; margin-top: 50px; font-size: 12px; color: #999; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 10px; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background: #f3f4f6; }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <h1>📄 ÉCHÉANCIER DE PAIEMENT</h1>
+        <p>VentesPro SARL - Kinshasa, RDC</p>
+      </div>
+      <div class="info">
+        <p><strong>Client :</strong> ${escapeHtml(echeancier.clientNom)}</p>
+        <p><strong>Code client :</strong> ${echeancier.clientId}</p>
+        <p><strong>Période :</strong> ${new Date(echeancier.annee, echeancier.mois - 1, 1).toLocaleDateString("fr-FR", { month: "long", year: "numeric" })}</p>
+        <p><strong>Date limite :</strong> ${new Date(echeancier.dateLimite).toLocaleDateString("fr-FR")}</p>
+      </div>
+      <table>
+        <thead>
+          <tr><th>Description</th><th>Montant (FC)</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Total des achats</td><td>${formatNumberFC(echeancier.totalAchats)}</td></tr>
+          <tr style="background:#f0fdf4"><td>Remise 5%</td><td class="remise">- ${formatNumberFC(echeancier.remise)}</td></tr>
+        </tbody>
+      </table>
+      <div class="total">
+        <p>NET À PAYER : <span class="net">${formatNumberFC(echeancier.netAPayer)} FC</span></p>
+      </div>
+      <div class="footer">
+        <p>Merci de votre confiance !</p>
+        <p>Date d'émission : ${new Date().toLocaleDateString("fr-FR")}</p>
+      </div>
+    </body>
+    </html>
+  `);
+  printWindow.document.close();
+  printWindow.print();
+}
+
+function sauvegarderEcheanciers() {
+  localStorage.setItem("ventespro_echeanciers", JSON.stringify(echeanciers));
+}
+
+function chargerEcheanciers() {
+  const saved = localStorage.getItem("ventespro_echeanciers");
+  if (saved) {
+    echeanciers = JSON.parse(saved);
+  }
+}
+
+async function genererTousEcheanciersMois(mois, annee) {
+  showTemporaryNotification("⏳ Génération des échéanciers en cours...");
+
+  try {
+    const clientsRes = await fetch(CLIENTS_URL);
+    const clients = await clientsRes.json();
+    const ventesRes = await fetch(VENTES_URL);
+    const toutesVentes = await ventesRes.json();
+
+    let compteur = 0;
+
+    for (const client of clients) {
+      const ventesClient = toutesVentes.filter((v) => {
+        const d = parseDate(v.date);
+        return (
+          String(v.clientId) === String(client.id) &&
+          d.getMonth() + 1 === mois &&
+          d.getFullYear() === annee
+        );
+      });
+
+      if (ventesClient.length > 0) {
+        const existe = echeanciers.some(
+          (e) =>
+            e.clientId === client.id && e.mois === mois && e.annee === annee,
+        );
+        if (!existe) {
+          let totalAchats = 0;
+          ventesClient.forEach((v) => {
+            const vn = nettoyerVente(v);
+            totalAchats += vn.total;
+          });
+
+          echeanciers.push({
+            id: Date.now() + compteur,
+            clientId: client.id,
+            clientNom: client.nom,
+            mois: mois,
+            annee: annee,
+            dateLimite: new Date(annee, mois, 10),
+            totalAchats: totalAchats,
+            remise: totalAchats * 0.05,
+            netAPayer: totalAchats * 0.95,
+            statut: "en_attente",
+            dateCreation: new Date().toISOString(),
+            ventes: ventesClient.map((v) => v.id),
+          });
+          compteur++;
+        }
+      }
+    }
+
+    sauvegarderEcheanciers();
+    showTemporaryNotification(
+      `✅ ${compteur} échéancier(s) généré(s) pour ${new Date(annee, mois - 1, 1).toLocaleDateString("fr-FR", { month: "long", year: "numeric" })}`,
+    );
+    mettreAJourWidgetEcheancier();
+    mettreAJourStatsEcheancier();
+    if (typeof afficherListeEcheanciers === "function") {
+      afficherListeEcheanciers();
+    }
+  } catch (error) {
+    showTemporaryNotification(`❌ Erreur: ${error.message}`, "error");
+  }
+}
+
+function afficherListeEcheanciers() {
+  const modal = document.createElement("div");
+  modal.className =
+    "fixed inset-0 bg-black/50 z-50 flex items-center justify-center";
+
+  const echeanciersNonPayes = echeanciers.filter(
+    (e) => e.statut === "en_attente",
+  );
+  const echeanciersPayes = echeanciers.filter((e) => e.statut === "paye");
+
+  let totalGlobal = 0;
+  let totalRemise = 0;
+
+  echeanciersNonPayes.forEach((e) => {
+    totalGlobal += e.netAPayer;
+    totalRemise += e.remise;
+  });
+
+  modal.innerHTML = `
+    <div class="bg-white rounded-xl shadow-xl w-full max-w-5xl mx-4 animate-fadeIn max-h-[90vh] overflow-y-auto">
+      <div class="sticky top-0 px-6 py-4 border-b bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-t-xl flex justify-between items-center">
+        <h3 class="text-lg font-semibold">
+          <i class="fas fa-calendar-alt mr-2"></i> Échéanciers de paiement
+        </h3>
+        <button onclick="this.closest('.fixed').remove()" class="text-white hover:bg-white/20 rounded-full w-8 h-8 flex items-center justify-center">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="p-6">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div class="bg-yellow-50 rounded-lg p-4 text-center">
+            <p class="text-sm text-gray-600">En attente</p>
+            <p class="text-2xl font-bold text-yellow-700">${echeanciersNonPayes.length}</p>
+          </div>
+          <div class="bg-green-50 rounded-lg p-4 text-center">
+            <p class="text-sm text-gray-600">Payés</p>
+            <p class="text-2xl font-bold text-green-700">${echeanciersPayes.length}</p>
+          </div>
+          <div class="bg-blue-50 rounded-lg p-4 text-center">
+            <p class="text-sm text-gray-600">Total à encaisser</p>
+            <p class="text-2xl font-bold text-blue-700">${formatNumberFC(totalGlobal)} FC</p>
+          </div>
+        </div>
+        
+        ${
+          echeanciersNonPayes.length > 0
+            ? `
+          <h4 class="font-semibold text-gray-800 mb-3">📋 En attente de paiement</h4>
+          <div class="overflow-x-auto mb-6">
+            <table class="w-full">
+              <thead class="bg-gray-50">
+                <tr>
+                  <th class="px-4 py-3 text-left text-xs font-medium text-gray-500">Client</th>
+                  <th class="px-4 py-3 text-center text-xs font-medium text-gray-500">Période</th>
+                  <th class="px-4 py-3 text-right text-xs font-medium text-gray-500">Total achats</th>
+                  <th class="px-4 py-3 text-right text-xs font-medium text-gray-500">Remise 5%</th>
+                  <th class="px-4 py-3 text-right text-xs font-medium text-gray-500">Net à payer</th>
+                  <th class="px-4 py-3 text-center text-xs font-medium text-gray-500">Date limite</th>
+                  <th class="px-4 py-3 text-center text-xs font-medium text-gray-500">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${echeanciersNonPayes
+                  .map(
+                    (e) => `
+                  <tr class="border-b hover:bg-gray-50">
+                    <td class="px-4 py-3">
+                      <div class="font-medium">${escapeHtml(e.clientNom)}</div>
+                      <div class="text-xs text-gray-400">${e.clientId}</div>
+                    </td>
+                    <td class="px-4 py-3 text-center text-sm">${new Date(e.annee, e.mois - 1, 1).toLocaleDateString("fr-FR", { month: "short", year: "numeric" })}</td>
+                    <td class="px-4 py-3 text-right text-sm">${formatNumberFC(e.totalAchats)} FC</td>
+                    <td class="px-4 py-3 text-right text-sm text-green-600">- ${formatNumberFC(e.remise)} FC</td>
+                    <td class="px-4 py-3 text-right font-bold text-emerald-600">${formatNumberFC(e.netAPayer)} FC</td>
+                    <td class="px-4 py-3 text-center text-sm">${new Date(e.dateLimite).toLocaleDateString("fr-FR")}</td>
+                    <td class="px-4 py-3 text-center">
+                      <button onclick="marquerCommePaye('${e.id}')" class="bg-emerald-600 text-white px-2 py-1 rounded text-xs hover:bg-emerald-700">
+                        <i class="fas fa-check mr-1"></i> Payé
+                      </button>
+                    </td>
+                  </tr>
+                `,
+                  )
+                  .join("")}
+              </tbody>
+              <tfoot class="bg-gray-50 font-bold">
+                <tr>
+                  <td colspan="2" class="px-4 py-3">TOTAL</td>
+                  <td class="px-4 py-3 text-right">${formatNumberFC(echeanciersNonPayes.reduce((s, e) => s + e.totalAchats, 0))} FC</td>
+                  <td class="px-4 py-3 text-right text-green-600">- ${formatNumberFC(echeanciersNonPayes.reduce((s, e) => s + e.remise, 0))} FC</td>
+                  <td class="px-4 py-3 text-right text-emerald-600">${formatNumberFC(totalGlobal)} FC</td>
+                  <td colspan="2"></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        `
+            : '<div class="text-center text-gray-400 py-8">✅ Aucun échéancier en attente</div>'
+        }
+        
+        <div class="flex gap-3 mt-6 pt-4 border-t">
+          <button onclick="genererEcheancierMoisActuel()" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-2 rounded-lg transition">
+            <i class="fas fa-sync-alt mr-2"></i> Générer pour le mois en cours
+          </button>
+          <button onclick="this.closest('.fixed').remove()" class="px-6 bg-gray-200 hover:bg-gray-300 rounded-lg transition">Fermer</button>
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+}
+
+async function genererEcheancierMoisActuel() {
+  const now = new Date();
+  const mois = now.getMonth() + 1;
+  const annee = now.getFullYear();
+  await genererTousEcheanciersMois(mois, annee);
+}
+
+async function genererEcheancierClient() {
+  const clientId = document.getElementById("echeancierClientSelect")?.value;
+  const moisAnnee = document.getElementById("echeancierMois")?.value;
+
+  if (!clientId || !moisAnnee) {
+    showTemporaryNotification(
+      "❌ Veuillez sélectionner un client et un mois",
+      "error",
+    );
+    return;
+  }
+
+  const [annee, mois] = moisAnnee.split("-");
+  await genererEcheancier(clientId, parseInt(mois), parseInt(annee));
+}
+
+function mettreAJourStatsEcheancier() {
+  const enAttente = echeanciers.filter((e) => e.statut === "en_attente").length;
+  const payes = echeanciers.filter((e) => e.statut === "paye").length;
+  const totalEcheances = echeanciers
+    .filter((e) => e.statut === "en_attente")
+    .reduce((s, e) => s + e.netAPayer, 0);
+  const remiseTotale = echeanciers
+    .filter((e) => e.statut === "en_attente")
+    .reduce((s, e) => s + e.remise, 0);
+
+  const statEnAttente = document.getElementById("statEnAttente");
+  const statPayes = document.getElementById("statPayes");
+  const statTotalEcheances = document.getElementById("statTotalEcheances");
+  const statRemiseTotale = document.getElementById("statRemiseTotale");
+
+  if (statEnAttente) statEnAttente.textContent = enAttente;
+  if (statPayes) statPayes.textContent = payes;
+  if (statTotalEcheances)
+    statTotalEcheances.textContent = formatNumberFC(totalEcheances) + " FC";
+  if (statRemiseTotale)
+    statRemiseTotale.textContent = formatNumberFC(remiseTotale) + " FC";
+}
+
+async function chargerClientsPourEcheancier() {
+  try {
+    const response = await fetch(CLIENTS_URL);
+    const clients = await response.json();
+    const select = document.getElementById("echeancierClientSelect");
+    if (select) {
+      select.innerHTML =
+        '<option value="">-- Sélectionner un client --</option>';
+      clients.forEach((c) => {
+        const option = document.createElement("option");
+        option.value = c.id;
+        option.textContent = `${c.id} - ${c.nom}`;
+        select.appendChild(option);
+      });
+    }
+  } catch (error) {
+    console.error("Erreur chargement clients:", error);
+  }
+}
+
+function ajouterWidgetEcheancier() {
+  const dashboard = document.getElementById("dashboardSection");
+  const alertsSection = document.getElementById("alertsSection");
+
+  const echeancierWidget = document.createElement("div");
+  echeancierWidget.className =
+    "bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-8";
+  echeancierWidget.id = "echeancierWidget";
+  echeancierWidget.innerHTML = `
+    <div class="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-emerald-50 to-teal-50">
+      <div class="flex justify-between items-center flex-wrap gap-4">
+        <h3 class="font-semibold text-gray-800">
+          <i class="fas fa-calendar-check text-emerald-600 mr-2"></i>
+          Échéanciers du mois
+        </h3>
+        <button onclick="afficherListeEcheanciers()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm transition">
+          <i class="fas fa-list mr-2"></i> Voir tous
+        </button>
+      </div>
+    </div>
+    <div id="echeancierPreview" class="p-6 text-center text-gray-400">
+      <i class="fas fa-spinner fa-spin text-2xl mb-2 block"></i>
+      <p>Chargement...</p>
+    </div>
+  `;
+
+  if (alertsSection) {
+    alertsSection.insertAdjacentElement("afterend", echeancierWidget);
+  }
+}
+
+function mettreAJourWidgetEcheancier() {
+  const container = document.getElementById("echeancierPreview");
+  if (!container) return;
+
+  const echeanciersEnAttente = echeanciers.filter(
+    (e) => e.statut === "en_attente",
+  );
+  const totalDuMois = echeanciersEnAttente.reduce((s, e) => s + e.netAPayer, 0);
+
+  if (echeanciersEnAttente.length === 0) {
+    container.innerHTML = `
+      <div class="text-center text-gray-400 py-4">
+        <i class="fas fa-check-circle text-2xl mb-2 block text-emerald-500"></i>
+        <p>✅ Aucun paiement en attente</p>
+        <p class="text-xs">Tous les échéanciers du mois sont réglés</p>
+      </div>
+    `;
+  } else {
+    container.innerHTML = `
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="text-center p-3 bg-yellow-50 rounded-xl">
+          <p class="text-xs text-gray-500">En attente</p>
+          <p class="text-2xl font-bold text-yellow-700">${echeanciersEnAttente.length}</p>
+        </div>
+        <div class="text-center p-3 bg-blue-50 rounded-xl">
+          <p class="text-xs text-gray-500">Total à encaisser</p>
+          <p class="text-2xl font-bold text-blue-700">${formatNumberFC(totalDuMois)} FC</p>
+        </div>
+        <div class="text-center p-3 bg-orange-50 rounded-xl">
+          <p class="text-xs text-gray-500">Remise totale</p>
+          <p class="text-2xl font-bold text-orange-700">${formatNumberFC(echeanciersEnAttente.reduce((s, e) => s + e.remise, 0))} FC</p>
+        </div>
+        <div class="text-center p-3 bg-emerald-50 rounded-xl">
+          <p class="text-xs text-gray-500">Net à payer</p>
+          <p class="text-2xl font-bold text-emerald-700">${formatNumberFC(totalDuMois)} FC</p>
+        </div>
+      </div>
+      <div class="mt-4 text-right">
+        <button onclick="genererEcheancierMoisActuel()" class="text-sm text-emerald-600 hover:text-emerald-700">
+          <i class="fas fa-sync-alt mr-1"></i> Générer les échéanciers du mois
+        </button>
+      </div>
+    `;
+  }
+}
+
+// ============================================
 // NAVIGATION
 // ============================================
 const navItems = document.querySelectorAll(".nav-item");
@@ -176,6 +721,7 @@ const sections = {
   historique: document.getElementById("historiqueSection"),
   rapports: document.getElementById("rapportsSection"),
   achats: document.getElementById("achatsSection"),
+  echeanciers: document.getElementById("echeanciersSection"),
 };
 const sidebar = document.getElementById("sidebar");
 const mobileMenuBtn = document.getElementById("mobileMenuBtn");
@@ -220,58 +766,6 @@ document.getElementById("currentDate").textContent =
     month: "long",
     day: "numeric",
   });
-
-// ============================================
-// REDIRECTION VERS LA SECTION VENTES
-// ============================================
-function redirectToVente(clientId = null) {
-  const navItems = document.querySelectorAll(".nav-item");
-  let ventesNavItem = null;
-  navItems.forEach((item) => {
-    if (item.dataset.section === "ventes") ventesNavItem = item;
-  });
-  if (ventesNavItem) {
-    navItems.forEach((nav) => {
-      nav.classList.remove("bg-emerald-600", "text-white");
-      nav.classList.add("text-gray-300");
-    });
-    ventesNavItem.classList.add("bg-emerald-600", "text-white");
-    ventesNavItem.classList.remove("text-gray-300");
-    const pageTitle = document.getElementById("currentPageTitle");
-    if (pageTitle)
-      pageTitle.textContent = ventesNavItem.querySelector("span").textContent;
-  }
-  Object.values(sections).forEach((section) => {
-    if (section) section.classList.add("hidden");
-  });
-  if (sections.ventes) sections.ventes.classList.remove("hidden");
-  if (clientId) {
-    const venteClientInput = document.getElementById("venteClientId");
-    if (venteClientInput) {
-      venteClientInput.value = clientId;
-      const event = new Event("input", { bubbles: true });
-      venteClientInput.dispatchEvent(event);
-      showTemporaryNotification(`✅ Client sélectionné - Code: ${clientId}`);
-    }
-  }
-  const sidebar = document.getElementById("sidebar");
-  const overlay = document.getElementById("overlay");
-  if (window.innerWidth < 768 && sidebar) {
-    sidebar.classList.add("-translate-x-full");
-    if (overlay) overlay.classList.remove("active");
-  }
-  window.scrollTo({ top: 0, behavior: "smooth" });
-}
-function fillVenteForm(clientId) {
-  redirectToVente(clientId);
-}
-function fillVenteFormWithId(clientId) {
-  redirectToVente(clientId);
-}
-function selectClientAndFill(clientId) {
-  document.getElementById("clientId").value = clientId;
-  searchClient();
-}
 
 // ============================================
 // DASHBOARD STATS
@@ -420,7 +914,7 @@ function displayDailySalesDetail(ventesDetail, dateStr) {
   if (!tbody) return;
   if (ventesDetail.length === 0) {
     tbody.innerHTML =
-      '</table><td colspan="7" class="px-4 py-8 text-center text-gray-400">📭 Aucune vente enregistrée ce jour<\/td><\/tr>';
+      '<tr><td colspan="7" class="px-4 py-8 text-center text-gray-400">📭 Aucune vente enregistrée ce jour<\/td><\/tr>';
     if (footer) footer.classList.add("hidden");
     return;
   }
@@ -1455,7 +1949,7 @@ async function loadClientsList() {
   const tbody = document.getElementById("clientsTableBody");
   if (tbody) {
     tbody.innerHTML =
-      '<tr><td colspan="4" class="px-4 py-8 text-center text-gray-400">⏳ Chargement...<\/td><\/tr>';
+      '<td><td colspan="4" class="px-4 py-8 text-center text-gray-400">⏳ Chargement...<\/td><\/tr>';
   }
   try {
     const response = await fetch(CLIENTS_URL);
@@ -1468,7 +1962,7 @@ async function loadClientsList() {
     showTemporaryNotification("❌ Erreur chargement clients", "error");
     if (tbody) {
       tbody.innerHTML =
-        '<table><td colspan="4" class="px-4 py-8 text-center text-red-400">❌ Erreur de chargement<\/td><\/tr>';
+        '<tr><td colspan="4" class="px-4 py-8 text-center text-red-400">❌ Erreur de chargement<\/td><\/tr>';
     }
   }
 }
@@ -1680,19 +2174,9 @@ function initGestionClients() {
 }
 
 // ============================================
-// PANIER ET VENTES
+// REDIRECTION VENTES
 // ============================================
-const venteBtn = document.getElementById("addVenteBtn");
-const clientInput = document.getElementById("venteClientId");
-const clientInfoDiv = document.getElementById("clientInfo");
-const messageVente = document.getElementById("venteMessage");
-const quantiteInput = document.getElementById("quantite");
-const prixInputVente = document.getElementById("prix");
-const ajouterPanierBtn = document.getElementById("ajouterPanierBtn");
-if (quantiteInput) quantiteInput.addEventListener("input", updateTotal);
-if (prixInputVente) prixInputVente.addEventListener("input", updateTotal);
-
-async function redirectToVente(clientId = null) {
+function redirectToVente(clientId = null) {
   const navItems = document.querySelectorAll(".nav-item");
   let ventesNavItem = null;
   navItems.forEach((item) => {
@@ -1730,6 +2214,29 @@ async function redirectToVente(clientId = null) {
   }
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
+function fillVenteForm(clientId) {
+  redirectToVente(clientId);
+}
+function fillVenteFormWithId(clientId) {
+  redirectToVente(clientId);
+}
+function selectClientAndFill(clientId) {
+  document.getElementById("clientId").value = clientId;
+  searchClient();
+}
+
+// ============================================
+// PANIER ET VENTES
+// ============================================
+const venteBtn = document.getElementById("addVenteBtn");
+const clientInput = document.getElementById("venteClientId");
+const clientInfoDiv = document.getElementById("clientInfo");
+const messageVente = document.getElementById("venteMessage");
+const quantiteInput = document.getElementById("quantite");
+const prixInputVente = document.getElementById("prix");
+const ajouterPanierBtn = document.getElementById("ajouterPanierBtn");
+if (quantiteInput) quantiteInput.addEventListener("input", updateTotal);
+if (prixInputVente) prixInputVente.addEventListener("input", updateTotal);
 
 let debounceTimeout;
 if (clientInput) {
@@ -1899,6 +2406,7 @@ async function addVente() {
     loadDashboardStats();
     getDailyStats();
     getWeeklyTrend();
+    mettreAJourWidgetEcheancier();
     setTimeout(() => {
       if (messageVente.innerHTML.includes("Vente enregistrée"))
         messageVente.innerHTML = "";
@@ -4188,6 +4696,11 @@ initGestionProduits();
 initGestionClients();
 initRapports();
 initDailyStats();
+chargerEcheanciers();
+ajouterWidgetEcheancier();
+mettreAJourWidgetEcheancier();
+chargerClientsPourEcheancier();
+mettreAJourStatsEcheancier();
 
 setTimeout(() => {
   if (typeof produits !== "undefined" && produits.BRACONGO) {
@@ -4201,3 +4714,9 @@ showTemporaryNotification("Bienvenue sur VentesPro !");
 window.ouvrirModalModificationAchat = ouvrirModalModificationAchat;
 window.confirmerSuppressionAchat = confirmerSuppressionAchat;
 window.selectClientAndFill = selectClientAndFill;
+window.marquerCommePaye = marquerCommePaye;
+window.imprimerEcheancier = imprimerEcheancier;
+window.afficherListeEcheanciers = afficherListeEcheanciers;
+window.genererEcheancierMoisActuel = genererEcheancierMoisActuel;
+window.genererEcheancierClient = genererEcheancierClient;
+window.fermerModalEcheanciers = fermerModalEcheanciers;

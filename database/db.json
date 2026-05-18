@@ -331,6 +331,14 @@
       "type": "bouteille",
       "fournisseur": "BRACONGO",
       "id": "y9_Ozn5"
+    },
+    {
+      "nom": "vitalo",
+      "prix": 2500,
+      "format": "33 cl",
+      "type": "bouteille",
+      "fournisseur": "BRACONGO",
+      "id": "itmIBpc"
     }
   ],
   "ventes": [
@@ -403,21 +411,23 @@
       "total": 2500,
       "date": "2026-05-18T11:07:26.480Z",
       "id": "HYQiDME"
+    },
+    {
+      "clientId": "1",
+      "produits": [
+        {
+          "nom": "Nkoy",
+          "quantite": 1,
+          "prix": 2500,
+          "type": "bouteille"
+        }
+      ],
+      "total": 2500,
+      "date": "2026-05-18T12:07:48.329Z",
+      "id": "5fq_PZM"
     }
   ],
   "achats": [
-    {
-      "id": "1",
-      "fournisseur": "BRACONGO",
-      "produit": "Nkoy",
-      "quantite": 1,
-      "prixUnitaire": 2500,
-      "total": 2500,
-      "statut": "actif",
-      "date": "2026-05-13T11:38:31.642Z",
-      "mois": 5,
-      "annee": 2026
-    },
     {
       "id": "2",
       "fournisseur": "BRALIMA",
@@ -427,18 +437,6 @@
       "total": 60000,
       "statut": "actif",
       "date": "2026-05-13T12:34:36.030Z",
-      "mois": 5,
-      "annee": 2026
-    },
-    {
-      "id": "d09c",
-      "fournisseur": "BRACONGO",
-      "produit": "Nkoy",
-      "quantite": 1,
-      "prixUnitaire": 60000,
-      "total": 60000,
-      "statut": "actif",
-      "date": "2026-05-13T21:00:37.254Z",
       "mois": 5,
       "annee": 2026
     },
@@ -453,18 +451,6 @@
       "mois": 5,
       "annee": 2026,
       "id": "2PRiNWn"
-    },
-    {
-      "fournisseur": "BRACONGO",
-      "produit": "Skol",
-      "quantite": 1,
-      "prixUnitaire": 40000,
-      "total": 40000,
-      "statut": "actif",
-      "date": "2026-05-18T07:23:51.274Z",
-      "mois": 5,
-      "annee": 2026,
-      "id": "9Abnhas"
     },
     {
       "fournisseur": "BRALIMA",
