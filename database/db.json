@@ -325,6 +325,20 @@
       ],
       "total": 60000,
       "date": "2026-05-13T20:56:00.764Z"
+    },
+    {
+      "clientId": "1",
+      "produits": [
+        {
+          "nom": "Nkoy",
+          "quantite": 1,
+          "prix": 2500,
+          "type": "bouteille"
+        }
+      ],
+      "total": 2500,
+      "date": "2026-05-18T07:27:47.521Z",
+      "id": "md214OR"
     }
   ],
   "achats": [
@@ -353,30 +367,6 @@
       "annee": 2026
     },
     {
-      "id": "3",
-      "fournisseur": "BRALIMA",
-      "produit": "Heimeken",
-      "quantite": 1,
-      "prixUnitaire": 80000,
-      "total": 80000,
-      "statut": "actif",
-      "date": "2026-05-13T12:34:50.651Z",
-      "mois": 5,
-      "annee": 2026
-    },
-    {
-      "id": "f4a6",
-      "fournisseur": "BRALIMA",
-      "produit": "Primus",
-      "quantite": 1,
-      "prixUnitaire": 60000,
-      "total": 60000,
-      "statut": "actif",
-      "date": "2026-05-13T20:59:57.730Z",
-      "mois": 5,
-      "annee": 2026
-    },
-    {
       "id": "d09c",
       "fournisseur": "BRACONGO",
       "produit": "Nkoy",
@@ -389,28 +379,40 @@
       "annee": 2026
     },
     {
-      "id": "01f9",
+      "fournisseur": "BRALIMA",
+      "produit": "Primus",
+      "quantite": 1,
+      "prixUnitaire": 2500,
+      "total": 2500,
+      "statut": "actif",
+      "date": "2026-05-18T07:23:01.446Z",
+      "mois": 5,
+      "annee": 2026,
+      "id": "2PRiNWn"
+    },
+    {
       "fournisseur": "BRACONGO",
       "produit": "Skol",
       "quantite": 1,
       "prixUnitaire": 40000,
       "total": 40000,
       "statut": "actif",
-      "date": "2026-05-13T21:00:37.267Z",
+      "date": "2026-05-18T07:23:51.274Z",
       "mois": 5,
-      "annee": 2026
+      "annee": 2026,
+      "id": "9Abnhas"
     },
     {
-      "id": "7389",
-      "fournisseur": "BRACONGO",
-      "produit": "Nkoy",
+      "fournisseur": "BRALIMA",
+      "produit": "Primus",
       "quantite": 1,
       "prixUnitaire": 60000,
       "total": 60000,
       "statut": "actif",
-      "date": "2026-05-13T21:00:58.920Z",
+      "date": "2026-05-18T07:24:12.672Z",
       "mois": 5,
-      "annee": 2026
+      "annee": 2026,
+      "id": "gBJ8i3Y"
     }
   ]
 }

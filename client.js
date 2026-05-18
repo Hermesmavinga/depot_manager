@@ -432,7 +432,7 @@ function displayDailySalesDetail(ventesDetail, dateStr) {
       tb += v.bouteilles;
       tc += v.cassiers;
       tm += v.total;
-      return `<tr class="${i % 2 === 0 ? "bg-white" : "bg-gray-50"} hover:bg-gray-100 transition"><td class="px-4 py-3 text-sm font-mono">${v.heure}<td><td class="px-4 py-3"><div class="font-medium">${escapeHtml(v.clientNom)}</div><div class="text-xs text-gray-400">ID: ${v.clientId}</div></td><td class="px-4 py-3 text-sm">${v.produits.map((p) => `<div class="text-xs">${escapeHtml(p.nom)} (${p.quantite})</div>`).join("")}</td><td class="px-4 py-3 text-center text-orange-600">${v.bouteilles}</td><td class="px-4 py-3 text-center text-purple-600">${v.cassiers}</td><td class="px-4 py-3 text-right font-bold text-emerald-600">${formatNumberFC(v.total)} FC</td><td class="px-4 py-3 text-center"><button onclick="genererFactureVenteSpecifique('${v.id}')" class="bg-blue-600 text-white px-2 py-1 rounded text-xs">🧾 Facture</button></td></tr>`;
+      return `<tr class="${i % 2 === 0 ? "bg-white" : "bg-gray-50"} hover:bg-gray-100 transition"><td class="px-4 py-3 text-sm font-mono">${v.heure}</td><td class="px-4 py-3"><div class="font-medium">${escapeHtml(v.clientNom)}</div><div class="text-xs text-gray-400">ID: ${v.clientId}</div></td><td class="px-4 py-3 text-sm">${v.produits.map((p) => `<div class="text-xs">${escapeHtml(p.nom)} (${p.quantite})</div>`).join("")}</td><td class="px-4 py-3 text-center text-orange-600">${v.bouteilles}</td><td class="px-4 py-3 text-center text-purple-600">${v.cassiers}</td><td class="px-4 py-3 text-right font-bold text-emerald-600">${formatNumberFC(v.total)} FC</td><td class="px-4 py-3 text-center"><button onclick="genererFactureVenteSpecifique('${v.id}')" class="bg-blue-600 text-white px-2 py-1 rounded text-xs">🧾 Facture</button></td></tr>`;
     })
     .join("");
   if (footer) {
@@ -1861,7 +1861,7 @@ async function loadClientsList() {
   const tbody = document.getElementById("clientsTableBody");
   if (tbody) {
     tbody.innerHTML =
-      '<tr><td colspan="4" class="px-4 py-8 text-center text-gray-400">⏳ Chargement...</td></tr>';
+      '<td><td colspan="4" class="px-4 py-8 text-center text-gray-400">⏳ Chargement...<\/td><\/tr>';
   }
   try {
     const response = await fetch(CLIENTS_URL);
@@ -1874,7 +1874,7 @@ async function loadClientsList() {
     showTemporaryNotification("❌ Erreur chargement clients", "error");
     if (tbody) {
       tbody.innerHTML =
-        '<tr><td colspan="4" class="px-4 py-8 text-center text-red-400">❌ Erreur de chargement</td></tr>';
+        '<tr><td colspan="4" class="px-4 py-8 text-center text-red-400">❌ Erreur de chargement<\/td><\/tr>';
     }
   }
 }
@@ -1895,7 +1895,7 @@ function displayClientsTable() {
   tbody.innerHTML = "";
   if (clientsToShow.length === 0) {
     tbody.innerHTML =
-      '<tr><td colspan="4" class="px-4 py-8 text-center text-gray-400">Aucun client trouvé</td></tr>';
+      '<tr><td colspan="4" class="px-4 py-8 text-center text-gray-400">Aucun client trouvé<\/td><\/tr>';
   } else {
     clientsToShow.forEach((client) => {
       const tr = document.createElement("tr");
@@ -1903,7 +1903,7 @@ function displayClientsTable() {
       tr.innerHTML = `<td class="px-4 py-3 text-sm font-mono">${client.id}<\/td>
                       <td class="px-4 py-3 text-sm"><button onclick="showClientDetails('${client.id}')" class="text-blue-600 hover:text-blue-800 hover:underline font-medium">${escapeHtml(client.nom)}<\/button><\/td>
                       <td class="px-4 py-3 text-sm">${escapeHtml(client.telephone)}<\/td>
-                      <td class="px-4 py-3 text-sm text-center"><button onclick="fillVenteForm('${client.id}')" class="bg-emerald-600 text-white px-3 py-1 rounded text-xs hover:bg-emerald-700 mr-2 transition">🛒 Vendre</button><button class="edit-client-btn text-blue-600 hover:text-blue-800 mr-3 transition" data-id="${client.id}" data-nom="${escapeHtml(client.nom)}" data-telephone="${escapeHtml(client.telephone)}"><i class="fas fa-edit"></i> Modifier</button><button class="delete-client-btn text-red-600 hover:text-red-800 transition" data-id="${client.id}" data-nom="${escapeHtml(client.nom)}"><i class="fas fa-trash"></i> Supprimer</button><\/td>`;
+                      <td class="px-4 py-3 text-sm text-center"><button onclick="fillVenteForm('${client.id}')" class="bg-emerald-600 text-white px-3 py-1 rounded text-xs hover:bg-emerald-700 mr-2 transition">🛒 Vendre<\/button><button class="edit-client-btn text-blue-600 hover:text-blue-800 mr-3 transition" data-id="${client.id}" data-nom="${escapeHtml(client.nom)}" data-telephone="${escapeHtml(client.telephone)}"><i class="fas fa-edit"><\/i> Modifier<\/button><button class="delete-client-btn text-red-600 hover:text-red-800 transition" data-id="${client.id}" data-nom="${escapeHtml(client.nom)}"><i class="fas fa-trash"><\/i> Supprimer<\/button><\/td>`;
       tbody.appendChild(tr);
     });
   }
@@ -2294,7 +2294,7 @@ function displayVentesMulti(ventes, clientData) {
       if (isNaN(total)) return;
       const row = document.createElement("tr");
       row.className = idx % 2 === 0 ? "bg-gray-50" : "";
-      row.innerHTML = `<td class="px-4 py-3 text-sm font-mono">${v.id.substring(0, 8)}<\/td><td class="px-4 py-3 text-sm">${afficherProduitsListe(produitsListe)}<\/td><td class="px-4 py-3 text-center font-medium">${qt}<\/td><td class="px-4 py-3 text-right">${formatNumberFC(prixMoyen)} FC<\/td><td class="px-4 py-3 text-right font-bold text-emerald-600">${formatNumberFC(total)} FC<\/td><td class="px-4 py-3 text-sm">${formatDate(v.date)}<\/td><td class="px-4 py-3 text-center"><button onclick="showVenteDetail('${v.id}')" class="bg-blue-600 text-white px-2 py-1 rounded text-xs mr-1">📄 Détails</button><button onclick="genererFactureVente('${v.id}', '${clientData.id}')" class="bg-emerald-600 text-white px-2 py-1 rounded text-xs">🧾 Facture</button><\/td>`;
+      row.innerHTML = `<td class="px-4 py-3 text-sm font-mono">${v.id.substring(0, 8)}<\/td><td class="px-4 py-3 text-sm">${afficherProduitsListe(produitsListe)}<\/td><td class="px-4 py-3 text-center font-medium">${qt}<\/td><td class="px-4 py-3 text-right">${formatNumberFC(prixMoyen)} FC<\/td><td class="px-4 py-3 text-right font-bold text-emerald-600">${formatNumberFC(total)} FC<\/td><td class="px-4 py-3 text-sm">${formatDate(v.date)}<\/td><td class="px-4 py-3 text-center"><button onclick="showVenteDetail('${v.id}')" class="bg-blue-600 text-white px-2 py-1 rounded text-xs mr-1">📄 Détails<\/button><button onclick="genererFactureVente('${v.id}', '${clientData.id}')" class="bg-emerald-600 text-white px-2 py-1 rounded text-xs">🧾 Facture<\/button><\/td>`;
       historiqueTableBody.appendChild(row);
       totalQuantite += qt;
       totalPrix += total;
@@ -2785,6 +2785,293 @@ async function ajouterAchat(fournisseur, item) {
   }
 }
 
+async function modifierAchat(achatId, updatedData) {
+  try {
+    const response = await fetch(`${ACHATS_URL}/${achatId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(updatedData),
+    });
+
+    if (!response.ok) throw new Error("Erreur modification achat");
+
+    const achatModifie = await response.json();
+
+    await chargerAchats();
+
+    const fournisseur = updatedData.fournisseur;
+    afficherListeAchats(fournisseur);
+    mettreAJourStatsAchats();
+
+    showTemporaryNotification("✅ Achat modifié avec succès !");
+    return achatModifie;
+  } catch (error) {
+    console.error("Erreur:", error);
+    showTemporaryNotification("❌ Erreur lors de la modification", "error");
+    return null;
+  }
+}
+
+async function supprimerAchat(achatId, fournisseur) {
+  try {
+    const response = await fetch(`${ACHATS_URL}/${achatId}`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+    });
+
+    if (response.status === 404) {
+      showTemporaryNotification("⚠️ Cet achat n'existe plus", "warning");
+      await chargerAchats();
+      afficherListeAchats(fournisseur);
+      mettreAJourStatsAchats();
+      return false;
+    }
+
+    if (!response.ok) throw new Error("Erreur suppression achat");
+
+    await chargerAchats();
+    afficherListeAchats(fournisseur);
+    mettreAJourStatsAchats();
+
+    showTemporaryNotification("✅ Achat supprimé avec succès !");
+    return true;
+  } catch (error) {
+    console.error("Erreur:", error);
+    showTemporaryNotification("❌ Erreur lors de la suppression", "error");
+    return false;
+  }
+}
+
+function ouvrirModalModificationAchat(achat) {
+  const modal = document.createElement("div");
+  modal.className =
+    "fixed inset-0 bg-black/50 z-50 flex items-center justify-center";
+  modal.innerHTML = `
+    <div class="bg-white rounded-xl shadow-xl w-full max-w-md mx-4 animate-fadeIn">
+      <div class="px-6 py-4 border-b bg-gradient-to-r from-blue-50 to-white">
+        <h3 class="text-lg font-semibold text-blue-800">
+          <i class="fas fa-edit text-blue-600 mr-2"></i> Modifier l'achat
+        </h3>
+      </div>
+      <div class="p-6 space-y-4">
+        <div>
+          <label class="block text-gray-700 text-sm font-medium mb-2">Produit</label>
+          <input type="text" id="editAchatProduit" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-gray-50" value="${escapeHtml(achat.produit)}" readonly>
+        </div>
+        <div>
+          <label class="block text-gray-700 text-sm font-medium mb-2">Quantité</label>
+          <input type="number" id="editAchatQuantite" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" value="${achat.quantite}" min="1">
+        </div>
+        <div>
+          <label class="block text-gray-700 text-sm font-medium mb-2">Prix unitaire (FC)</label>
+          <input type="number" id="editAchatPrixUnitaire" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" value="${achat.prixUnitaire}" min="0" step="100">
+        </div>
+        <div>
+          <label class="block text-gray-700 text-sm font-medium mb-2">Date</label>
+          <input type="datetime-local" id="editAchatDate" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" value="${new Date(achat.date).toISOString().slice(0, 16)}">
+        </div>
+        <div class="bg-gray-50 p-3 rounded-lg">
+          <div class="flex justify-between items-center">
+            <span class="text-gray-600">Total actuel :</span>
+            <span class="font-bold text-emerald-600">${formatNumberFC(achat.total)} FC</span>
+          </div>
+          <div class="flex justify-between items-center mt-2" id="nouveauTotalPreview">
+            <span class="text-gray-600">Nouveau total :</span>
+            <span class="font-bold text-blue-600">-- FC</span>
+          </div>
+        </div>
+      </div>
+      <div class="px-6 py-4 border-t flex justify-end gap-3">
+        <button id="cancelEditAchatBtn" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">Annuler</button>
+        <button id="saveEditAchatBtn" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg">Enregistrer</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  const quantiteInput = modal.querySelector("#editAchatQuantite");
+  const prixInput = modal.querySelector("#editAchatPrixUnitaire");
+  const nouveauTotalPreview = modal.querySelector(
+    "#nouveauTotalPreview span:last-child",
+  );
+
+  function updateTotalPreview() {
+    const quantite = parseInt(quantiteInput.value) || 0;
+    const prix = parseFloat(prixInput.value) || 0;
+    const nouveauTotal = quantite * prix;
+    nouveauTotalPreview.innerHTML = `${formatNumberFC(nouveauTotal)} FC`;
+  }
+
+  quantiteInput.addEventListener("input", updateTotalPreview);
+  prixInput.addEventListener("input", updateTotalPreview);
+
+  const saveBtn = modal.querySelector("#saveEditAchatBtn");
+  saveBtn.addEventListener("click", async () => {
+    const nouvelleQuantite = parseInt(quantiteInput.value);
+    const nouveauPrixUnitaire = parseFloat(prixInput.value);
+    const nouvelleDate = modal.querySelector("#editAchatDate").value;
+
+    if (isNaN(nouvelleQuantite) || nouvelleQuantite <= 0) {
+      showTemporaryNotification("❌ Quantité invalide", "error");
+      return;
+    }
+
+    if (isNaN(nouveauPrixUnitaire) || nouveauPrixUnitaire <= 0) {
+      showTemporaryNotification("❌ Prix invalide", "error");
+      return;
+    }
+
+    const nouveauTotal = nouvelleQuantite * nouveauPrixUnitaire;
+    const nouvelleDateObj = new Date(nouvelleDate);
+
+    const updatedData = {
+      ...achat,
+      quantite: nouvelleQuantite,
+      prixUnitaire: nouveauPrixUnitaire,
+      total: nouveauTotal,
+      date: nouvelleDateObj.toISOString(),
+      mois: nouvelleDateObj.getMonth() + 1,
+      annee: nouvelleDateObj.getFullYear(),
+    };
+
+    await modifierAchat(achat.id, updatedData);
+    modal.remove();
+  });
+
+  const cancelBtn = modal.querySelector("#cancelEditAchatBtn");
+  cancelBtn.addEventListener("click", () => modal.remove());
+
+  modal.addEventListener("click", (e) => {
+    if (e.target === modal) modal.remove();
+  });
+
+  updateTotalPreview();
+}
+
+function afficherListeAchats(
+  fournisseur,
+  moisFiltre = null,
+  anneeFiltre = null,
+) {
+  const tbody = document.getElementById(
+    `${fournisseur.toLowerCase()}AchatsBody`,
+  );
+  const footer = document.getElementById(
+    `${fournisseur.toLowerCase()}AchatsFooter`,
+  );
+
+  if (!tbody) return;
+
+  let achatsFiltres = achats[fournisseur];
+
+  if (moisFiltre && anneeFiltre) {
+    achatsFiltres = achatsFiltres.filter((a) => {
+      const dateAchat = new Date(a.date);
+      return (
+        dateAchat.getMonth() + 1 === moisFiltre &&
+        dateAchat.getFullYear() === anneeFiltre
+      );
+    });
+  }
+
+  if (achatsFiltres.length === 0) {
+    tbody.innerHTML =
+      '<tr><td colspan="7" class="text-center py-8 text-gray-400">📭 Aucun achat trouvé</td></tr>';
+    if (footer) footer.classList.add("hidden");
+    return;
+  }
+
+  let totalGeneral = 0;
+  tbody.innerHTML = achatsFiltres
+    .sort((a, b) => new Date(b.date) - new Date(a.date))
+    .map((achat, idx) => {
+      totalGeneral += achat.total;
+      const date = new Date(achat.date);
+      const statutBadge =
+        achat.statut === "actif"
+          ? '<span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-700">Actif</span>'
+          : '<span class="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-700">Archivé</span>';
+
+      return `<tr class="${idx % 2 === 0 ? "bg-white" : "bg-gray-50"} hover:bg-gray-100 transition">
+                <td class="px-4 py-3 text-sm">${date.toLocaleDateString("fr-FR")} ${date.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</td>
+                <td class="px-4 py-3 font-medium">${escapeHtml(achat.produit)}</td>
+                <td class="px-4 py-3 text-center">${achat.quantite}</td>
+                <td class="px-4 py-3 text-right">${formatNumberFC(achat.prixUnitaire)} FC</td>
+                <td class="px-4 py-3 text-right font-bold text-emerald-600">${formatNumberFC(achat.total)} FC</td>
+                <td class="px-4 py-3 text-center">${statutBadge}</td>
+                <td class="px-4 py-3 text-center">
+                  <div class="flex gap-2 justify-center">
+                    ${
+                      achat.statut === "actif"
+                        ? `
+                      <button onclick="ouvrirModalModificationAchat(${JSON.stringify(achat).replace(/"/g, "&quot;")})" 
+                              class="text-blue-600 hover:text-blue-800 transition" title="Modifier">
+                        <i class="fas fa-edit"></i>
+                      </button>
+                      <button onclick="confirmerSuppressionAchat('${achat.id}', '${fournisseur}')" 
+                              class="text-red-600 hover:text-red-800 transition" title="Supprimer">
+                        <i class="fas fa-trash"></i>
+                      </button>
+                    `
+                        : `
+                      <span class="text-gray-400 text-xs">Non modifiable</span>
+                    `
+                    }
+                  </div>
+                </td>
+              </tr>`;
+    })
+    .join("");
+
+  if (footer) {
+    footer.classList.remove("hidden");
+    const footerTotal = document.getElementById(
+      `${fournisseur.toLowerCase()}FooterTotal`,
+    );
+    if (footerTotal)
+      footerTotal.textContent = formatNumberFC(totalGeneral) + " FC";
+  }
+}
+
+function confirmerSuppressionAchat(achatId, fournisseur) {
+  const modal = document.createElement("div");
+  modal.className =
+    "fixed inset-0 bg-black/50 z-50 flex items-center justify-center";
+  modal.innerHTML = `
+    <div class="bg-white rounded-xl shadow-xl w-full max-w-sm mx-4 animate-fadeIn">
+      <div class="px-6 py-4 border-b bg-gradient-to-r from-red-50 to-white">
+        <h3 class="text-lg font-semibold text-red-700">
+          <i class="fas fa-exclamation-triangle text-red-600 mr-2"></i> Confirmer la suppression
+        </h3>
+      </div>
+      <div class="p-6">
+        <p class="text-gray-700 text-center">Êtes-vous sûr de vouloir supprimer cet achat ?</p>
+        <p class="text-gray-500 text-sm text-center mt-2">Cette action est irréversible.</p>
+      </div>
+      <div class="px-6 py-4 border-t flex justify-end gap-3">
+        <button id="cancelDeleteBtn" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">Annuler</button>
+        <button id="confirmDeleteBtn" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg">Supprimer</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  const confirmBtn = modal.querySelector("#confirmDeleteBtn");
+  confirmBtn.addEventListener("click", async () => {
+    await supprimerAchat(achatId, fournisseur);
+    modal.remove();
+  });
+
+  const cancelBtn = modal.querySelector("#cancelDeleteBtn");
+  cancelBtn.addEventListener("click", () => modal.remove());
+
+  modal.addEventListener("click", (e) => {
+    if (e.target === modal) modal.remove();
+  });
+}
+
 async function archiverMois(fournisseur, mois, annee) {
   try {
     const response = await fetch(ACHATS_URL);
@@ -2840,66 +3127,6 @@ function calculerTotalMois(fournisseur, mois, annee) {
   const total = achatsMois.reduce((sum, a) => sum + a.total, 0);
   const remise = total * 0.05;
   return { total, remise, net: total - remise };
-}
-
-function afficherListeAchats(
-  fournisseur,
-  moisFiltre = null,
-  anneeFiltre = null,
-) {
-  const tbody = document.getElementById(
-    `${fournisseur.toLowerCase()}AchatsBody`,
-  );
-  const footer = document.getElementById(
-    `${fournisseur.toLowerCase()}AchatsFooter`,
-  );
-
-  if (!tbody) return;
-
-  let achatsFiltres = achats[fournisseur].filter((a) => a.statut === "actif");
-
-  if (moisFiltre && anneeFiltre) {
-    achatsFiltres = achatsFiltres.filter((a) => {
-      const dateAchat = new Date(a.date);
-      return (
-        dateAchat.getMonth() + 1 === moisFiltre &&
-        dateAchat.getFullYear() === anneeFiltre
-      );
-    });
-  }
-
-  if (achatsFiltres.length === 0) {
-    tbody.innerHTML =
-      '<tr><td colspan="6" class="text-center py-8 text-gray-400">📭 Aucun achat trouvé</td></tr>';
-    if (footer) footer.classList.add("hidden");
-    return;
-  }
-
-  let totalGeneral = 0;
-  tbody.innerHTML = achatsFiltres
-    .sort((a, b) => new Date(b.date) - new Date(a.date))
-    .map((achat, idx) => {
-      totalGeneral += achat.total;
-      const date = new Date(achat.date);
-      return `<tr class="${idx % 2 === 0 ? "bg-white" : "bg-gray-50"}">
-                <td class="px-4 py-3 text-sm">${date.toLocaleDateString("fr-FR")}</td>
-                <td class="px-4 py-3 font-medium">${escapeHtml(achat.produit)}</td>
-                <td class="px-4 py-3 text-center">${achat.quantite}</td>
-                <td class="px-4 py-3 text-right">${formatNumberFC(achat.prixUnitaire)} FC</td>
-                <td class="px-4 py-3 text-right font-bold text-emerald-600">${formatNumberFC(achat.total)} FC</td>
-                <td class="px-4 py-3 text-center"><span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-700">Actif</span></td>
-              </tr>`;
-    })
-    .join("");
-
-  if (footer) {
-    footer.classList.remove("hidden");
-    const footerTotal = document.getElementById(
-      `${fournisseur.toLowerCase()}FooterTotal`,
-    );
-    if (footerTotal)
-      footerTotal.textContent = formatNumberFC(totalGeneral) + " FC";
-  }
 }
 
 function mettreAJourStatsAchats() {
@@ -3508,3 +3735,6 @@ setTimeout(() => {
   }
 }, 1000);
 showTemporaryNotification("Bienvenue sur VentesPro !");
+
+window.ouvrirModalModificationAchat = ouvrirModalModificationAchat;
+window.confirmerSuppressionAchat = confirmerSuppressionAchat;
