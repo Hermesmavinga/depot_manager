@@ -46,11 +46,6 @@
       "telephone": "+243 828 790 728"
     },
     {
-      "id": "10",
-      "nom": "yves",
-      "telephone": "+243 828 790 728"
-    },
-    {
       "id": "11",
       "nom": "julie",
       "telephone": "+243 828 790 728"
@@ -309,6 +304,15 @@
       "type": "cassier",
       "fournisseur": "BRACONGO",
       "nbBouteilles": 12
+    },
+    {
+      "nom": "Sprite",
+      "prixCassier": 50000,
+      "format": "33cl",
+      "type": "cassier",
+      "fournisseur": "BRACONGO",
+      "nbBouteilles": 20,
+      "id": "lYmi4QI"
     }
   ],
   "ventes": [
@@ -339,6 +343,20 @@
       "total": 2500,
       "date": "2026-05-18T07:27:47.521Z",
       "id": "md214OR"
+    },
+    {
+      "clientId": "1",
+      "produits": [
+        {
+          "nom": "Primus",
+          "quantite": 3,
+          "prix": 60000,
+          "type": "cassier"
+        }
+      ],
+      "total": 180000,
+      "date": "2026-05-18T08:36:04.724Z",
+      "id": "lYdFIPt"
     }
   ],
   "achats": [

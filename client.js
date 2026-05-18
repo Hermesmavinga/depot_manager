@@ -835,7 +835,21 @@ async function initDailyStats() {
   await getDailyStats();
   await getWeeklyTrend();
   initDetailCards();
+
+  const anneeActuelle = new Date().getFullYear();
+  const moisActuel = String(new Date().getMonth() + 1).padStart(2, "0");
+
+  const bracongoFiltre = document.getElementById("bracongoFiltreMois");
+  if (bracongoFiltre && !bracongoFiltre.value) {
+    bracongoFiltre.value = `${anneeActuelle}-${moisActuel}`;
+  }
+
+  const bralimaFiltre = document.getElementById("bralimaFiltreMois");
+  if (bralimaFiltre && !bralimaFiltre.value) {
+    bralimaFiltre.value = `${anneeActuelle}-${moisActuel}`;
+  }
 }
+
 // ============================================
 // POPUP DÉTAILS CLIENT AVEC HISTORIQUE ET FILTRE ANNÉE
 // ============================================
@@ -1691,6 +1705,7 @@ function initGestionProduits() {
     });
   if (produitSelect) produitSelect.addEventListener("change", updatePrix);
 }
+
 // ============================================
 // CLIENTS
 // ============================================
@@ -1861,7 +1876,7 @@ async function loadClientsList() {
   const tbody = document.getElementById("clientsTableBody");
   if (tbody) {
     tbody.innerHTML =
-      '<td><td colspan="4" class="px-4 py-8 text-center text-gray-400">⏳ Chargement...<\/td><\/tr>';
+      '<tr><td colspan="4" class="px-4 py-8 text-center text-gray-400">⏳ Chargement...<\/td><\/tr>';
   }
   try {
     const response = await fetch(CLIENTS_URL);
@@ -1874,7 +1889,7 @@ async function loadClientsList() {
     showTemporaryNotification("❌ Erreur chargement clients", "error");
     if (tbody) {
       tbody.innerHTML =
-        '<tr><td colspan="4" class="px-4 py-8 text-center text-red-400">❌ Erreur de chargement<\/td><\/tr>';
+        '</table><td colspan="4" class="px-4 py-8 text-center text-red-400">❌ Erreur de chargement<\/td><\/tr>';
     }
   }
 }
@@ -2390,6 +2405,7 @@ function appliquerFiltreHisto(filterType, ventesOriginales, clientData) {
     historiqueMessageDiv.innerHTML = `<span class="text-emerald-600">✅ ${filtrees.length} vente(s) pour ${msg}</span>`;
   }
 }
+
 // ============================================
 // RAPPORTS MENSUELS
 // ============================================
@@ -2460,7 +2476,7 @@ async function genererRapportMensuel() {
         nbGlobal += data.nb;
         const tr = document.createElement("tr");
         tr.className = "border-b hover:bg-gray-50";
-        tr.innerHTML = `<td class="px-4 py-3"><div class="font-medium">${client ? escapeHtml(client.nom) : "Client " + id}</div><div class="text-xs text-gray-400">ID: ${id}</div></td><td class="px-4 py-3 text-center">${data.nb}</td><td class="px-4 py-3 text-right">${formatNumberFC(data.total)} FC</td><td class="px-4 py-3 text-right text-orange-600">${formatNumberFC(remise)} FC</td><td class="px-4 py-3 text-right font-bold text-emerald-600">${formatNumberFC(data.total - remise)} FC</td><td class="px-4 py-3 text-center"><button onclick="showTemporaryNotification('Facture client')" class="bg-purple-600 text-white px-2 py-1 rounded text-xs">🧾</button></td>`;
+        tr.innerHTML = `<td class="px-4 py-3"><div class="font-medium">${client ? escapeHtml(client.nom) : "Client " + id}</div><div class="text-xs text-gray-400">ID: ${id}</div></td><td class="px-4 py-3 text-center">${data.nb}</td><td class="px-4 py-3 text-right">${formatNumberFC(data.total)} FC</td><td class="px-4 py-3 text-right text-orange-600">${formatNumberFC(remise)} FC</td><td class="px-4 py-3 text-right font-bold text-emerald-600">${formatNumberFC(data.total - remise)} FC</td><td class="px-4 py-3 text-center"><button onclick="genererFactureClientRapport('${id}', ${mois}, ${annee})" class="bg-purple-600 text-white px-2 py-1 rounded text-xs">🧾</button></td>`;
         tbody.appendChild(tr);
       }
       document.getElementById("rapportFootNbVentes").textContent = nbGlobal;
@@ -2486,18 +2502,240 @@ async function genererRapportMensuel() {
     showTemporaryNotification("❌ Erreur", "error");
   }
 }
+
+window.genererFactureClientRapport = async function (clientId, mois, annee) {
+  try {
+    const clientRes = await fetch(`${CLIENTS_URL}/${String(clientId)}`);
+    if (!clientRes.ok) throw new Error("Client non trouvé");
+    const client = await clientRes.json();
+
+    const ventesRes = await fetch(VENTES_URL);
+    const toutesVentes = await ventesRes.json();
+    const ventesClient = toutesVentes.filter((v) => {
+      const d = parseDate(v.date);
+      return (
+        String(v.clientId) === String(clientId) &&
+        d.getMonth() + 1 === mois &&
+        d.getFullYear() === annee
+      );
+    });
+
+    if (ventesClient.length === 0) {
+      showTemporaryNotification("Aucune vente pour cette période", "error");
+      return;
+    }
+
+    let total = 0;
+    ventesClient.forEach((v) => {
+      const vn = nettoyerVente(v);
+      total += vn.total;
+    });
+
+    const remise = total * 0.05;
+    const net = total - remise;
+    const moisNom = new Date(annee, mois - 1, 1).toLocaleString("fr-FR", {
+      month: "long",
+      year: "numeric",
+    });
+
+    if (typeof window.jspdf === "undefined") {
+      showTemporaryNotification("❌ Erreur PDF", "error");
+      return;
+    }
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    const w = doc.internal.pageSize.getWidth();
+    const m = 20;
+    const rt = w - m;
+    const dateF = new Date().toLocaleString("fr-FR");
+
+    doc.setFontSize(20);
+    doc.setFont("helvetica", "bold");
+    doc.text("FACTURE MENSUELLE", w / 2, 20, { align: "center" });
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    doc.text("VentesPro SARL", m, 35);
+    doc.text("Kinshasa, RDC", m, 45);
+    doc.text(`Période: ${moisNom}`, rt - 40, 35, { align: "right" });
+    doc.text(`Date: ${dateF}`, rt - 40, 40, { align: "right" });
+    doc.line(m, 55, rt, 55);
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "bold");
+    doc.text("Client :", m, 68);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.text(client.nom, m + 30, 68);
+    doc.text(`Tél: ${client.telephone || "N/A"}`, m, 75);
+    doc.text(`ID: ${client.id}`, m, 82);
+    doc.line(m, 90, rt, 90);
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "bold");
+    doc.text("Détail des achats", m, 102);
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "bold");
+    doc.text("Date", m, 112);
+    doc.text("Produits", 55, 112);
+    doc.text("Total", 160, 112);
+    doc.line(m, 114, rt, 114);
+
+    let y = 122;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+    ventesClient.forEach((v, idx) => {
+      const vn = nettoyerVente(v);
+      const prods = vn.produits
+        .map((p) => `${p.nom}(${p.quantite})`)
+        .join(", ");
+      const dateStr = formatDate(v.date);
+      doc.text(dateStr.substring(0, 10), m, y);
+      doc.text(prods.substring(0, 45), 55, y);
+      doc.text(`${formatNumberFC(vn.total)} FC`, 160, y);
+      y += 6;
+      if (y > 250 && idx < ventesClient.length - 1) {
+        doc.addPage();
+        y = 20;
+      }
+    });
+
+    y += 5;
+    doc.line(m, y, rt, y);
+    y += 8;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.text("Sous-total:", 130, y);
+    doc.text(`${formatNumberFC(total)} FC`, rt, y, { align: "right" });
+    y += 7;
+    doc.text("Remise (5%):", 130, y);
+    doc.text(`-${formatNumberFC(remise)} FC`, rt, y, { align: "right" });
+    y += 10;
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(12);
+    doc.text("TOTAL À PAYER :", 130, y);
+    doc.setFontSize(14);
+    doc.setTextColor(76, 175, 80);
+    doc.text(`${formatNumberFC(net)} FC`, rt, y, { align: "right" });
+    doc.setFontSize(8);
+    doc.setTextColor(100, 100, 100);
+    doc.text("Merci de votre confiance !", w / 2, 280, { align: "center" });
+
+    doc.save(
+      `facture_${client.nom.replace(/\s/g, "_")}_${moisNom.replace(/\s/g, "_")}.pdf`,
+    );
+    showTemporaryNotification("✅ Facture générée");
+  } catch (error) {
+    showTemporaryNotification(`❌ Erreur: ${error.message}`, "error");
+  }
+};
+
 function initRapports() {
   document
     .getElementById("genererRapportBtn")
     ?.addEventListener("click", genererRapportMensuel);
   document
     .getElementById("exporterRapportBtn")
-    ?.addEventListener("click", () => showTemporaryNotification("Export CSV"));
-  const annee = document.getElementById("rapportAnneeSelect");
-  if (annee) annee.value = new Date().getFullYear();
+    ?.addEventListener("click", () => {
+      const clientId = document.getElementById("rapportClientSelect")?.value;
+      const mois = document.getElementById("rapportMoisSelect")?.value;
+      const annee = document.getElementById("rapportAnneeSelect")?.value;
+      exporterRapportCSV(clientId, mois, annee);
+    });
+
+  const anneeSelect = document.getElementById("rapportAnneeSelect");
+  if (anneeSelect) {
+    const anneeActuelle = new Date().getFullYear();
+    anneeSelect.innerHTML = "";
+    for (let annee = anneeActuelle - 5; annee <= anneeActuelle + 5; annee++) {
+      const option = document.createElement("option");
+      option.value = annee;
+      option.textContent = annee;
+      if (annee === anneeActuelle) option.selected = true;
+      anneeSelect.appendChild(option);
+    }
+  }
+
   const mois = document.getElementById("rapportMoisSelect");
   if (mois) mois.value = new Date().getMonth() + 1;
+
   chargerClientsPourRapport();
+}
+
+async function exporterRapportCSV(clientId, mois, annee) {
+  try {
+    const vr = await fetch(VENTES_URL);
+    const cr = await fetch(CLIENTS_URL);
+    const toutesVentes = await vr.json();
+    const tousClients = await cr.json();
+
+    let ventesFiltrees = toutesVentes.filter((v) => {
+      const d = parseDate(v.date);
+      return (
+        d.getMonth() + 1 === parseInt(mois) &&
+        d.getFullYear() === parseInt(annee)
+      );
+    });
+
+    if (clientId && clientId !== "") {
+      ventesFiltrees = ventesFiltrees.filter(
+        (v) => String(v.clientId) === String(clientId),
+      );
+    }
+
+    if (ventesFiltrees.length === 0) {
+      showTemporaryNotification("📭 Aucune donnée à exporter", "error");
+      return;
+    }
+
+    const separator = ";";
+    const headers = [
+      "Client ID",
+      "Client Nom",
+      "Nb Ventes",
+      "Total (FC)",
+      "Remise 5% (FC)",
+      "Net (FC)",
+    ];
+    const rows = [];
+    const totaux = new Map();
+
+    ventesFiltrees.forEach((v) => {
+      const id = String(v.clientId);
+      const vn = nettoyerVente(v);
+      if (!totaux.has(id)) totaux.set(id, { nb: 0, total: 0 });
+      const t = totaux.get(id);
+      t.nb++;
+      t.total += vn.total;
+    });
+
+    for (let [id, data] of totaux) {
+      const client = tousClients.find((c) => String(c.id) === String(id));
+      const remise = data.total * 0.05;
+      rows.push([
+        id,
+        client ? client.nom : "Inconnu",
+        data.nb,
+        data.total,
+        remise,
+        data.total - remise,
+      ]);
+    }
+
+    const csvContent = [headers, ...rows]
+      .map((row) => row.join(separator))
+      .join("\n");
+    const blob = new Blob(["\uFEFF" + csvContent], {
+      type: "text/csv;charset=utf-8;",
+    });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.href = url;
+    link.download = `rapport_${mois}_${annee}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+    showTemporaryNotification("📥 Export CSV effectué");
+  } catch (error) {
+    showTemporaryNotification("❌ Erreur export", "error");
+  }
 }
 
 // ============================================
@@ -3005,7 +3243,7 @@ function afficherListeAchats(
                     ${
                       achat.statut === "actif"
                         ? `
-                      <button onclick="ouvrirModalModificationAchat(${JSON.stringify(achat).replace(/"/g, "&quot;")})" 
+                      <button onclick='ouvrirModalModificationAchat(${JSON.stringify(achat).replace(/'/g, "\\'")})' 
                               class="text-blue-600 hover:text-blue-800 transition" title="Modifier">
                         <i class="fas fa-edit"></i>
                       </button>
@@ -3020,7 +3258,7 @@ function afficherListeAchats(
                     }
                   </div>
                 </td>
-              </tr>`;
+               </tr>`;
     })
     .join("");
 
@@ -3729,11 +3967,13 @@ initGestionProduits();
 initGestionClients();
 initRapports();
 initDailyStats();
+
 setTimeout(() => {
   if (typeof produits !== "undefined" && produits.BRACONGO) {
     initModuleAchats();
   }
 }, 1000);
+
 showTemporaryNotification("Bienvenue sur VentesPro !");
 
 window.ouvrirModalModificationAchat = ouvrirModalModificationAchat;
