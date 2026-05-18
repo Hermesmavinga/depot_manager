@@ -259,6 +259,11 @@
       "id": "55",
       "nom": "aline",
       "telephone": "+243 828 790 728"
+    },
+    {
+      "nom": "kapinga",
+      "telephone": "+243 828 790 728",
+      "id": "VIgqJ9p"
     }
   ],
   "produits": [
@@ -313,6 +318,14 @@
       "fournisseur": "BRACONGO",
       "nbBouteilles": 20,
       "id": "lYmi4QI"
+    },
+    {
+      "nom": "fanta",
+      "prix": 1200,
+      "format": "30 cl",
+      "type": "bouteille",
+      "fournisseur": "BRACONGO",
+      "id": "y9_Ozn5"
     }
   ],
   "ventes": [
@@ -357,6 +370,20 @@
       "total": 180000,
       "date": "2026-05-18T08:36:04.724Z",
       "id": "lYdFIPt"
+    },
+    {
+      "clientId": "VIgqJ9p",
+      "produits": [
+        {
+          "nom": "Nkoy",
+          "quantite": 1,
+          "prix": 2500,
+          "type": "bouteille"
+        }
+      ],
+      "total": 2500,
+      "date": "2026-05-18T10:24:31.949Z",
+      "id": "jrlD5r9"
     }
   ],
   "achats": [
@@ -431,6 +458,18 @@
       "mois": 5,
       "annee": 2026,
       "id": "gBJ8i3Y"
+    },
+    {
+      "fournisseur": "BRACONGO",
+      "produit": "fanta",
+      "quantite": 1,
+      "prixUnitaire": 1200,
+      "total": 1200,
+      "statut": "actif",
+      "date": "2026-05-18T10:36:16.099Z",
+      "mois": 5,
+      "annee": 2026,
+      "id": "H9qkF5x"
     }
   ]
 }

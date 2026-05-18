@@ -420,7 +420,7 @@ function displayDailySalesDetail(ventesDetail, dateStr) {
   if (!tbody) return;
   if (ventesDetail.length === 0) {
     tbody.innerHTML =
-      '<tr><td colspan="7" class="px-4 py-8 text-center text-gray-400">📭 Aucune vente enregistrée ce jour</td></tr>';
+      '<tr><td colspan="7" class="px-4 py-8 text-center text-gray-400">📭 Aucune vente enregistrée ce jour<\/td><\/tr>';
     if (footer) footer.classList.add("hidden");
     return;
   }
@@ -432,7 +432,7 @@ function displayDailySalesDetail(ventesDetail, dateStr) {
       tb += v.bouteilles;
       tc += v.cassiers;
       tm += v.total;
-      return `<tr class="${i % 2 === 0 ? "bg-white" : "bg-gray-50"} hover:bg-gray-100 transition"><td class="px-4 py-3 text-sm font-mono">${v.heure}</td><td class="px-4 py-3"><div class="font-medium">${escapeHtml(v.clientNom)}</div><div class="text-xs text-gray-400">ID: ${v.clientId}</div></td><td class="px-4 py-3 text-sm">${v.produits.map((p) => `<div class="text-xs">${escapeHtml(p.nom)} (${p.quantite})</div>`).join("")}</td><td class="px-4 py-3 text-center text-orange-600">${v.bouteilles}</td><td class="px-4 py-3 text-center text-purple-600">${v.cassiers}</td><td class="px-4 py-3 text-right font-bold text-emerald-600">${formatNumberFC(v.total)} FC</td><td class="px-4 py-3 text-center"><button onclick="genererFactureVenteSpecifique('${v.id}')" class="bg-blue-600 text-white px-2 py-1 rounded text-xs">🧾 Facture</button></td></tr>`;
+      return `<tr class="${i % 2 === 0 ? "bg-white" : "bg-gray-50"} hover:bg-gray-100 transition"><td class="px-4 py-3 text-sm font-mono">${v.heure}<\/td><td class="px-4 py-3"><div class="font-medium">${escapeHtml(v.clientNom)}</div><div class="text-xs text-gray-400">ID: ${v.clientId}</div><\/td><td class="px-4 py-3 text-sm">${v.produits.map((p) => `<div class="text-xs">${escapeHtml(p.nom)} (${p.quantite})</div>`).join("")}<\/td><td class="px-4 py-3 text-center text-orange-600">${v.bouteilles}<\/td><td class="px-4 py-3 text-center text-purple-600">${v.cassiers}<\/td><td class="px-4 py-3 text-right font-bold text-emerald-600">${formatNumberFC(v.total)} FC<\/td><td class="px-4 py-3 text-center"><button onclick="genererFactureVenteSpecifique('${v.id}')" class="bg-blue-600 text-white px-2 py-1 rounded text-xs">🧾 Facture<\/button><\/td><\/tr>`;
     })
     .join("");
   if (footer) {
@@ -1253,58 +1253,183 @@ const produitSelect = document.getElementById("produit");
 function setActiveFournisseur(fournisseur) {
   currentFournisseur = fournisseur;
   const tabs = document.querySelectorAll(".categorie-tab");
+
   tabs.forEach((tab) => {
     if (tab.getAttribute("data-categorie") === fournisseur) {
       tab.classList.add("active");
+      tab.classList.remove("text-gray-600");
       tab.style.borderBottomColor = "#10b981";
       tab.style.color = "#10b981";
     } else {
       tab.classList.remove("active");
+      tab.classList.add("text-gray-600");
       tab.style.borderBottomColor = "transparent";
-      tab.style.color = "#4b5563";
+      tab.style.color = "#6b7280";
     }
   });
+
   if (bracongoContainer && bralimaContainer) {
-    bracongoContainer.style.display =
-      fournisseur === "BRACONGO" ? "block" : "none";
-    bralimaContainer.style.display =
-      fournisseur === "BRALIMA" ? "block" : "none";
+    if (fournisseur === "BRACONGO") {
+      bracongoContainer.style.display = "block";
+      bralimaContainer.style.display = "none";
+      if (currentType === "bouteille") {
+        if (bracongoBouteilleTab) bracongoBouteilleTab.classList.add("active");
+        if (bracongoCassierTab) bracongoCassierTab.classList.remove("active");
+        if (bracongoBouteilleContainer)
+          bracongoBouteilleContainer.style.display = "block";
+        if (bracongoCassierContainer)
+          bracongoCassierContainer.style.display = "none";
+      } else {
+        if (bracongoCassierTab) bracongoCassierTab.classList.add("active");
+        if (bracongoBouteilleTab)
+          bracongoBouteilleTab.classList.remove("active");
+        if (bracongoBouteilleContainer)
+          bracongoBouteilleContainer.style.display = "none";
+        if (bracongoCassierContainer)
+          bracongoCassierContainer.style.display = "block";
+      }
+    } else {
+      bracongoContainer.style.display = "none";
+      bralimaContainer.style.display = "block";
+      if (currentType === "bouteille") {
+        if (bralimaBouteilleTab) bralimaBouteilleTab.classList.add("active");
+        if (bralimaCassierTab) bralimaCassierTab.classList.remove("active");
+        if (bralimaBouteilleContainer)
+          bralimaBouteilleContainer.style.display = "block";
+        if (bralimaCassierContainer)
+          bralimaCassierContainer.style.display = "none";
+      } else {
+        if (bralimaCassierTab) bralimaCassierTab.classList.add("active");
+        if (bralimaBouteilleTab) bralimaBouteilleTab.classList.remove("active");
+        if (bralimaBouteilleContainer)
+          bralimaBouteilleContainer.style.display = "none";
+        if (bralimaCassierContainer)
+          bralimaCassierContainer.style.display = "block";
+      }
+    }
   }
-  setActiveType(currentType, fournisseur);
 }
+
 function setActiveType(type, fournisseur) {
   currentType = type;
+
   if (
     fournisseur === "BRACONGO" &&
     bracongoBouteilleTab &&
     bracongoCassierTab
   ) {
+    bracongoBouteilleTab.classList.remove("active");
+    bracongoCassierTab.classList.remove("active");
+    bracongoBouteilleTab.style.borderBottomColor = "";
+    bracongoCassierTab.style.borderBottomColor = "";
+    bracongoBouteilleTab.style.color = "";
+    bracongoCassierTab.style.color = "";
+
     if (type === "bouteille") {
       bracongoBouteilleTab.classList.add("active");
-      bracongoCassierTab.classList.remove("active");
-      bracongoBouteilleContainer.style.display = "block";
-      bracongoCassierContainer.style.display = "none";
+      if (bracongoBouteilleContainer)
+        bracongoBouteilleContainer.style.display = "block";
+      if (bracongoCassierContainer)
+        bracongoCassierContainer.style.display = "none";
     } else {
       bracongoCassierTab.classList.add("active");
-      bracongoBouteilleTab.classList.remove("active");
-      bracongoBouteilleContainer.style.display = "none";
-      bracongoCassierContainer.style.display = "block";
+      if (bracongoBouteilleContainer)
+        bracongoBouteilleContainer.style.display = "none";
+      if (bracongoCassierContainer)
+        bracongoCassierContainer.style.display = "block";
     }
   }
+
   if (fournisseur === "BRALIMA" && bralimaBouteilleTab && bralimaCassierTab) {
+    bralimaBouteilleTab.classList.remove("active");
+    bralimaCassierTab.classList.remove("active");
+    bralimaBouteilleTab.style.borderBottomColor = "";
+    bralimaCassierTab.style.borderBottomColor = "";
+    bralimaBouteilleTab.style.color = "";
+    bralimaCassierTab.style.color = "";
+
     if (type === "bouteille") {
       bralimaBouteilleTab.classList.add("active");
-      bralimaCassierTab.classList.remove("active");
-      bralimaBouteilleContainer.style.display = "block";
-      bralimaCassierContainer.style.display = "none";
+      if (bralimaBouteilleContainer)
+        bralimaBouteilleContainer.style.display = "block";
+      if (bralimaCassierContainer)
+        bralimaCassierContainer.style.display = "none";
     } else {
       bralimaCassierTab.classList.add("active");
-      bralimaBouteilleTab.classList.remove("active");
-      bralimaBouteilleContainer.style.display = "none";
-      bralimaCassierContainer.style.display = "block";
+      if (bralimaBouteilleContainer)
+        bralimaBouteilleContainer.style.display = "none";
+      if (bralimaCassierContainer)
+        bralimaCassierContainer.style.display = "block";
     }
   }
 }
+
+function initProduitsTabs() {
+  const bracongoTab = document.getElementById("tabBracongo");
+  const bralimaTab = document.getElementById("tabBralima");
+
+  if (bracongoTab && !bracongoTab.classList.contains("active")) {
+    bracongoTab.classList.add("active");
+    bracongoTab.style.borderBottomColor = "#10b981";
+    bracongoTab.style.color = "#10b981";
+  }
+  if (bralimaTab && bralimaTab.classList.contains("active")) {
+    bralimaTab.classList.remove("active");
+    bralimaTab.style.borderBottomColor = "transparent";
+    bralimaTab.style.color = "#6b7280";
+  }
+
+  if (
+    bracongoBouteilleTab &&
+    !bracongoBouteilleTab.classList.contains("active")
+  ) {
+    bracongoBouteilleTab.classList.add("active");
+  }
+  if (bracongoCassierTab && bracongoCassierTab.classList.contains("active")) {
+    bracongoCassierTab.classList.remove("active");
+  }
+}
+
+function initAllTabs() {
+  const activeCategorie = document.querySelector(".categorie-tab.active");
+  if (!activeCategorie && tabBracongo) {
+    tabBracongo.classList.add("active");
+    tabBralima.classList.remove("active");
+    tabBracongo.style.borderBottomColor = "#10b981";
+    tabBracongo.style.color = "#10b981";
+    tabBralima.style.borderBottomColor = "transparent";
+    tabBralima.style.color = "#6b7280";
+  }
+
+  const activeTypeBracongo = document.querySelector(
+    "#bracongoBouteilleTab.active",
+  );
+  if (!activeTypeBracongo && bracongoBouteilleTab) {
+    bracongoBouteilleTab.classList.add("active");
+    bracongoCassierTab.classList.remove("active");
+    if (bracongoBouteilleContainer)
+      bracongoBouteilleContainer.style.display = "block";
+    if (bracongoCassierContainer)
+      bracongoCassierContainer.style.display = "none";
+  }
+
+  if (bralimaBouteilleTab) {
+    bralimaBouteilleTab.classList.add("active");
+    bralimaCassierTab.classList.remove("active");
+  }
+
+  const activeFournisseur = document.querySelector(".fournisseur-tab.active");
+  if (!activeFournisseur && document.getElementById("fournisseurBracongo")) {
+    document.getElementById("fournisseurBracongo").classList.add("active");
+    document.getElementById("fournisseurBralima").classList.remove("active");
+  }
+
+  const activeAchat = document.querySelector("#bracongoListeTab.active");
+  if (!activeAchat && document.getElementById("bracongoListeTab")) {
+    document.getElementById("bracongoListeTab").classList.add("active");
+  }
+}
+
 function initTypeTabs() {
   if (bracongoBouteilleTab)
     bracongoBouteilleTab.addEventListener("click", () =>
@@ -1323,6 +1448,7 @@ function initTypeTabs() {
       setActiveType("cassier", "BRALIMA"),
     );
 }
+
 function initFournisseurTabs() {
   if (tabBracongo)
     tabBracongo.addEventListener("click", () =>
@@ -1331,6 +1457,7 @@ function initFournisseurTabs() {
   if (tabBralima)
     tabBralima.addEventListener("click", () => setActiveFournisseur("BRALIMA"));
 }
+
 function initTypeChangeListener() {
   if (produitTypeSelect) {
     produitTypeSelect.addEventListener("change", () => {
@@ -1344,6 +1471,7 @@ function initTypeChangeListener() {
     });
   }
 }
+
 function mettreAJourSelecteurProduits() {
   if (!produitSelect) return;
   const selectedValue = produitSelect.value;
@@ -1393,6 +1521,7 @@ function mettreAJourSelecteurProduits() {
   produitSelect.appendChild(bralimaCassierGroup);
   updatePrix();
 }
+
 function updatePrix() {
   if (!produitSelect || !document.getElementById("prix")) return;
   const value = produitSelect.value;
@@ -1421,6 +1550,7 @@ function updatePrix() {
   } else document.getElementById("prix").value = "";
   if (typeof updateTotal === "function") updateTotal();
 }
+
 function updateTotal() {
   const quantite = parseFloat(document.getElementById("quantite")?.value) || 0;
   const prix = parseFloat(document.getElementById("prix")?.value) || 0;
@@ -1439,6 +1569,7 @@ function updateTotal() {
     else totalDisplay.innerHTML = "";
   }
 }
+
 function afficherListeProduits() {
   if (bracongoBouteilleBody) {
     bracongoBouteilleBody.innerHTML = "";
@@ -1487,6 +1618,7 @@ function afficherListeProduits() {
     btn.addEventListener("click", handleDeleteClick);
   });
 }
+
 async function handleEditClick(e) {
   const btn = e.currentTarget;
   const id = btn.getAttribute("data-id");
@@ -1508,6 +1640,7 @@ async function handleEditClick(e) {
     nbBouteilles,
   );
 }
+
 async function handleDeleteClick(e) {
   const btn = e.currentTarget;
   const id = btn.getAttribute("data-id");
@@ -1561,6 +1694,7 @@ async function handleDeleteClick(e) {
     }
   }
 }
+
 function ouvrirModalAjout() {
   produitEnEdition = null;
   modalTitle.textContent = "Ajouter un produit";
@@ -1577,6 +1711,7 @@ function ouvrirModalAjout() {
   produitModal.classList.remove("hidden");
   produitModal.classList.add("flex");
 }
+
 function ouvrirModalEdition(
   id,
   fournisseur,
@@ -1609,11 +1744,13 @@ function ouvrirModalEdition(
   produitModal.classList.remove("hidden");
   produitModal.classList.add("flex");
 }
+
 function fermerModal() {
   produitModal.classList.add("hidden");
   produitModal.classList.remove("flex");
   produitEnEdition = null;
 }
+
 async function sauvegarderProduit() {
   const nom = produitNomInput.value.trim();
   const format = produitFormatInput.value.trim();
@@ -1687,6 +1824,7 @@ async function sauvegarderProduit() {
     showTemporaryNotification(`❌ Erreur: ${error.message}`, "error");
   }
 }
+
 function initGestionProduits() {
   chargerProduits().then(() => {
     initFournisseurTabs();
@@ -1694,6 +1832,8 @@ function initGestionProduits() {
     initTypeChangeListener();
     mettreAJourSelecteurProduits();
     afficherListeProduits();
+    initProduitsTabs();
+    initAllTabs();
   });
   const addProductBtn = document.getElementById("ajouterProduitBtn");
   if (addProductBtn) addProductBtn.addEventListener("click", ouvrirModalAjout);
@@ -1850,24 +1990,35 @@ function initClientsTabs() {
   const tabLister = document.getElementById("tabListerClients");
   const panelAjouter = document.getElementById("panelAjouterClient");
   const panelLister = document.getElementById("panelListerClients");
-  if (tabAjouter) {
-    tabAjouter.addEventListener("click", () => {
-      tabAjouter.classList.add("text-emerald-600", "border-emerald-600");
-      tabAjouter.classList.remove("text-gray-500", "border-transparent");
-      tabLister.classList.remove("text-emerald-600", "border-emerald-600");
-      tabLister.classList.add("text-gray-500", "border-transparent");
-      panelAjouter.classList.remove("hidden");
-      panelLister.classList.add("hidden");
-    });
-  }
-  if (tabLister) {
-    tabLister.addEventListener("click", () => {
-      tabLister.classList.add("text-emerald-600", "border-emerald-600");
-      tabLister.classList.remove("text-gray-500", "border-transparent");
+
+  const resetClientsTabs = () => {
+    if (tabAjouter) {
       tabAjouter.classList.remove("text-emerald-600", "border-emerald-600");
       tabAjouter.classList.add("text-gray-500", "border-transparent");
-      panelAjouter.classList.add("hidden");
-      panelLister.classList.remove("hidden");
+    }
+    if (tabLister) {
+      tabLister.classList.remove("text-emerald-600", "border-emerald-600");
+      tabLister.classList.add("text-gray-500", "border-transparent");
+    }
+  };
+
+  if (tabAjouter) {
+    tabAjouter.addEventListener("click", () => {
+      resetClientsTabs();
+      tabAjouter.classList.add("text-emerald-600", "border-emerald-600");
+      tabAjouter.classList.remove("text-gray-500", "border-transparent");
+      if (panelAjouter) panelAjouter.classList.remove("hidden");
+      if (panelLister) panelLister.classList.add("hidden");
+    });
+  }
+
+  if (tabLister) {
+    tabLister.addEventListener("click", () => {
+      resetClientsTabs();
+      tabLister.classList.add("text-emerald-600", "border-emerald-600");
+      tabLister.classList.remove("text-gray-500", "border-transparent");
+      if (panelAjouter) panelAjouter.classList.add("hidden");
+      if (panelLister) panelLister.classList.remove("hidden");
       loadClientsList();
     });
   }
@@ -1889,7 +2040,7 @@ async function loadClientsList() {
     showTemporaryNotification("❌ Erreur chargement clients", "error");
     if (tbody) {
       tbody.innerHTML =
-        '</table><td colspan="4" class="px-4 py-8 text-center text-red-400">❌ Erreur de chargement<\/td><\/tr>';
+        '<tr><td colspan="4" class="px-4 py-8 text-center text-red-400">❌ Erreur de chargement<\/td><\/tr>';
     }
   }
 }
@@ -2476,7 +2627,7 @@ async function genererRapportMensuel() {
         nbGlobal += data.nb;
         const tr = document.createElement("tr");
         tr.className = "border-b hover:bg-gray-50";
-        tr.innerHTML = `<td class="px-4 py-3"><div class="font-medium">${client ? escapeHtml(client.nom) : "Client " + id}</div><div class="text-xs text-gray-400">ID: ${id}</div></td><td class="px-4 py-3 text-center">${data.nb}</td><td class="px-4 py-3 text-right">${formatNumberFC(data.total)} FC</td><td class="px-4 py-3 text-right text-orange-600">${formatNumberFC(remise)} FC</td><td class="px-4 py-3 text-right font-bold text-emerald-600">${formatNumberFC(data.total - remise)} FC</td><td class="px-4 py-3 text-center"><button onclick="genererFactureClientRapport('${id}', ${mois}, ${annee})" class="bg-purple-600 text-white px-2 py-1 rounded text-xs">🧾</button></td>`;
+        tr.innerHTML = `<td class="px-4 py-3"><div class="font-medium">${client ? escapeHtml(client.nom) : "Client " + id}</div><div class="text-xs text-gray-400">ID: ${id}</div><\/td><td class="px-4 py-3 text-center">${data.nb}<\/td><td class="px-4 py-3 text-right">${formatNumberFC(data.total)} FC<\/td><td class="px-4 py-3 text-right text-orange-600">${formatNumberFC(remise)} FC<\/td><td class="px-4 py-3 text-right font-bold text-emerald-600">${formatNumberFC(data.total - remise)} FC<\/td><td class="px-4 py-3 text-center"><button onclick="genererFactureClientRapport('${id}', ${mois}, ${annee})" class="bg-purple-600 text-white px-2 py-1 rounded text-xs">🧾<\/button><\/td><\/tr>`;
         tbody.appendChild(tr);
       }
       document.getElementById("rapportFootNbVentes").textContent = nbGlobal;
@@ -3215,7 +3366,7 @@ function afficherListeAchats(
 
   if (achatsFiltres.length === 0) {
     tbody.innerHTML =
-      '<tr><td colspan="7" class="text-center py-8 text-gray-400">📭 Aucun achat trouvé</td></tr>';
+      '<tr><td colspan="7" class="text-center py-8 text-gray-400">📭 Aucun achat trouvé<\/td><\/tr>';
     if (footer) footer.classList.add("hidden");
     return;
   }
@@ -3232,12 +3383,12 @@ function afficherListeAchats(
           : '<span class="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-700">Archivé</span>';
 
       return `<tr class="${idx % 2 === 0 ? "bg-white" : "bg-gray-50"} hover:bg-gray-100 transition">
-                <td class="px-4 py-3 text-sm">${date.toLocaleDateString("fr-FR")} ${date.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</td>
-                <td class="px-4 py-3 font-medium">${escapeHtml(achat.produit)}</td>
-                <td class="px-4 py-3 text-center">${achat.quantite}</td>
-                <td class="px-4 py-3 text-right">${formatNumberFC(achat.prixUnitaire)} FC</td>
-                <td class="px-4 py-3 text-right font-bold text-emerald-600">${formatNumberFC(achat.total)} FC</td>
-                <td class="px-4 py-3 text-center">${statutBadge}</td>
+                <td class="px-4 py-3 text-sm">${date.toLocaleDateString("fr-FR")} ${date.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}<\/td>
+                <td class="px-4 py-3 font-medium">${escapeHtml(achat.produit)}<\/td>
+                <td class="px-4 py-3 text-center">${achat.quantite}<\/td>
+                <td class="px-4 py-3 text-right">${formatNumberFC(achat.prixUnitaire)} FC<\/td>
+                <td class="px-4 py-3 text-right font-bold text-emerald-600">${formatNumberFC(achat.total)} FC<\/td>
+                <td class="px-4 py-3 text-center">${statutBadge}<\/td>
                 <td class="px-4 py-3 text-center">
                   <div class="flex gap-2 justify-center">
                     ${
@@ -3257,8 +3408,8 @@ function afficherListeAchats(
                     `
                     }
                   </div>
-                </td>
-               </tr>`;
+                <\/td>
+              <\/tr>`;
     })
     .join("");
 
@@ -3972,6 +4123,7 @@ setTimeout(() => {
   if (typeof produits !== "undefined" && produits.BRACONGO) {
     initModuleAchats();
   }
+  initAllTabs();
 }, 1000);
 
 showTemporaryNotification("Bienvenue sur VentesPro !");

@@ -88,22 +88,40 @@
       .overlay.active {
         display: block;
       }
-      .categorie-tab.active {
+      
+      /* Styles corrigés pour les onglets */
+      .categorie-tab.active, .type-tab.active {
         border-bottom-color: #10b981 !important;
         color: #10b981 !important;
       }
-      .type-tab.active {
-        border-bottom-color: #10b981 !important;
-        color: #10b981 !important;
+
+      .categorie-tab:not(.active), .type-tab:not(.active) {
+        color: #6b7280 !important;
+        border-bottom-color: transparent !important;
       }
-      .fournisseur-tab.active {
+
+      .fournisseur-tab.active, .achat-tab.active {
         border-bottom-color: #3b82f6 !important;
         color: #3b82f6 !important;
       }
-      .achat-tab.active {
-        border-bottom-color: #3b82f6 !important;
-        color: #3b82f6 !important;
+
+      .fournisseur-tab:not(.active), .achat-tab:not(.active) {
+        color: #6b7280 !important;
+        border-bottom-color: transparent !important;
       }
+
+      .categorie-tab, .type-tab, .fournisseur-tab, .achat-tab {
+        transition: all 0.2s ease;
+        cursor: pointer;
+        background-color: transparent;
+      }
+
+      .categorie-tab:hover:not(.active), .type-tab:hover:not(.active),
+      .fournisseur-tab:hover:not(.active), .achat-tab:hover:not(.active) {
+        color: #374151 !important;
+        border-bottom-color: #d1d5db !important;
+      }
+      
       @keyframes fadeInModal {
         from {
           opacity: 0;
@@ -1233,7 +1251,6 @@
                     id="rapportAnneeSelect"
                     class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
                   >
-                    <!-- Les années seront chargées dynamiquement par JavaScript -->
                   </select>
                 </div>
               </div>
@@ -1318,7 +1335,7 @@
                       >
                         Actions
                       </th>
-                    </tr>
+                    <tr>
                   </thead>
                   <tbody
                     id="rapportTableBody"
@@ -1639,7 +1656,7 @@
                       <tr>
                         <td colspan="7" class="text-center py-8 text-gray-400">
                           Aucun achat
-                        </td>
+                        </table>
                       </tr>
                     </tbody>
                     <tfoot
