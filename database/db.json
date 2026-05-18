@@ -269,6 +269,11 @@
       "id": "JEAN001",
       "nom": "JEAN LIEVIN",
       "telephone": "+243 828 790 728"
+    },
+    {
+      "id": "ROSE001",
+      "nom": "rosie",
+      "telephone": "+243 828 790 728"
     }
   ],
   "produits": [
@@ -339,6 +344,15 @@
       "type": "bouteille",
       "fournisseur": "BRACONGO",
       "id": "itmIBpc"
+    },
+    {
+      "nom": "heineken",
+      "prixCassier": 40000,
+      "format": "30 cl",
+      "type": "cassier",
+      "fournisseur": "BRALIMA",
+      "nbBouteilles": 24,
+      "id": "IJJAMPB"
     }
   ],
   "ventes": [
@@ -425,6 +439,34 @@
       "total": 2500,
       "date": "2026-05-18T12:07:48.329Z",
       "id": "5fq_PZM"
+    },
+    {
+      "clientId": "1",
+      "produits": [
+        {
+          "nom": "Nkoy",
+          "quantite": 1,
+          "prix": 60000,
+          "type": "cassier"
+        }
+      ],
+      "total": 60000,
+      "date": "2026-05-18T16:23:58.535Z",
+      "id": "4oHSJJj"
+    },
+    {
+      "clientId": "ROSE001",
+      "produits": [
+        {
+          "nom": "fanta",
+          "quantite": 1,
+          "prix": 1200,
+          "type": "bouteille"
+        }
+      ],
+      "total": 1200,
+      "date": "2026-05-18T18:41:10.965Z",
+      "id": "RkLh_Mq"
     }
   ],
   "achats": [
@@ -500,5 +542,6 @@
       "annee": 2026,
       "id": "qXTh2vv"
     }
-  ]
+  ],
+  "echeanciers": []
 }

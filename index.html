@@ -88,48 +88,39 @@
       .overlay.active {
         display: block;
       }
-
-      .categorie-tab.active,
-      .type-tab.active {
+      
+      .categorie-tab.active, .type-tab.active {
         border-bottom-color: #10b981 !important;
         color: #10b981 !important;
       }
 
-      .categorie-tab:not(.active),
-      .type-tab:not(.active) {
+      .categorie-tab:not(.active), .type-tab:not(.active) {
         color: #6b7280 !important;
         border-bottom-color: transparent !important;
       }
 
-      .fournisseur-tab.active,
-      .achat-tab.active {
+      .fournisseur-tab.active, .achat-tab.active {
         border-bottom-color: #3b82f6 !important;
         color: #3b82f6 !important;
       }
 
-      .fournisseur-tab:not(.active),
-      .achat-tab:not(.active) {
+      .fournisseur-tab:not(.active), .achat-tab:not(.active) {
         color: #6b7280 !important;
         border-bottom-color: transparent !important;
       }
 
-      .categorie-tab,
-      .type-tab,
-      .fournisseur-tab,
-      .achat-tab {
+      .categorie-tab, .type-tab, .fournisseur-tab, .achat-tab {
         transition: all 0.2s ease;
         cursor: pointer;
         background-color: transparent;
       }
 
-      .categorie-tab:hover:not(.active),
-      .type-tab:hover:not(.active),
-      .fournisseur-tab:hover:not(.active),
-      .achat-tab:hover:not(.active) {
+      .categorie-tab:hover:not(.active), .type-tab:hover:not(.active),
+      .fournisseur-tab:hover:not(.active), .achat-tab:hover:not(.active) {
         color: #374151 !important;
         border-bottom-color: #d1d5db !important;
       }
-
+      
       @keyframes fadeInModal {
         from {
           opacity: 0;
@@ -567,33 +558,6 @@
             </div>
           </div>
 
-          <!-- Widget Échéancier -->
-          <div
-            id="echeancierWidget"
-            class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-8"
-          >
-            <div
-              class="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-emerald-50 to-teal-50"
-            >
-              <div class="flex justify-between items-center flex-wrap gap-4">
-                <h3 class="font-semibold text-gray-800">
-                  <i class="fas fa-calendar-check text-emerald-600 mr-2"></i>
-                  Échéanciers du mois
-                </h3>
-                <button
-                  onclick="afficherListeEcheanciers()"
-                  class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm transition"
-                >
-                  <i class="fas fa-list mr-2"></i> Voir tous
-                </button>
-              </div>
-            </div>
-            <div id="echeancierPreview" class="p-6 text-center text-gray-400">
-              <i class="fas fa-spinner fa-spin text-2xl mb-2 block"></i>
-              <p>Chargement...</p>
-            </div>
-          </div>
-
           <div
             class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-8"
           >
@@ -709,31 +673,17 @@
                 clients
               </h3>
             </div>
-
-            <div
-              class="mx-6 mt-4 bg-green-50 border border-green-200 rounded-lg p-3 text-sm"
-            >
+            
+            <div class="mx-6 mt-4 bg-green-50 border border-green-200 rounded-lg p-3 text-sm">
               <i class="fas fa-lightbulb text-green-600 mr-2"></i>
-              <span class="text-green-800 font-medium"
-                >💡 Code client personnalisé :</span
-              >
+              <span class="text-green-800 font-medium">💡 Code client personnalisé :</span>
               <ul class="text-xs text-gray-600 mt-1 ml-6 list-disc">
-                <li>
-                  Choisissez un code
-                  <strong>court et facile à retenir</strong> (ex: JEAN001,
-                  DUPONT01)
-                </li>
-                <li>
-                  Utilisez ce code pour retrouver rapidement le client dans la
-                  vente
-                </li>
-                <li>
-                  Le code doit être <strong>unique</strong> - une vérification
-                  est faite automatiquement
-                </li>
+                <li>Choisissez un code <strong>court et facile à retenir</strong> (ex: JEAN001, DUPONT01)</li>
+                <li>Utilisez ce code pour retrouver rapidement le client dans la vente</li>
+                <li>Le code doit être <strong>unique</strong> - une vérification est faite automatiquement</li>
               </ul>
             </div>
-
+            
             <div class="flex border-b border-gray-200 px-6 mt-4">
               <button
                 id="tabAjouterClient"
@@ -759,9 +709,7 @@
                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none uppercase"
                       placeholder="Ex: JEAN001, DUPONT01, CLIENT01"
                     />
-                    <p class="text-xs text-gray-400 mt-1">
-                      Code unique pour identifier le client (max 20 caractères)
-                    </p>
+                    <p class="text-xs text-gray-400 mt-1">Code unique pour identifier le client (max 20 caractères)</p>
                   </div>
                   <div class="mb-4">
                     <label class="block text-gray-700 text-sm font-medium mb-2"
@@ -1263,14 +1211,14 @@
                       >
                         0
                       </td>
-                      <td class="px-4 py-3"></td>
+                      <td class="px-4 py-3"> </td>
                       <td
                         id="totalPrix"
                         class="px-4 py-3 text-right font-medium"
                       >
                         0 FC
-                      </td>
-                      <td colspan="2"></td>
+                       </td>
+                      <td colspan="2"> </td>
                     </tr>
                   </tfoot>
                 </table>
@@ -1329,7 +1277,8 @@
                   ><select
                     id="rapportAnneeSelect"
                     class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
-                  ></select>
+                  >
+                  </select>
                 </div>
               </div>
               <div class="flex gap-3 mb-6">
@@ -1455,12 +1404,8 @@
 
         <!-- ÉCHÉANCIERS -->
         <div id="echeanciersSection" class="hidden fade-in">
-          <div
-            class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden"
-          >
-            <div
-              class="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-emerald-50 to-teal-50"
-            >
+          <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-emerald-50 to-teal-50">
               <h3 class="font-semibold text-gray-800">
                 <i class="fas fa-calendar-check text-emerald-600 mr-2"></i>
                 Gestion des échéanciers
@@ -1469,94 +1414,49 @@
             <div class="p-6">
               <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                 <div class="bg-gray-50 rounded-lg p-4">
-                  <h4 class="font-medium text-gray-800 mb-2">
-                    Générer un échéancier
-                  </h4>
+                  <h4 class="font-medium text-gray-800 mb-2">Générer un échéancier</h4>
                   <div class="grid grid-cols-2 gap-3">
                     <div>
-                      <label class="block text-xs text-gray-500 mb-1"
-                        >Client</label
-                      >
-                      <select
-                        id="echeancierClientSelect"
-                        class="w-full px-3 py-2 border rounded-lg text-sm"
-                      >
+                      <label class="block text-xs text-gray-500 mb-1">Client</label>
+                      <select id="echeancierClientSelect" class="w-full px-3 py-2 border rounded-lg text-sm">
                         <option value="">-- Sélectionner --</option>
                       </select>
                     </div>
                     <div>
-                      <label class="block text-xs text-gray-500 mb-1"
-                        >Mois</label
-                      >
-                      <input
-                        type="month"
-                        id="echeancierMois"
-                        class="w-full px-3 py-2 border rounded-lg text-sm"
-                      />
+                      <label class="block text-xs text-gray-500 mb-1">Mois</label>
+                      <input type="month" id="echeancierMois" class="w-full px-3 py-2 border rounded-lg text-sm">
                     </div>
                   </div>
-                  <button
-                    onclick="genererEcheancierClient()"
-                    class="mt-3 w-full bg-emerald-600 text-white py-2 rounded-lg text-sm"
-                  >
+                  <button onclick="genererEcheancierClient()" class="mt-3 w-full bg-emerald-600 text-white py-2 rounded-lg text-sm">
                     <i class="fas fa-file-invoice mr-2"></i> Générer
                   </button>
                 </div>
                 <div class="bg-gray-50 rounded-lg p-4">
-                  <h4 class="font-medium text-gray-800 mb-2">
-                    Actions rapides
-                  </h4>
-                  <button
-                    onclick="genererEcheancierMoisActuel()"
-                    class="w-full bg-blue-600 text-white py-2 rounded-lg text-sm mb-2"
-                  >
-                    <i class="fas fa-calendar-alt mr-2"></i> Générer pour le
-                    mois en cours
+                  <h4 class="font-medium text-gray-800 mb-2">Actions rapides</h4>
+                  <button onclick="genererEcheancierMoisActuel()" class="w-full bg-blue-600 text-white py-2 rounded-lg text-sm mb-2">
+                    <i class="fas fa-calendar-alt mr-2"></i> Générer pour le mois en cours
                   </button>
-                  <button
-                    onclick="afficherListeEcheanciers()"
-                    class="w-full bg-purple-600 text-white py-2 rounded-lg text-sm"
-                  >
+                  <button onclick="afficherListeEcheanciers()" class="w-full bg-purple-600 text-white py-2 rounded-lg text-sm">
                     <i class="fas fa-list mr-2"></i> Voir tous les échéanciers
                   </button>
                 </div>
               </div>
-              <div
-                id="echeancierStats"
-                class="grid grid-cols-1 md:grid-cols-4 gap-4"
-              >
+              <div id="echeancierStats" class="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div class="bg-yellow-50 rounded-xl p-4 text-center">
                   <p class="text-xs text-gray-500">En attente</p>
-                  <p
-                    id="statEnAttente"
-                    class="text-2xl font-bold text-yellow-700"
-                  >
-                    0
-                  </p>
+                  <p id="statEnAttente" class="text-2xl font-bold text-yellow-700">0</p>
                 </div>
                 <div class="bg-green-50 rounded-xl p-4 text-center">
                   <p class="text-xs text-gray-500">Payés</p>
-                  <p id="statPayes" class="text-2xl font-bold text-green-700">
-                    0
-                  </p>
+                  <p id="statPayes" class="text-2xl font-bold text-green-700">0</p>
                 </div>
                 <div class="bg-blue-50 rounded-xl p-4 text-center">
                   <p class="text-xs text-gray-500">Total à encaisser</p>
-                  <p
-                    id="statTotalEcheances"
-                    class="text-2xl font-bold text-blue-700"
-                  >
-                    0 FC
-                  </p>
+                  <p id="statTotalEcheances" class="text-2xl font-bold text-blue-700">0 FC</p>
                 </div>
                 <div class="bg-emerald-50 rounded-xl p-4 text-center">
                   <p class="text-xs text-gray-500">Remise totale</p>
-                  <p
-                    id="statRemiseTotale"
-                    class="text-2xl font-bold text-emerald-700"
-                  >
-                    0 FC
-                  </p>
+                  <p id="statRemiseTotale" class="text-2xl font-bold text-emerald-700">0 FC</p>
                 </div>
               </div>
             </div>
@@ -1993,7 +1893,7 @@
                         >
                           Actions
                         </th>
-                      </tr>
+                      </table>
                     </thead>
                     <tbody
                       id="bralimaAchatsBody"
