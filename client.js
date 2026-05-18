@@ -49,63 +49,6 @@ let panierAchats = {
 let currentFournisseurAchat = "BRACONGO";
 
 // ============================================
-// REDIRECTION VERS LA SECTION VENTES
-// ============================================
-function redirectToVente(clientId = null) {
-  const navItems = document.querySelectorAll(".nav-item");
-  let ventesNavItem = null;
-  navItems.forEach((item) => {
-    if (item.dataset.section === "ventes") ventesNavItem = item;
-  });
-  const sections = {
-    dashboard: document.getElementById("dashboardSection"),
-    clients: document.getElementById("clientsSection"),
-    produits: document.getElementById("produitsSection"),
-    ventes: document.getElementById("ventesSection"),
-    historique: document.getElementById("historiqueSection"),
-    rapports: document.getElementById("rapportsSection"),
-    achats: document.getElementById("achatsSection"),
-  };
-  if (ventesNavItem) {
-    navItems.forEach((nav) => {
-      nav.classList.remove("bg-emerald-600", "text-white");
-      nav.classList.add("text-gray-300");
-    });
-    ventesNavItem.classList.add("bg-emerald-600", "text-white");
-    ventesNavItem.classList.remove("text-gray-300");
-    const pageTitle = document.getElementById("currentPageTitle");
-    if (pageTitle)
-      pageTitle.textContent = ventesNavItem.querySelector("span").textContent;
-  }
-  Object.values(sections).forEach((section) => {
-    if (section) section.classList.add("hidden");
-  });
-  if (sections.ventes) sections.ventes.classList.remove("hidden");
-  if (clientId) {
-    const venteClientInput = document.getElementById("venteClientId");
-    if (venteClientInput) {
-      venteClientInput.value = clientId;
-      const event = new Event("input", { bubbles: true });
-      venteClientInput.dispatchEvent(event);
-      showTemporaryNotification(`✅ Client sélectionné - ID: ${clientId}`);
-    }
-  }
-  const sidebar = document.getElementById("sidebar");
-  const overlay = document.getElementById("overlay");
-  if (window.innerWidth < 768 && sidebar) {
-    sidebar.classList.add("-translate-x-full");
-    if (overlay) overlay.classList.remove("active");
-  }
-  window.scrollTo({ top: 0, behavior: "smooth" });
-}
-function fillVenteForm(clientId) {
-  redirectToVente(clientId);
-}
-function fillVenteFormWithId(clientId) {
-  redirectToVente(clientId);
-}
-
-// ============================================
 // FONCTIONS UTILITAIRES
 // ============================================
 function showNotification(message, type = "success") {
@@ -215,6 +158,11 @@ function afficherProduitsListe(prods) {
     )
     .join("");
 }
+function formatId(id) {
+  if (!id) return "";
+  if (id.length <= 12) return id;
+  return id.substring(0, 8) + "...";
+}
 
 // ============================================
 // NAVIGATION
@@ -272,6 +220,58 @@ document.getElementById("currentDate").textContent =
     month: "long",
     day: "numeric",
   });
+
+// ============================================
+// REDIRECTION VERS LA SECTION VENTES
+// ============================================
+function redirectToVente(clientId = null) {
+  const navItems = document.querySelectorAll(".nav-item");
+  let ventesNavItem = null;
+  navItems.forEach((item) => {
+    if (item.dataset.section === "ventes") ventesNavItem = item;
+  });
+  if (ventesNavItem) {
+    navItems.forEach((nav) => {
+      nav.classList.remove("bg-emerald-600", "text-white");
+      nav.classList.add("text-gray-300");
+    });
+    ventesNavItem.classList.add("bg-emerald-600", "text-white");
+    ventesNavItem.classList.remove("text-gray-300");
+    const pageTitle = document.getElementById("currentPageTitle");
+    if (pageTitle)
+      pageTitle.textContent = ventesNavItem.querySelector("span").textContent;
+  }
+  Object.values(sections).forEach((section) => {
+    if (section) section.classList.add("hidden");
+  });
+  if (sections.ventes) sections.ventes.classList.remove("hidden");
+  if (clientId) {
+    const venteClientInput = document.getElementById("venteClientId");
+    if (venteClientInput) {
+      venteClientInput.value = clientId;
+      const event = new Event("input", { bubbles: true });
+      venteClientInput.dispatchEvent(event);
+      showTemporaryNotification(`✅ Client sélectionné - Code: ${clientId}`);
+    }
+  }
+  const sidebar = document.getElementById("sidebar");
+  const overlay = document.getElementById("overlay");
+  if (window.innerWidth < 768 && sidebar) {
+    sidebar.classList.add("-translate-x-full");
+    if (overlay) overlay.classList.remove("active");
+  }
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+function fillVenteForm(clientId) {
+  redirectToVente(clientId);
+}
+function fillVenteFormWithId(clientId) {
+  redirectToVente(clientId);
+}
+function selectClientAndFill(clientId) {
+  document.getElementById("clientId").value = clientId;
+  searchClient();
+}
 
 // ============================================
 // DASHBOARD STATS
@@ -420,7 +420,7 @@ function displayDailySalesDetail(ventesDetail, dateStr) {
   if (!tbody) return;
   if (ventesDetail.length === 0) {
     tbody.innerHTML =
-      '<tr><td colspan="7" class="px-4 py-8 text-center text-gray-400">📭 Aucune vente enregistrée ce jour<\/td><\/tr>';
+      '</table><td colspan="7" class="px-4 py-8 text-center text-gray-400">📭 Aucune vente enregistrée ce jour<\/td><\/tr>';
     if (footer) footer.classList.add("hidden");
     return;
   }
@@ -432,7 +432,7 @@ function displayDailySalesDetail(ventesDetail, dateStr) {
       tb += v.bouteilles;
       tc += v.cassiers;
       tm += v.total;
-      return `<tr class="${i % 2 === 0 ? "bg-white" : "bg-gray-50"} hover:bg-gray-100 transition"><td class="px-4 py-3 text-sm font-mono">${v.heure}<\/td><td class="px-4 py-3"><div class="font-medium">${escapeHtml(v.clientNom)}</div><div class="text-xs text-gray-400">ID: ${v.clientId}</div><\/td><td class="px-4 py-3 text-sm">${v.produits.map((p) => `<div class="text-xs">${escapeHtml(p.nom)} (${p.quantite})</div>`).join("")}<\/td><td class="px-4 py-3 text-center text-orange-600">${v.bouteilles}<\/td><td class="px-4 py-3 text-center text-purple-600">${v.cassiers}<\/td><td class="px-4 py-3 text-right font-bold text-emerald-600">${formatNumberFC(v.total)} FC<\/td><td class="px-4 py-3 text-center"><button onclick="genererFactureVenteSpecifique('${v.id}')" class="bg-blue-600 text-white px-2 py-1 rounded text-xs">🧾 Facture<\/button><\/td><\/tr>`;
+      return `<tr class="${i % 2 === 0 ? "bg-white" : "bg-gray-50"} hover:bg-gray-100 transition"><td class="px-4 py-3 text-sm font-mono">${v.heure}<\/td><td class="px-4 py-3"><div class="font-medium">${escapeHtml(v.clientNom)}</div><div class="text-xs text-gray-400">Code: ${v.clientId}</div><\/td><td class="px-4 py-3 text-sm">${v.produits.map((p) => `<div class="text-xs">${escapeHtml(p.nom)} (${p.quantite})</div>`).join("")}<\/td><td class="px-4 py-3 text-center text-orange-600">${v.bouteilles}<\/td><td class="px-4 py-3 text-center text-purple-600">${v.cassiers}<\/td><td class="px-4 py-3 text-right font-bold text-emerald-600">${formatNumberFC(v.total)} FC<\/td><td class="px-4 py-3 text-center"><button onclick="genererFactureVenteSpecifique('${v.id}')" class="bg-blue-600 text-white px-2 py-1 rounded text-xs">🧾 Facture<\/button><\/td><\/tr>`;
     })
     .join("");
   if (footer) {
@@ -874,7 +874,7 @@ async function showClientDetails(clientId) {
     ].sort((a, b) => b - a);
     const modal = document.createElement("div");
     modal.className = "client-detail-modal";
-    modal.innerHTML = `<div class="client-detail-content"><div class="sticky top-0 bg-gradient-to-r from-emerald-600 to-teal-600 text-white px-6 py-4 rounded-t-2xl flex justify-between items-center"><div><i class="fas fa-user-circle text-2xl mr-2"></i><span class="font-bold text-lg">${escapeHtml(client.nom)}</span><p class="text-xs opacity-90 mt-1">ID: ${client.id} | 📞 ${client.telephone}</p></div><button onclick="this.closest('.client-detail-modal').remove()" class="text-white hover:bg-white/20 rounded-full w-8 h-8 flex items-center justify-center"><i class="fas fa-times"></i></button></div><div class="p-5 flex-1 overflow-y-auto" style="max-height: calc(85vh - 180px);"><div class="bg-gray-50 rounded-xl p-3 mb-4 flex flex-wrap items-center justify-between gap-3"><div class="flex items-center gap-2"><i class="fas fa-calendar-alt text-emerald-600"></i><span class="text-sm font-medium text-gray-700">Filtrer par année :</span></div><div class="flex flex-wrap gap-2"><button onclick="filterClientYear('all')" class="year-filter-btn px-3 py-1.5 rounded-lg text-sm transition ${currentFilterYear === "all" ? "bg-emerald-600 text-white" : "bg-gray-200 text-gray-700 hover:bg-gray-300"}">📅 Toutes</button>${anneesDisponibles.map((annee) => `<button onclick="filterClientYear('${annee}')" class="year-filter-btn px-3 py-1.5 rounded-lg text-sm transition ${currentFilterYear === String(annee) ? "bg-emerald-600 text-white" : "bg-gray-200 text-gray-700 hover:bg-gray-300"}">${annee}</button>`).join("")}</div></div><div id="clientStatsContent">${renderClientStats(ventesClient, currentFilterYear)}</div></div><div class="sticky bottom-0 bg-white border-t border-gray-100 pt-3 pb-2 px-5 flex justify-end gap-2"><button onclick="exporterHistoriqueClientFiltre()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm transition"><i class="fas fa-download mr-1"></i> Exporter CSV</button><button onclick="genererFactureClientParAnnee()" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg text-sm transition"><i class="fas fa-file-invoice mr-1"></i> Facture PDF</button><button onclick="this.closest('.client-detail-modal').remove()" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm transition">Fermer</button></div></div>`;
+    modal.innerHTML = `<div class="client-detail-content"><div class="sticky top-0 bg-gradient-to-r from-emerald-600 to-teal-600 text-white px-6 py-4 rounded-t-2xl flex justify-between items-center"><div><i class="fas fa-user-circle text-2xl mr-2"></i><span class="font-bold text-lg">${escapeHtml(client.nom)}</span><p class="text-xs opacity-90 mt-1">Code: ${client.id} | 📞 ${client.telephone}</p></div><button onclick="this.closest('.client-detail-modal').remove()" class="text-white hover:bg-white/20 rounded-full w-8 h-8 flex items-center justify-center"><i class="fas fa-times"></i></button></div><div class="p-5 flex-1 overflow-y-auto" style="max-height: calc(85vh - 180px);"><div class="bg-gray-50 rounded-xl p-3 mb-4 flex flex-wrap items-center justify-between gap-3"><div class="flex items-center gap-2"><i class="fas fa-calendar-alt text-emerald-600"></i><span class="text-sm font-medium text-gray-700">Filtrer par année :</span></div><div class="flex flex-wrap gap-2"><button onclick="filterClientYear('all')" class="year-filter-btn px-3 py-1.5 rounded-lg text-sm transition ${currentFilterYear === "all" ? "bg-emerald-600 text-white" : "bg-gray-200 text-gray-700 hover:bg-gray-300"}">📅 Toutes</button>${anneesDisponibles.map((annee) => `<button onclick="filterClientYear('${annee}')" class="year-filter-btn px-3 py-1.5 rounded-lg text-sm transition ${currentFilterYear === String(annee) ? "bg-emerald-600 text-white" : "bg-gray-200 text-gray-700 hover:bg-gray-300"}">${annee}</button>`).join("")}</div></div><div id="clientStatsContent">${renderClientStats(ventesClient, currentFilterYear)}</div></div><div class="sticky bottom-0 bg-white border-t border-gray-100 pt-3 pb-2 px-5 flex justify-end gap-2"><button onclick="exporterHistoriqueClientFiltre()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm transition"><i class="fas fa-download mr-1"></i> Exporter CSV</button><button onclick="genererFactureClientParAnnee()" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg text-sm transition"><i class="fas fa-file-invoice mr-1"></i> Facture PDF</button><button onclick="this.closest('.client-detail-modal').remove()" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm transition">Fermer</button></div></div>`;
     document.body.appendChild(modal);
     modal.addEventListener("click", (e) => {
       if (e.target === modal) modal.remove();
@@ -1078,7 +1078,7 @@ async function genererFactureClientParAnnee() {
     doc.setFontSize(10);
     doc.text(client.nom, m + 30, 68);
     doc.text(`Téléphone: ${client.telephone}`, m, 75);
-    doc.text(`ID Client: ${client.id}`, m, 82);
+    doc.text(`Code Client: ${client.id}`, m, 82);
     doc.line(m, 90, rt, 90);
     doc.setFontSize(11);
     doc.setFont("helvetica", "bold");
@@ -1145,6 +1145,778 @@ window.genererFactureVente = async function (venteId, clientId) {
     showTemporaryNotification("❌ Erreur", "error");
   }
 };
+
+// ============================================
+// CLIENTS - AJOUT, RECHERCHE, LISTE
+// ============================================
+const button = document.getElementById("searchBtn");
+const clientIdInput = document.getElementById("clientId");
+const resultDiv = document.getElementById("result");
+if (button) button.addEventListener("click", searchClient);
+
+async function searchClient() {
+  const searchValue = clientIdInput.value.trim();
+  if (!searchValue) {
+    showError(
+      "Veuillez entrer un code client, un nom ou un téléphone",
+      resultDiv,
+    );
+    return;
+  }
+
+  showLoading(resultDiv);
+
+  try {
+    let response = await fetch(
+      `${CLIENTS_URL}/${encodeURIComponent(searchValue)}`,
+    );
+
+    if (!response.ok) {
+      const allClientsRes = await fetch(CLIENTS_URL);
+      const allClientsList = await allClientsRes.json();
+      const foundClients = allClientsList.filter(
+        (c) =>
+          c.nom?.toLowerCase().includes(searchValue.toLowerCase()) ||
+          c.telephone?.includes(searchValue),
+      );
+
+      if (foundClients.length === 0) {
+        throw new Error(`Aucun client trouvé avec "${searchValue}"`);
+      }
+
+      if (foundClients.length === 1) {
+        displayClient(foundClients[0]);
+      } else {
+        resultDiv.innerHTML = `
+          <div class="border border-yellow-400 bg-yellow-50 rounded-lg p-3 mt-3">
+            <p class="text-yellow-700 text-sm font-medium mb-2">⚠️ ${foundClients.length} clients correspondent :</p>
+            <div class="space-y-2 max-h-48 overflow-y-auto">
+              ${foundClients
+                .map(
+                  (c) => `
+                <div class="flex justify-between items-center p-2 bg-white rounded border">
+                  <div>
+                    <div class="font-medium">${escapeHtml(c.nom)}</div>
+                    <div class="text-xs text-gray-500">📞 ${c.telephone || "—"} | 🆔 <span class="font-mono">${c.id}</span></div>
+                  </div>
+                  <button onclick="selectClientAndFill('${c.id}')" class="bg-emerald-600 text-white px-3 py-1 rounded text-sm">
+                    Sélectionner
+                  </button>
+                </div>
+              `,
+                )
+                .join("")}
+            </div>
+          </div>`;
+        return;
+      }
+    } else {
+      const client = await response.json();
+      displayClient(client);
+    }
+  } catch (error) {
+    showError(error.message, resultDiv);
+  }
+}
+
+function displayClient(client) {
+  resultDiv.innerHTML = `<div class="border-2 border-emerald-500 rounded-lg p-4 mt-3 bg-emerald-50">
+    <div class="flex justify-between items-center mb-3">
+      <h3 class="font-bold text-emerald-700">✅ Client trouvé</h3>
+      <button onclick="clearResult()" class="bg-red-500 text-white px-2 py-1 rounded text-sm hover:bg-red-600">✕</button>
+    </div>
+    <div class="space-y-1 text-sm">
+      <p><strong>🆔 Code :</strong> <span class="font-mono font-bold">${client.id}</span></p>
+      <p><strong>👤 Nom :</strong> ${escapeHtml(client.nom)}</p>
+      <p><strong>📞 Téléphone :</strong> ${escapeHtml(client.telephone)}</p>
+    </div>
+    <div class="flex gap-2 mt-3">
+      <button onclick="fillVenteForm('${client.id}')" class="bg-emerald-600 text-white px-3 py-1 rounded text-sm hover:bg-emerald-700">🛒 Faire une vente</button>
+      <button onclick="copyToClipboard('${client.id}')" class="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700">📋 Copier le code</button>
+    </div>
+  </div>`;
+}
+
+function showLoading(container) {
+  container.innerHTML = `<div class="border border-blue-500 p-3 mt-3 rounded bg-blue-50 text-blue-600">⏳ Recherche en cours...</div>`;
+}
+function showError(message, container) {
+  container.innerHTML = `<div class="border border-red-500 p-3 mt-3 rounded bg-red-50 text-red-600">❌ ${message}</div>`;
+  setTimeout(() => {
+    if (container.innerHTML.includes(message)) container.innerHTML = "";
+  }, 5000);
+}
+function clearResult() {
+  if (resultDiv) resultDiv.innerHTML = "";
+}
+if (clientIdInput) {
+  clientIdInput.addEventListener("keypress", function (e) {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      searchClient();
+    }
+  });
+}
+const clearButton = document.createElement("button");
+clearButton.textContent = "Effacer";
+clearButton.className =
+  "bg-gray-500 hover:bg-gray-600 text-white px-3 py-2 rounded-lg transition ml-2";
+clearButton.addEventListener("click", () => {
+  if (clientIdInput) clientIdInput.value = "";
+  if (resultDiv) resultDiv.innerHTML = "";
+  if (clientIdInput) clientIdInput.focus();
+});
+if (button) button.insertAdjacentElement("afterend", clearButton);
+
+const addBtn = document.getElementById("addClientBtn");
+const nomInput = document.getElementById("nom");
+const telephoneInput = document.getElementById("telephone");
+const clientCodeInput = document.getElementById("clientCode");
+const messageDiv = document.getElementById("clientMessage");
+if (addBtn) addBtn.addEventListener("click", addClient);
+if (nomInput)
+  nomInput.addEventListener("keypress", function (e) {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      addClient();
+    }
+  });
+if (telephoneInput)
+  telephoneInput.addEventListener("keypress", function (e) {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      addClient();
+    }
+  });
+if (clientCodeInput)
+  clientCodeInput.addEventListener("keypress", function (e) {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      addClient();
+    }
+  });
+
+async function addClient() {
+  const code = clientCodeInput.value.trim().toUpperCase();
+  const nom = nomInput.value.trim();
+  const telephone = telephoneInput.value.trim();
+
+  if (!code) {
+    showErrorMessage("Veuillez entrer un code client", messageDiv);
+    return;
+  }
+  if (code.length < 3) {
+    showErrorMessage(
+      "Le code client doit contenir au moins 3 caractères",
+      messageDiv,
+    );
+    return;
+  }
+  if (code.length > 20) {
+    showErrorMessage(
+      "Le code client est trop long (max 20 caractères)",
+      messageDiv,
+    );
+    return;
+  }
+  if (!nom) {
+    showErrorMessage("Veuillez entrer le nom du client", messageDiv);
+    return;
+  }
+  if (!telephone) {
+    showErrorMessage("Veuillez entrer le téléphone", messageDiv);
+    return;
+  }
+
+  showLoadingMessage(messageDiv);
+
+  try {
+    const checkResponse = await fetch(
+      `${CLIENTS_URL}/${encodeURIComponent(code)}`,
+    );
+    if (checkResponse.ok) {
+      showErrorMessage(
+        `❌ Le code "${code}" est déjà utilisé. Veuillez en choisir un autre.`,
+        messageDiv,
+      );
+      return;
+    }
+
+    const response = await fetch(CLIENTS_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id: code,
+        nom: nom,
+        telephone: telephone,
+      }),
+    });
+
+    if (!response.ok) throw new Error("Erreur création");
+
+    const data = await response.json();
+    messageDiv.innerHTML = `<div class="bg-emerald-50 border border-emerald-500 rounded-lg p-4">
+      <div class="flex justify-between items-start">
+        <div>
+          <strong class="text-emerald-700">✅ Client ajouté avec succès !</strong>
+          <div class="bg-emerald-100 rounded p-2 my-2">
+            <strong>🆔 Code client :</strong> 
+            <span class="font-bold text-emerald-700 text-lg font-mono">${escapeHtml(data.id)}</span>
+          </div>
+          <p><strong>👤 Nom :</strong> ${escapeHtml(nom)}</p>
+          <p><strong>📞 Téléphone :</strong> ${escapeHtml(telephone)}</p>
+          <div class="flex gap-2 mt-3">
+            <button onclick="fillVenteFormWithId('${data.id}')" class="bg-emerald-600 text-white px-3 py-1 rounded text-sm hover:bg-emerald-700">🛒 Faire une vente</button>
+            <button onclick="copyToClipboard('${data.id}')" class="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700">📋 Copier le code</button>
+          </div>
+        </div>
+        <button onclick="this.parentElement.parentElement.remove()" class="text-gray-400 hover:text-gray-600">✕</button>
+      </div>
+    </div>`;
+
+    clientCodeInput.value = "";
+    nomInput.value = "";
+    telephoneInput.value = "";
+    clientCodeInput.focus();
+
+    showTemporaryNotification(`✅ Client "${code}" créé avec succès !`);
+    loadDashboardStats();
+    loadClientsList();
+  } catch (error) {
+    showErrorMessage(`Erreur lors de l'ajout : ${error.message}`, messageDiv);
+  }
+}
+
+function showErrorMessage(message, container) {
+  container.innerHTML = `<div class="bg-red-50 border border-red-500 rounded-lg p-3 text-red-600">❌ ${message}<button onclick="this.parentElement.remove()" class="float-right text-red-400">✕</button></div>`;
+  setTimeout(() => {
+    if (container.innerHTML.includes(message)) container.innerHTML = "";
+  }, 5000);
+}
+function showLoadingMessage(container) {
+  container.innerHTML = `<div class="bg-blue-50 border border-blue-500 rounded-lg p-3 text-blue-600">⏳ Création en cours...</div>`;
+}
+async function copyToClipboard(text) {
+  try {
+    await navigator.clipboard.writeText(text.toString());
+    showCopyNotification("✅ Code copié !");
+  } catch (err) {
+    showCopyNotification("❌ Impossible de copier", "error");
+  }
+}
+function showCopyNotification(message, type = "success") {
+  const notification = document.createElement("div");
+  notification.className = `fixed bottom-5 right-5 z-50 px-4 py-2 rounded-lg shadow-lg text-white ${type === "success" ? "bg-emerald-600" : "bg-red-600"}`;
+  notification.innerHTML = message;
+  document.body.appendChild(notification);
+  setTimeout(() => notification.remove(), 2000);
+}
+
+function initClientsTabs() {
+  const tabAjouter = document.getElementById("tabAjouterClient");
+  const tabLister = document.getElementById("tabListerClients");
+  const panelAjouter = document.getElementById("panelAjouterClient");
+  const panelLister = document.getElementById("panelListerClients");
+
+  const resetClientsTabs = () => {
+    if (tabAjouter) {
+      tabAjouter.classList.remove("text-emerald-600", "border-emerald-600");
+      tabAjouter.classList.add("text-gray-500", "border-transparent");
+    }
+    if (tabLister) {
+      tabLister.classList.remove("text-emerald-600", "border-emerald-600");
+      tabLister.classList.add("text-gray-500", "border-transparent");
+    }
+  };
+
+  if (tabAjouter) {
+    tabAjouter.addEventListener("click", () => {
+      resetClientsTabs();
+      tabAjouter.classList.add("text-emerald-600", "border-emerald-600");
+      tabAjouter.classList.remove("text-gray-500", "border-transparent");
+      if (panelAjouter) panelAjouter.classList.remove("hidden");
+      if (panelLister) panelLister.classList.add("hidden");
+    });
+  }
+
+  if (tabLister) {
+    tabLister.addEventListener("click", () => {
+      resetClientsTabs();
+      tabLister.classList.add("text-emerald-600", "border-emerald-600");
+      tabLister.classList.remove("text-gray-500", "border-transparent");
+      if (panelAjouter) panelAjouter.classList.add("hidden");
+      if (panelLister) panelLister.classList.remove("hidden");
+      loadClientsList();
+    });
+  }
+}
+
+async function loadClientsList() {
+  const tbody = document.getElementById("clientsTableBody");
+  if (tbody) {
+    tbody.innerHTML =
+      '<tr><td colspan="4" class="px-4 py-8 text-center text-gray-400">⏳ Chargement...<\/td><\/tr>';
+  }
+  try {
+    const response = await fetch(CLIENTS_URL);
+    if (!response.ok) throw new Error("Erreur chargement clients");
+    allClients = await response.json();
+    filteredClients = [...allClients];
+    displayClientsTable();
+  } catch (error) {
+    console.error("Erreur chargement clients:", error);
+    showTemporaryNotification("❌ Erreur chargement clients", "error");
+    if (tbody) {
+      tbody.innerHTML =
+        '<table><td colspan="4" class="px-4 py-8 text-center text-red-400">❌ Erreur de chargement<\/td><\/tr>';
+    }
+  }
+}
+
+function displayClientsTable() {
+  const tbody = document.getElementById("clientsTableBody");
+  if (!tbody) return;
+
+  const searchTerm =
+    document.getElementById("searchClientList")?.value.toLowerCase() || "";
+
+  filteredClients = allClients.filter(
+    (client) =>
+      client.nom?.toLowerCase().includes(searchTerm) ||
+      client.telephone?.toLowerCase().includes(searchTerm) ||
+      client.id?.toLowerCase().includes(searchTerm),
+  );
+
+  const totalPages = Math.ceil(filteredClients.length / clientsPerPage);
+  const start = (currentClientsPage - 1) * clientsPerPage;
+  const end = start + clientsPerPage;
+  const clientsToShow = filteredClients.slice(start, end);
+
+  tbody.innerHTML = "";
+  if (clientsToShow.length === 0) {
+    tbody.innerHTML =
+      '<tr><td colspan="4" class="px-4 py-8 text-center text-gray-400">Aucun client trouvé<\/td><\/tr>';
+  } else {
+    clientsToShow.forEach((client) => {
+      const tr = document.createElement("tr");
+      tr.className = "border-b border-gray-100 hover:bg-gray-50";
+      tr.innerHTML = `
+        <td class="px-4 py-3 text-sm font-mono font-bold text-emerald-700">${escapeHtml(client.id)}<\/td>
+        <td class="px-4 py-3 text-sm">
+          <button onclick="showClientDetails('${client.id}')" class="text-blue-600 hover:text-blue-800 hover:underline font-medium">
+            ${escapeHtml(client.nom)}
+          <\/button>
+        <\/td>
+        <td class="px-4 py-3 text-sm">${escapeHtml(client.telephone || "—")}<\/td>
+        <td class="px-4 py-3 text-sm text-center">
+          <button onclick="fillVenteForm('${client.id}')" class="bg-emerald-600 text-white px-3 py-1 rounded text-xs hover:bg-emerald-700 mr-2 transition">🛒 Vendre<\/button>
+          <button class="edit-client-btn text-blue-600 hover:text-blue-800 mr-2 transition" data-id="${client.id}" data-nom="${escapeHtml(client.nom)}" data-telephone="${escapeHtml(client.telephone)}">
+            <i class="fas fa-edit"><\/i>
+          <\/button>
+          <button class="delete-client-btn text-red-600 hover:text-red-800 transition" data-id="${client.id}" data-nom="${escapeHtml(client.nom)}">
+            <i class="fas fa-trash"><\/i>
+          <\/button>
+        <\/td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+  updateClientsPagination(totalPages);
+  document.querySelectorAll(".edit-client-btn").forEach((btn) => {
+    btn.removeEventListener("click", handleEditClient);
+    btn.addEventListener("click", handleEditClient);
+  });
+  document.querySelectorAll(".delete-client-btn").forEach((btn) => {
+    btn.removeEventListener("click", handleDeleteClient);
+    btn.addEventListener("click", handleDeleteClient);
+  });
+}
+
+function updateClientsPagination(totalPages) {
+  const paginationDiv = document.getElementById("clientsPagination");
+  if (!paginationDiv) return;
+  if (totalPages <= 1) {
+    paginationDiv.innerHTML = "";
+    return;
+  }
+  let paginationHtml = '<div class="flex gap-2">';
+  for (let i = 1; i <= totalPages; i++) {
+    paginationHtml += `<button class="client-page-btn px-3 py-1 rounded-lg text-sm transition ${i === currentClientsPage ? "bg-emerald-600 text-white" : "bg-gray-200 text-gray-700 hover:bg-gray-300"}" data-page="${i}">${i}</button>`;
+  }
+  paginationHtml += "</div>";
+  paginationDiv.innerHTML = paginationHtml;
+  document.querySelectorAll(".client-page-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      currentClientsPage = parseInt(btn.dataset.page);
+      displayClientsTable();
+    });
+  });
+}
+
+function handleEditClient(e) {
+  const btn = e.currentTarget;
+  currentEditClientId = btn.getAttribute("data-id");
+  const nom = btn.getAttribute("data-nom");
+  const telephone = btn.getAttribute("data-telephone");
+  document.getElementById("editClientNom").value = nom;
+  document.getElementById("editClientTelephone").value = telephone;
+  document.getElementById("editClientModal").classList.remove("hidden");
+  document.getElementById("editClientModal").classList.add("flex");
+}
+async function saveEditClient() {
+  const newNom = document.getElementById("editClientNom").value.trim();
+  const newTelephone = document
+    .getElementById("editClientTelephone")
+    .value.trim();
+  if (!newNom || !newTelephone) {
+    showTemporaryNotification("❌ Veuillez remplir tous les champs", "error");
+    return;
+  }
+  try {
+    const response = await fetch(`${CLIENTS_URL}/${currentEditClientId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        nom: newNom,
+        telephone: newTelephone,
+        id: currentEditClientId,
+      }),
+    });
+    if (!response.ok) throw new Error("Erreur modification");
+    showTemporaryNotification("✅ Client modifié avec succès !");
+    document.getElementById("editClientModal").classList.add("hidden");
+    document.getElementById("editClientModal").classList.remove("flex");
+    loadClientsList();
+    loadDashboardStats();
+  } catch (error) {
+    showTemporaryNotification(`❌ Erreur: ${error.message}`, "error");
+  }
+}
+async function handleDeleteClient(e) {
+  const btn = e.currentTarget;
+  const clientId = btn.getAttribute("data-id");
+  const clientNom = btn.getAttribute("data-nom");
+
+  if (!clientId) {
+    showTemporaryNotification("❌ Code client non trouvé", "error");
+    return;
+  }
+
+  if (
+    confirm(
+      `⚠️ Êtes-vous sûr de vouloir supprimer le client "${clientNom}" (Code: ${clientId}) ?`,
+    )
+  ) {
+    try {
+      const url = `${CLIENTS_URL}/${encodeURIComponent(clientId)}`;
+      const response = await fetch(url, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      if (response.status === 404) {
+        showTemporaryNotification(
+          `⚠️ Le client "${clientNom}" n'existe plus`,
+          "warning",
+        );
+        await loadClientsList();
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error(`Erreur ${response.status}`);
+      }
+
+      showTemporaryNotification(`✅ Client "${clientNom}" supprimé !`);
+      await loadClientsList();
+      loadDashboardStats();
+    } catch (error) {
+      console.error("Erreur suppression client:", error);
+      await loadClientsList();
+      loadDashboardStats();
+      showTemporaryNotification(`⚠️ Client peut-être déjà supprimé`, "info");
+    }
+  }
+}
+function initClientSearch() {
+  const searchInput = document.getElementById("searchClientList");
+  if (searchInput) {
+    searchInput.addEventListener("input", () => {
+      currentClientsPage = 1;
+      displayClientsTable();
+    });
+  }
+}
+function initEditClientModal() {
+  const modal = document.getElementById("editClientModal");
+  const closeBtn = document.getElementById("closeEditModalBtn");
+  const saveBtn = document.getElementById("saveEditClientBtn");
+  if (closeBtn) {
+    closeBtn.addEventListener("click", () => {
+      modal.classList.add("hidden");
+      modal.classList.remove("flex");
+    });
+  }
+  if (saveBtn) {
+    saveBtn.addEventListener("click", saveEditClient);
+  }
+  if (modal) {
+    modal.addEventListener("click", (e) => {
+      if (e.target === modal) {
+        modal.classList.add("hidden");
+        modal.classList.remove("flex");
+      }
+    });
+  }
+}
+function initGestionClients() {
+  initClientsTabs();
+  initClientSearch();
+  initEditClientModal();
+  const refreshBtn = document.getElementById("refreshClientsBtn");
+  if (refreshBtn) {
+    refreshBtn.addEventListener("click", loadClientsList);
+  }
+}
+
+// ============================================
+// PANIER ET VENTES
+// ============================================
+const venteBtn = document.getElementById("addVenteBtn");
+const clientInput = document.getElementById("venteClientId");
+const clientInfoDiv = document.getElementById("clientInfo");
+const messageVente = document.getElementById("venteMessage");
+const quantiteInput = document.getElementById("quantite");
+const prixInputVente = document.getElementById("prix");
+const ajouterPanierBtn = document.getElementById("ajouterPanierBtn");
+if (quantiteInput) quantiteInput.addEventListener("input", updateTotal);
+if (prixInputVente) prixInputVente.addEventListener("input", updateTotal);
+
+async function redirectToVente(clientId = null) {
+  const navItems = document.querySelectorAll(".nav-item");
+  let ventesNavItem = null;
+  navItems.forEach((item) => {
+    if (item.dataset.section === "ventes") ventesNavItem = item;
+  });
+  if (ventesNavItem) {
+    navItems.forEach((nav) => {
+      nav.classList.remove("bg-emerald-600", "text-white");
+      nav.classList.add("text-gray-300");
+    });
+    ventesNavItem.classList.add("bg-emerald-600", "text-white");
+    ventesNavItem.classList.remove("text-gray-300");
+    const pageTitle = document.getElementById("currentPageTitle");
+    if (pageTitle)
+      pageTitle.textContent = ventesNavItem.querySelector("span").textContent;
+  }
+  Object.values(sections).forEach((section) => {
+    if (section) section.classList.add("hidden");
+  });
+  if (sections.ventes) sections.ventes.classList.remove("hidden");
+  if (clientId) {
+    const venteClientInput = document.getElementById("venteClientId");
+    if (venteClientInput) {
+      venteClientInput.value = clientId;
+      const event = new Event("input", { bubbles: true });
+      venteClientInput.dispatchEvent(event);
+      showTemporaryNotification(`✅ Client sélectionné - Code: ${clientId}`);
+    }
+  }
+  const sidebar = document.getElementById("sidebar");
+  const overlay = document.getElementById("overlay");
+  if (window.innerWidth < 768 && sidebar) {
+    sidebar.classList.add("-translate-x-full");
+    if (overlay) overlay.classList.remove("active");
+  }
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+let debounceTimeout;
+if (clientInput) {
+  clientInput.addEventListener("input", function () {
+    clearTimeout(debounceTimeout);
+    debounceTimeout = setTimeout(afficherClient, 500);
+  });
+}
+async function afficherClient() {
+  const searchValue = clientInput.value.trim();
+  if (!searchValue) {
+    if (clientInfoDiv) clientInfoDiv.innerHTML = "";
+    return;
+  }
+
+  try {
+    let response = await fetch(
+      `${CLIENTS_URL}/${encodeURIComponent(searchValue)}`,
+    );
+    let clientsTrouves = [];
+
+    if (!response.ok) {
+      const allClientsRes = await fetch(CLIENTS_URL);
+      const allClientsList = await allClientsRes.json();
+      clientsTrouves = allClientsList.filter(
+        (c) =>
+          c.nom?.toLowerCase().includes(searchValue.toLowerCase()) ||
+          c.telephone?.includes(searchValue),
+      );
+
+      if (clientsTrouves.length === 0) {
+        clientInfoDiv.innerHTML = `<span class="text-red-600 text-sm">❌ Aucun client trouvé</span>`;
+        return;
+      }
+
+      if (clientsTrouves.length === 1) {
+        const client = clientsTrouves[0];
+        clientInfoDiv.innerHTML = `
+          <div class="bg-emerald-50 text-emerald-700 p-3 rounded-lg text-sm">
+            ✅ <strong>${escapeHtml(client.nom)}</strong><br>
+            📞 ${client.telephone || "N/A"}<br>
+            🆔 <span class="font-mono">${client.id}</span>
+            <button onclick="redirectToVente('${client.id}')" class="ml-2 bg-emerald-600 text-white px-2 py-1 rounded text-xs">Vendre</button>
+          </div>`;
+      } else {
+        clientInfoDiv.innerHTML = `
+          <div class="border border-yellow-400 bg-yellow-50 rounded-lg p-3">
+            <p class="text-yellow-700 text-sm font-medium mb-2">⚠️ Plusieurs clients correspondent :</p>
+            <div class="space-y-2 max-h-48 overflow-y-auto">
+              ${clientsTrouves
+                .map(
+                  (c) => `
+                <div class="flex justify-between items-center p-2 bg-white rounded border">
+                  <div>
+                    <div class="font-medium">${escapeHtml(c.nom)}</div>
+                    <div class="text-xs text-gray-500">📞 ${c.telephone || "—"} | 🆔 <span class="font-mono">${c.id}</span></div>
+                  </div>
+                  <button onclick="redirectToVente('${c.id}')" class="bg-emerald-600 text-white px-3 py-1 rounded text-sm">
+                    Sélectionner
+                  </button>
+                </div>
+              `,
+                )
+                .join("")}
+            </div>
+          </div>`;
+      }
+    } else {
+      const client = await response.json();
+      clientInfoDiv.innerHTML = `
+        <div class="bg-emerald-50 text-emerald-700 p-3 rounded-lg text-sm">
+          ✅ <strong>${escapeHtml(client.nom)}</strong><br>
+          📞 ${client.telephone || "N/A"}<br>
+          🆔 <span class="font-mono">${client.id}</span>
+          <button onclick="redirectToVente('${client.id}')" class="ml-2 bg-emerald-600 text-white px-2 py-1 rounded text-xs">Vendre</button>
+        </div>`;
+    }
+  } catch (error) {
+    clientInfoDiv.innerHTML = `<span class="text-red-600 text-sm">❌ Erreur: ${error.message}</span>`;
+  }
+}
+
+function ajouterAuPanier() {
+  const produitValue = produitSelect.value;
+  const quantite = Number(quantiteInput.value);
+  const prix = Number(prixInputVente.value);
+  if (!produitValue || quantite <= 0 || prix <= 0) {
+    showTemporaryNotification("❌ Données invalides");
+    return;
+  }
+  const produitNom = produitValue.split("|")[1] || produitValue;
+  const type = produitValue.split("|")[0] || "bouteille";
+  panier.push({ nom: produitNom, quantite: quantite, prix: prix, type: type });
+  afficherPanier();
+  quantiteInput.value = "1";
+  updateTotal();
+  showTemporaryNotification(`✅ ${produitNom} ajouté au panier !`);
+}
+function afficherPanier() {
+  let panierDiv = document.getElementById("panier");
+  if (!panierDiv) return;
+  if (panier.length === 0) {
+    panierDiv.innerHTML =
+      '<div class="text-center text-gray-400 py-4"><i class="fas fa-shopping-cart text-3xl mb-2 block"></i>Panier vide</div>';
+    return;
+  }
+  let total = 0;
+  let html = '<div class="space-y-2">';
+  panier.forEach((item, index) => {
+    const sousTotal = item.prix * item.quantite;
+    total += sousTotal;
+    const typeLabel = item.type === "cassier" ? "📦 Cassier" : "🍾 Bouteille";
+    const typeClass =
+      item.type === "cassier"
+        ? "bg-orange-100 text-orange-700"
+        : "bg-blue-100 text-blue-700";
+    html += `<div class="flex justify-between items-center p-3 bg-white rounded-lg border border-gray-100"><div class="flex-1"><span class="inline-block px-2 py-0.5 rounded text-xs font-medium ${typeClass} mr-2">${typeLabel}</span><span class="font-medium">${escapeHtml(item.nom)}</span><div class="text-sm text-gray-500">${item.quantite} x ${formatNumberFC(item.prix)} FC</div></div><div class="text-right"><div class="font-bold text-emerald-600">${formatNumberFC(sousTotal)} FC</div><button onclick="supprimerDuPanier(${index})" class="text-red-500 hover:text-red-700 text-sm mt-1">❌ Supprimer</button></div></div>`;
+  });
+  html += `</div><div class="mt-4 pt-3 border-t text-right"><strong class="text-lg">Total : ${formatNumberFC(total)} FC</strong></div>`;
+  panierDiv.innerHTML = html;
+}
+function supprimerDuPanier(index) {
+  panier.splice(index, 1);
+  afficherPanier();
+  showTemporaryNotification(`❌ Produit retiré du panier`);
+}
+async function addVente() {
+  const clientId = clientInput.value.trim();
+  if (!clientId) {
+    showTemporaryNotification("❌ Veuillez sélectionner un client");
+    return;
+  }
+  if (panier.length === 0) {
+    showTemporaryNotification("❌ Ajoutez des produits au panier");
+    return;
+  }
+  messageVente.innerHTML =
+    '<div class="bg-blue-50 text-blue-600 p-3 rounded-lg">⏳ Enregistrement en cours...</div>';
+  try {
+    const clientResponse = await fetch(`${CLIENTS_URL}/${String(clientId)}`);
+    if (!clientResponse.ok) {
+      messageVente.innerHTML =
+        '<div class="bg-red-50 text-red-600 p-3 rounded-lg">❌ Client introuvable</div>';
+      return;
+    }
+    const clientData = await clientResponse.json();
+    const total = panier.reduce(
+      (sum, item) => sum + item.prix * item.quantite,
+      0,
+    );
+    const response = await fetch(VENTES_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        clientId: String(clientId),
+        produits: panier,
+        total: total,
+        date: new Date().toISOString(),
+      }),
+    });
+    const data = await response.json();
+    genererFacturePanier(data, clientData);
+    panier = [];
+    afficherPanier();
+    messageVente.innerHTML = `<div class="bg-emerald-50 text-emerald-700 p-4 rounded-lg">✅ Vente enregistrée ! ID: ${data.id}<br>💰 Total: ${formatNumberFC(total)} FC</div>`;
+    clientInput.focus();
+    loadDashboardStats();
+    getDailyStats();
+    getWeeklyTrend();
+    setTimeout(() => {
+      if (messageVente.innerHTML.includes("Vente enregistrée"))
+        messageVente.innerHTML = "";
+    }, 5000);
+  } catch (error) {
+    messageVente.innerHTML = `<div class="bg-red-50 text-red-600 p-3 rounded-lg">❌ Erreur: ${error.message}</div>`;
+  }
+}
+if (ajouterPanierBtn)
+  ajouterPanierBtn.addEventListener("click", ajouterAuPanier);
+if (venteBtn) venteBtn.addEventListener("click", addVente);
+if (clientInput)
+  clientInput.addEventListener("keypress", function (e) {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      afficherClient();
+    }
+  });
 
 // ============================================
 // API PRODUITS
@@ -1253,66 +2025,28 @@ const produitSelect = document.getElementById("produit");
 function setActiveFournisseur(fournisseur) {
   currentFournisseur = fournisseur;
   const tabs = document.querySelectorAll(".categorie-tab");
-
   tabs.forEach((tab) => {
     if (tab.getAttribute("data-categorie") === fournisseur) {
       tab.classList.add("active");
-      tab.classList.remove("text-gray-600");
       tab.style.borderBottomColor = "#10b981";
       tab.style.color = "#10b981";
     } else {
       tab.classList.remove("active");
-      tab.classList.add("text-gray-600");
       tab.style.borderBottomColor = "transparent";
       tab.style.color = "#6b7280";
     }
   });
-
   if (bracongoContainer && bralimaContainer) {
-    if (fournisseur === "BRACONGO") {
-      bracongoContainer.style.display = "block";
-      bralimaContainer.style.display = "none";
-      if (currentType === "bouteille") {
-        if (bracongoBouteilleTab) bracongoBouteilleTab.classList.add("active");
-        if (bracongoCassierTab) bracongoCassierTab.classList.remove("active");
-        if (bracongoBouteilleContainer)
-          bracongoBouteilleContainer.style.display = "block";
-        if (bracongoCassierContainer)
-          bracongoCassierContainer.style.display = "none";
-      } else {
-        if (bracongoCassierTab) bracongoCassierTab.classList.add("active");
-        if (bracongoBouteilleTab)
-          bracongoBouteilleTab.classList.remove("active");
-        if (bracongoBouteilleContainer)
-          bracongoBouteilleContainer.style.display = "none";
-        if (bracongoCassierContainer)
-          bracongoCassierContainer.style.display = "block";
-      }
-    } else {
-      bracongoContainer.style.display = "none";
-      bralimaContainer.style.display = "block";
-      if (currentType === "bouteille") {
-        if (bralimaBouteilleTab) bralimaBouteilleTab.classList.add("active");
-        if (bralimaCassierTab) bralimaCassierTab.classList.remove("active");
-        if (bralimaBouteilleContainer)
-          bralimaBouteilleContainer.style.display = "block";
-        if (bralimaCassierContainer)
-          bralimaCassierContainer.style.display = "none";
-      } else {
-        if (bralimaCassierTab) bralimaCassierTab.classList.add("active");
-        if (bralimaBouteilleTab) bralimaBouteilleTab.classList.remove("active");
-        if (bralimaBouteilleContainer)
-          bralimaBouteilleContainer.style.display = "none";
-        if (bralimaCassierContainer)
-          bralimaCassierContainer.style.display = "block";
-      }
-    }
+    bracongoContainer.style.display =
+      fournisseur === "BRACONGO" ? "block" : "none";
+    bralimaContainer.style.display =
+      fournisseur === "BRALIMA" ? "block" : "none";
   }
+  setActiveType(currentType, fournisseur);
 }
 
 function setActiveType(type, fournisseur) {
   currentType = type;
-
   if (
     fournisseur === "BRACONGO" &&
     bracongoBouteilleTab &&
@@ -1320,113 +2054,28 @@ function setActiveType(type, fournisseur) {
   ) {
     bracongoBouteilleTab.classList.remove("active");
     bracongoCassierTab.classList.remove("active");
-    bracongoBouteilleTab.style.borderBottomColor = "";
-    bracongoCassierTab.style.borderBottomColor = "";
-    bracongoBouteilleTab.style.color = "";
-    bracongoCassierTab.style.color = "";
-
     if (type === "bouteille") {
       bracongoBouteilleTab.classList.add("active");
-      if (bracongoBouteilleContainer)
-        bracongoBouteilleContainer.style.display = "block";
-      if (bracongoCassierContainer)
-        bracongoCassierContainer.style.display = "none";
+      bracongoBouteilleContainer.style.display = "block";
+      bracongoCassierContainer.style.display = "none";
     } else {
       bracongoCassierTab.classList.add("active");
-      if (bracongoBouteilleContainer)
-        bracongoBouteilleContainer.style.display = "none";
-      if (bracongoCassierContainer)
-        bracongoCassierContainer.style.display = "block";
+      bracongoBouteilleContainer.style.display = "none";
+      bracongoCassierContainer.style.display = "block";
     }
   }
-
   if (fournisseur === "BRALIMA" && bralimaBouteilleTab && bralimaCassierTab) {
     bralimaBouteilleTab.classList.remove("active");
     bralimaCassierTab.classList.remove("active");
-    bralimaBouteilleTab.style.borderBottomColor = "";
-    bralimaCassierTab.style.borderBottomColor = "";
-    bralimaBouteilleTab.style.color = "";
-    bralimaCassierTab.style.color = "";
-
     if (type === "bouteille") {
       bralimaBouteilleTab.classList.add("active");
-      if (bralimaBouteilleContainer)
-        bralimaBouteilleContainer.style.display = "block";
-      if (bralimaCassierContainer)
-        bralimaCassierContainer.style.display = "none";
+      bralimaBouteilleContainer.style.display = "block";
+      bralimaCassierContainer.style.display = "none";
     } else {
       bralimaCassierTab.classList.add("active");
-      if (bralimaBouteilleContainer)
-        bralimaBouteilleContainer.style.display = "none";
-      if (bralimaCassierContainer)
-        bralimaCassierContainer.style.display = "block";
+      bralimaBouteilleContainer.style.display = "none";
+      bralimaCassierContainer.style.display = "block";
     }
-  }
-}
-
-function initProduitsTabs() {
-  const bracongoTab = document.getElementById("tabBracongo");
-  const bralimaTab = document.getElementById("tabBralima");
-
-  if (bracongoTab && !bracongoTab.classList.contains("active")) {
-    bracongoTab.classList.add("active");
-    bracongoTab.style.borderBottomColor = "#10b981";
-    bracongoTab.style.color = "#10b981";
-  }
-  if (bralimaTab && bralimaTab.classList.contains("active")) {
-    bralimaTab.classList.remove("active");
-    bralimaTab.style.borderBottomColor = "transparent";
-    bralimaTab.style.color = "#6b7280";
-  }
-
-  if (
-    bracongoBouteilleTab &&
-    !bracongoBouteilleTab.classList.contains("active")
-  ) {
-    bracongoBouteilleTab.classList.add("active");
-  }
-  if (bracongoCassierTab && bracongoCassierTab.classList.contains("active")) {
-    bracongoCassierTab.classList.remove("active");
-  }
-}
-
-function initAllTabs() {
-  const activeCategorie = document.querySelector(".categorie-tab.active");
-  if (!activeCategorie && tabBracongo) {
-    tabBracongo.classList.add("active");
-    tabBralima.classList.remove("active");
-    tabBracongo.style.borderBottomColor = "#10b981";
-    tabBracongo.style.color = "#10b981";
-    tabBralima.style.borderBottomColor = "transparent";
-    tabBralima.style.color = "#6b7280";
-  }
-
-  const activeTypeBracongo = document.querySelector(
-    "#bracongoBouteilleTab.active",
-  );
-  if (!activeTypeBracongo && bracongoBouteilleTab) {
-    bracongoBouteilleTab.classList.add("active");
-    bracongoCassierTab.classList.remove("active");
-    if (bracongoBouteilleContainer)
-      bracongoBouteilleContainer.style.display = "block";
-    if (bracongoCassierContainer)
-      bracongoCassierContainer.style.display = "none";
-  }
-
-  if (bralimaBouteilleTab) {
-    bralimaBouteilleTab.classList.add("active");
-    bralimaCassierTab.classList.remove("active");
-  }
-
-  const activeFournisseur = document.querySelector(".fournisseur-tab.active");
-  if (!activeFournisseur && document.getElementById("fournisseurBracongo")) {
-    document.getElementById("fournisseurBracongo").classList.add("active");
-    document.getElementById("fournisseurBralima").classList.remove("active");
-  }
-
-  const activeAchat = document.querySelector("#bracongoListeTab.active");
-  if (!activeAchat && document.getElementById("bracongoListeTab")) {
-    document.getElementById("bracongoListeTab").classList.add("active");
   }
 }
 
@@ -1477,6 +2126,7 @@ function mettreAJourSelecteurProduits() {
   const selectedValue = produitSelect.value;
   produitSelect.innerHTML =
     '<option value="" disabled selected>-- Sélectionnez un produit --</option>';
+
   const bracongoBouteilleGroup = document.createElement("optgroup");
   bracongoBouteilleGroup.label = "🍺 BRACONGO - Bouteilles";
   Object.entries(produits.BRACONGO.bouteille).forEach(([nom, data]) => {
@@ -1487,6 +2137,7 @@ function mettreAJourSelecteurProduits() {
     bracongoBouteilleGroup.appendChild(option);
   });
   produitSelect.appendChild(bracongoBouteilleGroup);
+
   const bracongoCassierGroup = document.createElement("optgroup");
   bracongoCassierGroup.label = "🍺 BRACONGO - Cassiers";
   Object.entries(produits.BRACONGO.cassier).forEach(([nom, data]) => {
@@ -1498,6 +2149,7 @@ function mettreAJourSelecteurProduits() {
     bracongoCassierGroup.appendChild(option);
   });
   produitSelect.appendChild(bracongoCassierGroup);
+
   const bralimaBouteilleGroup = document.createElement("optgroup");
   bralimaBouteilleGroup.label = "🍻 BRALIMA - Bouteilles";
   Object.entries(produits.BRALIMA.bouteille).forEach(([nom, data]) => {
@@ -1508,6 +2160,7 @@ function mettreAJourSelecteurProduits() {
     bralimaBouteilleGroup.appendChild(option);
   });
   produitSelect.appendChild(bralimaBouteilleGroup);
+
   const bralimaCassierGroup = document.createElement("optgroup");
   bralimaCassierGroup.label = "🍻 BRALIMA - Cassiers";
   Object.entries(produits.BRALIMA.cassier).forEach(([nom, data]) => {
@@ -1825,6 +2478,64 @@ async function sauvegarderProduit() {
   }
 }
 
+function initProduitsTabs() {
+  const bracongoTab = document.getElementById("tabBracongo");
+  const bralimaTab = document.getElementById("tabBralima");
+  if (bracongoTab && !bracongoTab.classList.contains("active")) {
+    bracongoTab.classList.add("active");
+    bracongoTab.style.borderBottomColor = "#10b981";
+    bracongoTab.style.color = "#10b981";
+  }
+  if (bralimaTab && bralimaTab.classList.contains("active")) {
+    bralimaTab.classList.remove("active");
+    bralimaTab.style.borderBottomColor = "transparent";
+    bralimaTab.style.color = "#6b7280";
+  }
+  if (
+    bracongoBouteilleTab &&
+    !bracongoBouteilleTab.classList.contains("active")
+  ) {
+    bracongoBouteilleTab.classList.add("active");
+  }
+  if (bracongoCassierTab && bracongoCassierTab.classList.contains("active")) {
+    bracongoCassierTab.classList.remove("active");
+  }
+}
+
+function initAllTabs() {
+  const activeCategorie = document.querySelector(".categorie-tab.active");
+  if (!activeCategorie && tabBracongo) {
+    tabBracongo.classList.add("active");
+    tabBralima.classList.remove("active");
+    tabBracongo.style.borderBottomColor = "#10b981";
+    tabBracongo.style.color = "#10b981";
+    tabBralima.style.borderBottomColor = "transparent";
+    tabBralima.style.color = "#6b7280";
+  }
+  const activeTypeBracongo = document.querySelector(
+    "#bracongoBouteilleTab.active",
+  );
+  if (!activeTypeBracongo && bracongoBouteilleTab) {
+    bracongoBouteilleTab.classList.add("active");
+    bracongoCassierTab.classList.remove("active");
+    bracongoBouteilleContainer.style.display = "block";
+    bracongoCassierContainer.style.display = "none";
+  }
+  if (bralimaBouteilleTab) {
+    bralimaBouteilleTab.classList.add("active");
+    bralimaCassierTab.classList.remove("active");
+  }
+  const activeFournisseur = document.querySelector(".fournisseur-tab.active");
+  if (!activeFournisseur && document.getElementById("fournisseurBracongo")) {
+    document.getElementById("fournisseurBracongo").classList.add("active");
+    document.getElementById("fournisseurBralima").classList.remove("active");
+  }
+  const activeAchat = document.querySelector("#bracongoListeTab.active");
+  if (!activeAchat && document.getElementById("bracongoListeTab")) {
+    document.getElementById("bracongoListeTab").classList.add("active");
+  }
+}
+
 function initGestionProduits() {
   chargerProduits().then(() => {
     initFournisseurTabs();
@@ -1847,717 +2558,6 @@ function initGestionProduits() {
 }
 
 // ============================================
-// CLIENTS
-// ============================================
-const button = document.getElementById("searchBtn");
-const clientIdInput = document.getElementById("clientId");
-const resultDiv = document.getElementById("result");
-if (button) button.addEventListener("click", searchClient);
-async function searchClient() {
-  const clientId = clientIdInput.value.trim();
-  if (!clientId) {
-    showError("Veuillez entrer un ID client", resultDiv);
-    return;
-  }
-  showLoading(resultDiv);
-  try {
-    const response = await fetch(`${CLIENTS_URL}/${String(clientId)}`);
-    if (!response.ok)
-      throw new Error(`Client avec l'ID ${clientId} non trouvé`);
-    const client = await response.json();
-    displayClient(client);
-  } catch (error) {
-    showError(error.message, resultDiv);
-  }
-}
-function displayClient(client) {
-  resultDiv.innerHTML = `<div class="border-2 border-emerald-500 rounded-lg p-4 mt-3 bg-emerald-50"><div class="flex justify-between items-center mb-3"><h3 class="font-bold text-emerald-700">✅ Client trouvé</h3><button onclick="clearResult()" class="bg-red-500 text-white px-2 py-1 rounded text-sm hover:bg-red-600">✕</button></div><div class="space-y-1 text-sm"><p><strong>🆔 ID :</strong> ${client.id}</p><p><strong>👤 Nom :</strong> ${escapeHtml(client.nom)}</p><p><strong>📞 Téléphone :</strong> ${escapeHtml(client.telephone)}</p></div><div class="flex gap-2 mt-3"><button onclick="fillVenteForm('${client.id}')" class="bg-emerald-600 text-white px-3 py-1 rounded text-sm hover:bg-emerald-700">🛒 Faire une vente</button><button onclick="copyToClipboard('${client.id}')" class="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700">📋 Copier l'ID</button></div></div>`;
-}
-function showLoading(container) {
-  container.innerHTML = `<div class="border border-blue-500 p-3 mt-3 rounded bg-blue-50 text-blue-600">⏳ Recherche en cours...</div>`;
-}
-function showError(message, container) {
-  container.innerHTML = `<div class="border border-red-500 p-3 mt-3 rounded bg-red-50 text-red-600">❌ ${message}</div>`;
-  setTimeout(() => {
-    if (container.innerHTML.includes(message)) container.innerHTML = "";
-  }, 5000);
-}
-function clearResult() {
-  if (resultDiv) resultDiv.innerHTML = "";
-}
-if (clientIdInput) {
-  clientIdInput.addEventListener("keypress", function (e) {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      searchClient();
-    }
-  });
-}
-const clearButton = document.createElement("button");
-clearButton.textContent = "Effacer";
-clearButton.className =
-  "bg-gray-500 hover:bg-gray-600 text-white px-3 py-2 rounded-lg transition ml-2";
-clearButton.addEventListener("click", () => {
-  if (clientIdInput) clientIdInput.value = "";
-  if (resultDiv) resultDiv.innerHTML = "";
-  if (clientIdInput) clientIdInput.focus();
-});
-if (button) button.insertAdjacentElement("afterend", clearButton);
-const addBtn = document.getElementById("addClientBtn");
-const nomInput = document.getElementById("nom");
-const telephoneInput = document.getElementById("telephone");
-const messageDiv = document.getElementById("clientMessage");
-if (addBtn) addBtn.addEventListener("click", addClient);
-if (nomInput)
-  nomInput.addEventListener("keypress", function (e) {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      addClient();
-    }
-  });
-if (telephoneInput)
-  telephoneInput.addEventListener("keypress", function (e) {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      addClient();
-    }
-  });
-async function addClient() {
-  const nom = nomInput.value.trim();
-  const telephone = telephoneInput.value.trim();
-  if (!nom || !telephone) {
-    showErrorMessage("Veuillez remplir tous les champs", messageDiv);
-    return;
-  }
-  if (nom.length < 2) {
-    showErrorMessage("Le nom doit contenir au moins 2 caractères", messageDiv);
-    return;
-  }
-  const phoneRegex = /^[0-9+\-\s]{8,}$/;
-  if (!phoneRegex.test(telephone)) {
-    showErrorMessage(
-      "Veuillez entrer un numéro de téléphone valide (au moins 8 chiffres)",
-      messageDiv,
-    );
-    return;
-  }
-  showLoadingMessage(messageDiv);
-  try {
-    const response = await fetch(CLIENTS_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ nom, telephone }),
-    });
-    if (!response.ok) throw new Error("Erreur création");
-    const data = await response.json();
-    messageDiv.innerHTML = `<div class="bg-emerald-50 border border-emerald-500 rounded-lg p-4"><div class="flex justify-between items-start"><div><strong class="text-emerald-700">✅ Client ajouté avec succès !</strong><div class="bg-emerald-100 rounded p-2 my-2"><strong>🆔 ID du client :</strong> <span class="font-bold text-emerald-700 text-lg">${data.id}</span></div><p><strong>👤 Nom :</strong> ${escapeHtml(nom)}</p><p><strong>📞 Téléphone :</strong> ${escapeHtml(telephone)}</p><div class="flex gap-2 mt-3"><button onclick="fillVenteFormWithId('${data.id}')" class="bg-emerald-600 text-white px-3 py-1 rounded text-sm hover:bg-emerald-700">🛒 Faire une vente</button><button onclick="copyToClipboard('${data.id}')" class="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700">📋 Copier l'ID</button></div></div><button onclick="this.parentElement.parentElement.remove()" class="text-gray-400 hover:text-gray-600">✕</button></div></div>`;
-    nomInput.value = "";
-    telephoneInput.value = "";
-    nomInput.focus();
-    showTemporaryNotification("✅ Client créé avec succès !");
-    loadDashboardStats();
-    loadClientsList();
-  } catch (error) {
-    showErrorMessage(`Erreur lors de l'ajout : ${error.message}`, messageDiv);
-  }
-}
-function showErrorMessage(message, container) {
-  container.innerHTML = `<div class="bg-red-50 border border-red-500 rounded-lg p-3 text-red-600">❌ ${message}<button onclick="this.parentElement.remove()" class="float-right text-red-400">✕</button></div>`;
-  setTimeout(() => {
-    if (container.innerHTML.includes(message)) container.innerHTML = "";
-  }, 5000);
-}
-function showLoadingMessage(container) {
-  container.innerHTML = `<div class="bg-blue-50 border border-blue-500 rounded-lg p-3 text-blue-600">⏳ Création en cours...</div>`;
-}
-async function copyToClipboard(text) {
-  try {
-    await navigator.clipboard.writeText(text.toString());
-    showCopyNotification("✅ ID copié !");
-  } catch (err) {
-    showCopyNotification("❌ Impossible de copier l'ID", "error");
-  }
-}
-function showCopyNotification(message, type = "success") {
-  const notification = document.createElement("div");
-  notification.className = `fixed bottom-5 right-5 z-50 px-4 py-2 rounded-lg shadow-lg text-white ${type === "success" ? "bg-emerald-600" : "bg-red-600"}`;
-  notification.innerHTML = message;
-  document.body.appendChild(notification);
-  setTimeout(() => notification.remove(), 2000);
-}
-function initClientsTabs() {
-  const tabAjouter = document.getElementById("tabAjouterClient");
-  const tabLister = document.getElementById("tabListerClients");
-  const panelAjouter = document.getElementById("panelAjouterClient");
-  const panelLister = document.getElementById("panelListerClients");
-
-  const resetClientsTabs = () => {
-    if (tabAjouter) {
-      tabAjouter.classList.remove("text-emerald-600", "border-emerald-600");
-      tabAjouter.classList.add("text-gray-500", "border-transparent");
-    }
-    if (tabLister) {
-      tabLister.classList.remove("text-emerald-600", "border-emerald-600");
-      tabLister.classList.add("text-gray-500", "border-transparent");
-    }
-  };
-
-  if (tabAjouter) {
-    tabAjouter.addEventListener("click", () => {
-      resetClientsTabs();
-      tabAjouter.classList.add("text-emerald-600", "border-emerald-600");
-      tabAjouter.classList.remove("text-gray-500", "border-transparent");
-      if (panelAjouter) panelAjouter.classList.remove("hidden");
-      if (panelLister) panelLister.classList.add("hidden");
-    });
-  }
-
-  if (tabLister) {
-    tabLister.addEventListener("click", () => {
-      resetClientsTabs();
-      tabLister.classList.add("text-emerald-600", "border-emerald-600");
-      tabLister.classList.remove("text-gray-500", "border-transparent");
-      if (panelAjouter) panelAjouter.classList.add("hidden");
-      if (panelLister) panelLister.classList.remove("hidden");
-      loadClientsList();
-    });
-  }
-}
-async function loadClientsList() {
-  const tbody = document.getElementById("clientsTableBody");
-  if (tbody) {
-    tbody.innerHTML =
-      '<tr><td colspan="4" class="px-4 py-8 text-center text-gray-400">⏳ Chargement...<\/td><\/tr>';
-  }
-  try {
-    const response = await fetch(CLIENTS_URL);
-    if (!response.ok) throw new Error("Erreur chargement clients");
-    allClients = await response.json();
-    filteredClients = [...allClients];
-    displayClientsTable();
-  } catch (error) {
-    console.error("Erreur chargement clients:", error);
-    showTemporaryNotification("❌ Erreur chargement clients", "error");
-    if (tbody) {
-      tbody.innerHTML =
-        '<tr><td colspan="4" class="px-4 py-8 text-center text-red-400">❌ Erreur de chargement<\/td><\/tr>';
-    }
-  }
-}
-function displayClientsTable() {
-  const tbody = document.getElementById("clientsTableBody");
-  if (!tbody) return;
-  const searchTerm =
-    document.getElementById("searchClientList")?.value.toLowerCase() || "";
-  filteredClients = allClients.filter(
-    (client) =>
-      client.nom?.toLowerCase().includes(searchTerm) ||
-      client.telephone?.toLowerCase().includes(searchTerm),
-  );
-  const totalPages = Math.ceil(filteredClients.length / clientsPerPage);
-  const start = (currentClientsPage - 1) * clientsPerPage;
-  const end = start + clientsPerPage;
-  const clientsToShow = filteredClients.slice(start, end);
-  tbody.innerHTML = "";
-  if (clientsToShow.length === 0) {
-    tbody.innerHTML =
-      '<tr><td colspan="4" class="px-4 py-8 text-center text-gray-400">Aucun client trouvé<\/td><\/tr>';
-  } else {
-    clientsToShow.forEach((client) => {
-      const tr = document.createElement("tr");
-      tr.className = "border-b border-gray-100 hover:bg-gray-50";
-      tr.innerHTML = `<td class="px-4 py-3 text-sm font-mono">${client.id}<\/td>
-                      <td class="px-4 py-3 text-sm"><button onclick="showClientDetails('${client.id}')" class="text-blue-600 hover:text-blue-800 hover:underline font-medium">${escapeHtml(client.nom)}<\/button><\/td>
-                      <td class="px-4 py-3 text-sm">${escapeHtml(client.telephone)}<\/td>
-                      <td class="px-4 py-3 text-sm text-center"><button onclick="fillVenteForm('${client.id}')" class="bg-emerald-600 text-white px-3 py-1 rounded text-xs hover:bg-emerald-700 mr-2 transition">🛒 Vendre<\/button><button class="edit-client-btn text-blue-600 hover:text-blue-800 mr-3 transition" data-id="${client.id}" data-nom="${escapeHtml(client.nom)}" data-telephone="${escapeHtml(client.telephone)}"><i class="fas fa-edit"><\/i> Modifier<\/button><button class="delete-client-btn text-red-600 hover:text-red-800 transition" data-id="${client.id}" data-nom="${escapeHtml(client.nom)}"><i class="fas fa-trash"><\/i> Supprimer<\/button><\/td>`;
-      tbody.appendChild(tr);
-    });
-  }
-  updateClientsPagination(totalPages);
-  document.querySelectorAll(".edit-client-btn").forEach((btn) => {
-    btn.removeEventListener("click", handleEditClient);
-    btn.addEventListener("click", handleEditClient);
-  });
-  document.querySelectorAll(".delete-client-btn").forEach((btn) => {
-    btn.removeEventListener("click", handleDeleteClient);
-    btn.addEventListener("click", handleDeleteClient);
-  });
-}
-function updateClientsPagination(totalPages) {
-  const paginationDiv = document.getElementById("clientsPagination");
-  if (!paginationDiv) return;
-  if (totalPages <= 1) {
-    paginationDiv.innerHTML = "";
-    return;
-  }
-  let paginationHtml = '<div class="flex gap-2">';
-  for (let i = 1; i <= totalPages; i++) {
-    paginationHtml += `<button class="client-page-btn px-3 py-1 rounded-lg text-sm transition ${i === currentClientsPage ? "bg-emerald-600 text-white" : "bg-gray-200 text-gray-700 hover:bg-gray-300"}" data-page="${i}">${i}</button>`;
-  }
-  paginationHtml += "</div>";
-  paginationDiv.innerHTML = paginationHtml;
-  document.querySelectorAll(".client-page-btn").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      currentClientsPage = parseInt(btn.dataset.page);
-      displayClientsTable();
-    });
-  });
-}
-function handleEditClient(e) {
-  const btn = e.currentTarget;
-  currentEditClientId = btn.getAttribute("data-id");
-  const nom = btn.getAttribute("data-nom");
-  const telephone = btn.getAttribute("data-telephone");
-  document.getElementById("editClientNom").value = nom;
-  document.getElementById("editClientTelephone").value = telephone;
-  document.getElementById("editClientModal").classList.remove("hidden");
-  document.getElementById("editClientModal").classList.add("flex");
-}
-async function saveEditClient() {
-  const newNom = document.getElementById("editClientNom").value.trim();
-  const newTelephone = document
-    .getElementById("editClientTelephone")
-    .value.trim();
-  if (!newNom || !newTelephone) {
-    showTemporaryNotification("❌ Veuillez remplir tous les champs", "error");
-    return;
-  }
-  try {
-    const response = await fetch(`${CLIENTS_URL}/${currentEditClientId}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        nom: newNom,
-        telephone: newTelephone,
-        id: currentEditClientId,
-      }),
-    });
-    if (!response.ok) throw new Error("Erreur modification");
-    showTemporaryNotification("✅ Client modifié avec succès !");
-    document.getElementById("editClientModal").classList.add("hidden");
-    document.getElementById("editClientModal").classList.remove("flex");
-    loadClientsList();
-    loadDashboardStats();
-  } catch (error) {
-    showTemporaryNotification(`❌ Erreur: ${error.message}`, "error");
-  }
-}
-async function handleDeleteClient(e) {
-  const btn = e.currentTarget;
-  const clientId = btn.getAttribute("data-id");
-  const clientNom = btn.getAttribute("data-nom");
-
-  if (!clientId) {
-    showTemporaryNotification("❌ ID client non trouvé", "error");
-    return;
-  }
-
-  if (
-    confirm(`⚠️ Êtes-vous sûr de vouloir supprimer le client "${clientNom}" ?`)
-  ) {
-    try {
-      const url = `${CLIENTS_URL}/${encodeURIComponent(clientId)}`;
-      const response = await fetch(url, {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-      });
-
-      if (response.status === 404) {
-        showTemporaryNotification(
-          `⚠️ Le client "${clientNom}" n'existe plus`,
-          "warning",
-        );
-        await loadClientsList();
-        return;
-      }
-
-      if (!response.ok) {
-        throw new Error(`Erreur ${response.status}`);
-      }
-
-      showTemporaryNotification(`✅ Client "${clientNom}" supprimé !`);
-      await loadClientsList();
-      loadDashboardStats();
-    } catch (error) {
-      console.error("Erreur suppression client:", error);
-      await loadClientsList();
-      loadDashboardStats();
-      showTemporaryNotification(`⚠️ Client peut-être déjà supprimé`, "info");
-    }
-  }
-}
-function initClientSearch() {
-  const searchInput = document.getElementById("searchClientList");
-  if (searchInput) {
-    searchInput.addEventListener("input", () => {
-      currentClientsPage = 1;
-      displayClientsTable();
-    });
-  }
-}
-function initEditClientModal() {
-  const modal = document.getElementById("editClientModal");
-  const closeBtn = document.getElementById("closeEditModalBtn");
-  const saveBtn = document.getElementById("saveEditClientBtn");
-  if (closeBtn) {
-    closeBtn.addEventListener("click", () => {
-      modal.classList.add("hidden");
-      modal.classList.remove("flex");
-    });
-  }
-  if (saveBtn) {
-    saveBtn.addEventListener("click", saveEditClient);
-  }
-  if (modal) {
-    modal.addEventListener("click", (e) => {
-      if (e.target === modal) {
-        modal.classList.add("hidden");
-        modal.classList.remove("flex");
-      }
-    });
-  }
-}
-function initGestionClients() {
-  initClientsTabs();
-  initClientSearch();
-  initEditClientModal();
-  const refreshBtn = document.getElementById("refreshClientsBtn");
-  if (refreshBtn) {
-    refreshBtn.addEventListener("click", loadClientsList);
-  }
-}
-
-// ============================================
-// PANIER ET VENTES
-// ============================================
-const venteBtn = document.getElementById("addVenteBtn");
-const clientInput = document.getElementById("venteClientId");
-const clientInfoDiv = document.getElementById("clientInfo");
-const messageVente = document.getElementById("venteMessage");
-const quantiteInput = document.getElementById("quantite");
-const prixInputVente = document.getElementById("prix");
-const ajouterPanierBtn = document.getElementById("ajouterPanierBtn");
-if (quantiteInput) quantiteInput.addEventListener("input", updateTotal);
-if (prixInputVente) prixInputVente.addEventListener("input", updateTotal);
-let debounceTimeout;
-if (clientInput) {
-  clientInput.addEventListener("input", function () {
-    clearTimeout(debounceTimeout);
-    debounceTimeout = setTimeout(afficherClient, 500);
-  });
-}
-async function afficherClient() {
-  const clientId = clientInput.value.trim();
-  if (!clientId) {
-    if (clientInfoDiv) clientInfoDiv.innerHTML = "";
-    return;
-  }
-  try {
-    const response = await fetch(`${CLIENTS_URL}/${String(clientId)}`);
-    if (!response.ok) {
-      if (clientInfoDiv)
-        clientInfoDiv.innerHTML = `<span class="text-red-600 text-sm">❌ Client introuvable</span>`;
-      return;
-    }
-    const data = await response.json();
-    if (clientInfoDiv)
-      clientInfoDiv.innerHTML = `<div class="bg-emerald-50 text-emerald-700 p-3 rounded-lg text-sm">✅ <strong>${escapeHtml(data.nom)}</strong><br>📞 ${data.telephone || "N/A"}<br>🆔 ${data.id}</div>`;
-  } catch (error) {
-    if (clientInfoDiv)
-      clientInfoDiv.innerHTML = `<span class="text-red-600 text-sm">❌ Erreur connexion</span>`;
-  }
-}
-function ajouterAuPanier() {
-  const produitValue = produitSelect.value;
-  const quantite = Number(quantiteInput.value);
-  const prix = Number(prixInputVente.value);
-  if (!produitValue || quantite <= 0 || prix <= 0) {
-    showTemporaryNotification("❌ Données invalides");
-    return;
-  }
-  const produitNom = produitValue.split("|")[1] || produitValue;
-  const type = produitValue.split("|")[0] || "bouteille";
-  panier.push({ nom: produitNom, quantite: quantite, prix: prix, type: type });
-  afficherPanier();
-  quantiteInput.value = "1";
-  updateTotal();
-  showTemporaryNotification(`✅ ${produitNom} ajouté au panier !`);
-}
-function afficherPanier() {
-  let panierDiv = document.getElementById("panier");
-  if (!panierDiv) return;
-  if (panier.length === 0) {
-    panierDiv.innerHTML =
-      '<div class="text-center text-gray-400 py-4"><i class="fas fa-shopping-cart text-3xl mb-2 block"></i>Panier vide</div>';
-    return;
-  }
-  let total = 0;
-  let html = '<div class="space-y-2">';
-  panier.forEach((item, index) => {
-    const sousTotal = item.prix * item.quantite;
-    total += sousTotal;
-    const typeLabel = item.type === "cassier" ? "📦 Cassier" : "🍾 Bouteille";
-    const typeClass =
-      item.type === "cassier"
-        ? "bg-orange-100 text-orange-700"
-        : "bg-blue-100 text-blue-700";
-    html += `<div class="flex justify-between items-center p-3 bg-white rounded-lg border border-gray-100"><div class="flex-1"><span class="inline-block px-2 py-0.5 rounded text-xs font-medium ${typeClass} mr-2">${typeLabel}</span><span class="font-medium">${escapeHtml(item.nom)}</span><div class="text-sm text-gray-500">${item.quantite} x ${formatNumberFC(item.prix)} FC</div></div><div class="text-right"><div class="font-bold text-emerald-600">${formatNumberFC(sousTotal)} FC</div><button onclick="supprimerDuPanier(${index})" class="text-red-500 hover:text-red-700 text-sm mt-1">❌ Supprimer</button></div></div>`;
-  });
-  html += `</div><div class="mt-4 pt-3 border-t text-right"><strong class="text-lg">Total : ${formatNumberFC(total)} FC</strong></div>`;
-  panierDiv.innerHTML = html;
-}
-function supprimerDuPanier(index) {
-  panier.splice(index, 1);
-  afficherPanier();
-  showTemporaryNotification(`❌ Produit retiré du panier`);
-}
-async function addVente() {
-  const clientId = clientInput.value.trim();
-  if (!clientId) {
-    showTemporaryNotification("❌ Veuillez sélectionner un client");
-    return;
-  }
-  if (panier.length === 0) {
-    showTemporaryNotification("❌ Ajoutez des produits au panier");
-    return;
-  }
-  messageVente.innerHTML =
-    '<div class="bg-blue-50 text-blue-600 p-3 rounded-lg">⏳ Enregistrement en cours...</div>';
-  try {
-    const clientResponse = await fetch(`${CLIENTS_URL}/${String(clientId)}`);
-    if (!clientResponse.ok) {
-      messageVente.innerHTML =
-        '<div class="bg-red-50 text-red-600 p-3 rounded-lg">❌ Client introuvable</div>';
-      return;
-    }
-    const clientData = await clientResponse.json();
-    const total = panier.reduce(
-      (sum, item) => sum + item.prix * item.quantite,
-      0,
-    );
-    const response = await fetch(VENTES_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        clientId: String(clientId),
-        produits: panier,
-        total: total,
-        date: new Date().toISOString(),
-      }),
-    });
-    const data = await response.json();
-    genererFacturePanier(data, clientData);
-    panier = [];
-    afficherPanier();
-    messageVente.innerHTML = `<div class="bg-emerald-50 text-emerald-700 p-4 rounded-lg">✅ Vente enregistrée ! ID: ${data.id}<br>💰 Total: ${formatNumberFC(total)} FC</div>`;
-    clientInput.focus();
-    loadDashboardStats();
-    getDailyStats();
-    getWeeklyTrend();
-    setTimeout(() => {
-      if (messageVente.innerHTML.includes("Vente enregistrée"))
-        messageVente.innerHTML = "";
-    }, 5000);
-  } catch (error) {
-    messageVente.innerHTML = `<div class="bg-red-50 text-red-600 p-3 rounded-lg">❌ Erreur: ${error.message}</div>`;
-  }
-}
-if (ajouterPanierBtn)
-  ajouterPanierBtn.addEventListener("click", ajouterAuPanier);
-if (venteBtn) venteBtn.addEventListener("click", addVente);
-if (clientInput)
-  clientInput.addEventListener("keypress", function (e) {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      afficherClient();
-    }
-  });
-
-// ============================================
-// HISTORIQUE AVEC FILTRES
-// ============================================
-const showHistoriqueBtn = document.getElementById("showHistoriqueBtn");
-const historiqueClientIdElem = document.getElementById("historiqueClientId");
-const historiqueMessageDiv = document.getElementById("historiqueMessage");
-const historiqueTableElem = document.getElementById("historiqueTable");
-const historiqueTableBody = document.getElementById("historiqueTableBody");
-if (showHistoriqueBtn)
-  showHistoriqueBtn.addEventListener("click", afficherHistorique);
-window.showVenteDetail = async function (venteId) {
-  try {
-    const response = await fetch(`${VENTES_URL}/${venteId}`);
-    if (!response.ok) throw new Error("Vente non trouvée");
-    const vente = await response.json();
-    let clientNom = "Client inconnu";
-    try {
-      const cr = await fetch(`${CLIENTS_URL}/${String(vente.clientId)}`);
-      if (cr.ok) clientNom = (await cr.json()).nom;
-    } catch (e) {}
-    const vn = nettoyerVente(vente);
-    const produits = vn.produits;
-    const total = vn.total;
-    let produitsHtml = produits
-      .map(
-        (p) =>
-          `<li class="flex justify-between items-center py-2 border-b border-gray-100"><span class="font-medium">${escapeHtml(p.nom)}</span><span class="text-gray-600">${p.quantite} x ${formatNumberFC(p.prix)} FC</span><span class="font-bold text-emerald-600">${formatNumberFC(p.prix * p.quantite)} FC</span></li>`,
-      )
-      .join("");
-    let totalArticles = produits.reduce((sum, p) => sum + p.quantite, 0);
-    const modal = document.createElement("div");
-    modal.className =
-      "fixed inset-0 bg-black/50 z-50 flex items-center justify-center";
-    modal.innerHTML = `<div class="bg-white rounded-xl shadow-xl max-w-md w-full mx-4 animate-fadeIn"><div class="px-6 py-4 border-b bg-gradient-to-r from-blue-50 to-white"><h3 class="text-lg font-semibold text-blue-800"><i class="fas fa-receipt text-blue-600 mr-2"></i> Détails de la vente</h3></div><div class="p-6 space-y-3"><div class="grid grid-cols-2 gap-2 text-sm"><p class="text-gray-500">🆔 ID Vente :</p><p class="font-mono font-medium">${vente.id}</p><p class="text-gray-500">👤 Client :</p><p class="font-medium">${escapeHtml(clientNom)}</p><p class="text-gray-500">🆔 ID Client :</p><p class="font-mono">${vente.clientId}</p></div><div class="border-t border-gray-100 pt-3"><p class="text-gray-500 text-sm mb-2">📦 Produits :</p><ul class="space-y-1 max-h-48 overflow-y-auto">${produitsHtml || '<li class="text-gray-400 text-center py-2">Aucun produit</li>'}</ul></div><div class="border-t border-gray-100 pt-3"><div class="flex justify-between items-center"><span class="text-gray-500">📊 Total articles :</span><span class="font-semibold">${totalArticles}</span></div><div class="flex justify-between items-center mt-2"><span class="text-gray-500">💰 Montant total :</span><span class="text-xl font-bold text-emerald-600">${formatNumberFC(total)} FC</span></div><div class="flex justify-between items-center mt-2"><span class="text-gray-500">📅 Date :</span><span class="text-sm">${formatDate(vente.date)}</span></div></div></div><div class="px-6 py-4 border-t flex justify-end gap-3"><button onclick="genererFactureVente('${vente.id}', '${vente.clientId}')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg transition text-sm"><i class="fas fa-print mr-1"></i> Imprimer facture</button><button onclick="this.closest('.fixed').remove()" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg transition text-sm">Fermer</button></div></div>`;
-    document.body.appendChild(modal);
-  } catch (e) {
-    showTemporaryNotification("❌ Erreur", "error");
-  }
-};
-async function afficherHistorique() {
-  const clientId = historiqueClientIdElem.value.trim();
-  if (!clientId) {
-    historiqueMessageDiv.innerHTML =
-      '<span class="text-red-600">⚠️ Entrez un ID client</span>';
-    return;
-  }
-  try {
-    const cr = await fetch(`${CLIENTS_URL}/${String(clientId)}`);
-    if (!cr.ok) {
-      historiqueMessageDiv.innerHTML = `<span class="text-red-600">❌ Client "${clientId}" non trouvé</span>`;
-      return;
-    }
-    const clientData = await cr.json();
-    const ventesRes = await fetch(VENTES_URL);
-    const allVentes = await ventesRes.json();
-    const ventes = allVentes.filter(
-      (v) => String(v.clientId) === String(clientId),
-    );
-    if (ventes.length === 0) {
-      historiqueMessageDiv.innerHTML = `<span class="text-blue-600">📭 Aucune vente pour ${clientData.nom}</span>`;
-      historiqueTableElem.classList.add("hidden");
-      return;
-    }
-    window.currentVentesData = ventes;
-    window.currentClientData = clientData;
-    historiqueMessageDiv.innerHTML = `<span class="text-emerald-600">✅ ${ventes.length} vente(s) pour ${escapeHtml(clientData.nom)} (ID: ${clientData.id})</span>`;
-    displayVentesMulti(ventes, clientData);
-  } catch (e) {
-    historiqueMessageDiv.innerHTML = `<span class="text-red-600">❌ Erreur: ${e.message}</span>`;
-  }
-}
-function displayVentesMulti(ventes, clientData) {
-  if (!historiqueTableBody) return;
-  historiqueTableBody.innerHTML = "";
-  let totalQuantite = 0,
-    totalPrix = 0;
-  ventes
-    .sort((a, b) => parseDate(b.date) - parseDate(a.date))
-    .forEach((v, idx) => {
-      const vn = nettoyerVente(v);
-      const produitsListe = vn.produits;
-      const total = vn.total;
-      let qt = produitsListe.reduce((s, p) => s + p.quantite, 0);
-      const prixMoyen = qt > 0 ? total / qt : 0;
-      if (isNaN(total)) return;
-      const row = document.createElement("tr");
-      row.className = idx % 2 === 0 ? "bg-gray-50" : "";
-      row.innerHTML = `<td class="px-4 py-3 text-sm font-mono">${v.id.substring(0, 8)}<\/td><td class="px-4 py-3 text-sm">${afficherProduitsListe(produitsListe)}<\/td><td class="px-4 py-3 text-center font-medium">${qt}<\/td><td class="px-4 py-3 text-right">${formatNumberFC(prixMoyen)} FC<\/td><td class="px-4 py-3 text-right font-bold text-emerald-600">${formatNumberFC(total)} FC<\/td><td class="px-4 py-3 text-sm">${formatDate(v.date)}<\/td><td class="px-4 py-3 text-center"><button onclick="showVenteDetail('${v.id}')" class="bg-blue-600 text-white px-2 py-1 rounded text-xs mr-1">📄 Détails<\/button><button onclick="genererFactureVente('${v.id}', '${clientData.id}')" class="bg-emerald-600 text-white px-2 py-1 rounded text-xs">🧾 Facture<\/button><\/td>`;
-      historiqueTableBody.appendChild(row);
-      totalQuantite += qt;
-      totalPrix += total;
-    });
-  document.getElementById("totalQuantite").textContent = totalQuantite;
-  document.getElementById("totalPrix").textContent =
-    formatNumberFC(totalPrix) + " FC";
-  historiqueTableElem.classList.remove("hidden");
-  const oldFilter = document.getElementById("filterContainerHisto");
-  if (oldFilter) oldFilter.remove();
-  const filterContainer = document.createElement("div");
-  filterContainer.id = "filterContainerHisto";
-  filterContainer.className =
-    "mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200";
-  filterContainer.innerHTML = `<div class="flex flex-wrap items-center justify-between gap-4"><div><strong><i class="fas fa-filter mr-1"></i> 🔍 Filtrer :</strong></div><div class="flex flex-wrap gap-3"><label class="inline-flex items-center gap-2"><input type="radio" name="filterTypeHisto" value="all" checked class="text-emerald-600"> 📅 Toutes</label><label class="inline-flex items-center gap-2"><input type="radio" name="filterTypeHisto" value="today" class="text-emerald-600"> 📆 Aujourd'hui</label><label class="inline-flex items-center gap-2"><input type="radio" name="filterTypeHisto" value="week" class="text-emerald-600"> 📊 Semaine</label><label class="inline-flex items-center gap-2"><input type="radio" name="filterTypeHisto" value="month" class="text-emerald-600"> 📈 Mois</label><button id="applyFilterHistoBtn" class="bg-emerald-600 text-white px-3 py-1 rounded text-sm">Appliquer</button><button id="resetFilterHistoBtn" class="bg-gray-500 text-white px-3 py-1 rounded text-sm">Réinitialiser</button></div></div>`;
-  const histContainer =
-    document.getElementById("historiqueTable").parentElement;
-  histContainer.appendChild(filterContainer);
-  document
-    .getElementById("applyFilterHistoBtn")
-    ?.addEventListener("click", () => {
-      const val = document.querySelector(
-        'input[name="filterTypeHisto"]:checked',
-      ).value;
-      appliquerFiltreHisto(val, ventes, clientData);
-    });
-  document
-    .getElementById("resetFilterHistoBtn")
-    ?.addEventListener("click", () => {
-      document.querySelector(
-        'input[name="filterTypeHisto"][value="all"]',
-      ).checked = true;
-      displayVentesMulti(ventes, clientData);
-      showTemporaryNotification("📋 Filtre réinitialisé");
-    });
-  const oldActions = document.querySelector(".action-buttons-container");
-  if (oldActions) oldActions.remove();
-  const actionDiv = document.createElement("div");
-  actionDiv.className = "action-buttons-container flex gap-3 mt-4 justify-end";
-  actionDiv.innerHTML = `<button id="exportCsvBtn" class="bg-orange-600 text-white px-4 py-2 rounded-lg flex items-center gap-2"><i class="fas fa-file-excel"></i> Exporter CSV</button><button id="factureMensuelleBtn" class="bg-purple-600 text-white px-4 py-2 rounded-lg flex items-center gap-2"><i class="fas fa-file-invoice"></i> Facture mensuelle</button>`;
-  histContainer.appendChild(actionDiv);
-  document
-    .getElementById("exportCsvBtn")
-    ?.addEventListener("click", () => exportToCSV(ventes, clientData));
-  document
-    .getElementById("factureMensuelleBtn")
-    ?.addEventListener("click", () =>
-      genererFactureMensuelleMulti(ventes, clientData),
-    );
-}
-function appliquerFiltreHisto(filterType, ventesOriginales, clientData) {
-  const now = new Date();
-  let filtrees = [];
-  let msg = "";
-  switch (filterType) {
-    case "today":
-      filtrees = ventesOriginales.filter(
-        (v) => parseDate(v.date).toDateString() === now.toDateString(),
-      );
-      msg = "aujourd'hui";
-      break;
-    case "week":
-      const weekAgo = new Date();
-      weekAgo.setDate(weekAgo.getDate() - 7);
-      weekAgo.setHours(0, 0, 0, 0);
-      filtrees = ventesOriginales.filter((v) => parseDate(v.date) >= weekAgo);
-      msg = "cette semaine";
-      break;
-    case "month":
-      const year = now.getFullYear(),
-        month = now.getMonth();
-      filtrees = ventesOriginales.filter((v) => {
-        const d = parseDate(v.date);
-        return (
-          !isNaN(d.getTime()) &&
-          d.getMonth() === month &&
-          d.getFullYear() === year
-        );
-      });
-      msg = "ce mois";
-      break;
-    default:
-      filtrees = [...ventesOriginales];
-      msg = "toutes";
-  }
-  if (filtrees.length === 0) {
-    historiqueMessageDiv.innerHTML = `<span class="text-blue-600">📭 Aucune vente pour ${msg}</span>`;
-    historiqueTableBody.innerHTML = "";
-    document.getElementById("totalQuantite").textContent = "0";
-    document.getElementById("totalPrix").textContent = "0 FC";
-  } else {
-    displayVentesMulti(filtrees, clientData);
-    historiqueMessageDiv.innerHTML = `<span class="text-emerald-600">✅ ${filtrees.length} vente(s) pour ${msg}</span>`;
-  }
-}
-
-// ============================================
 // RAPPORTS MENSUELS
 // ============================================
 async function chargerClientsPourRapport() {
@@ -2576,6 +2576,7 @@ async function chargerClientsPourRapport() {
     }
   } catch (e) {}
 }
+
 async function genererRapportMensuel() {
   const clientId = document.getElementById("rapportClientSelect")?.value;
   const mois = parseInt(document.getElementById("rapportMoisSelect")?.value);
@@ -2627,7 +2628,7 @@ async function genererRapportMensuel() {
         nbGlobal += data.nb;
         const tr = document.createElement("tr");
         tr.className = "border-b hover:bg-gray-50";
-        tr.innerHTML = `<td class="px-4 py-3"><div class="font-medium">${client ? escapeHtml(client.nom) : "Client " + id}</div><div class="text-xs text-gray-400">ID: ${id}</div><\/td><td class="px-4 py-3 text-center">${data.nb}<\/td><td class="px-4 py-3 text-right">${formatNumberFC(data.total)} FC<\/td><td class="px-4 py-3 text-right text-orange-600">${formatNumberFC(remise)} FC<\/td><td class="px-4 py-3 text-right font-bold text-emerald-600">${formatNumberFC(data.total - remise)} FC<\/td><td class="px-4 py-3 text-center"><button onclick="genererFactureClientRapport('${id}', ${mois}, ${annee})" class="bg-purple-600 text-white px-2 py-1 rounded text-xs">🧾<\/button><\/td><\/tr>`;
+        tr.innerHTML = `<td class="px-4 py-3"><div class="font-medium">${client ? escapeHtml(client.nom) : "Client " + id}</div><div class="text-xs text-gray-400">Code: ${id}</div><\/td><td class="px-4 py-3 text-center">${data.nb}<\/td><td class="px-4 py-3 text-right">${formatNumberFC(data.total)} FC<\/td><td class="px-4 py-3 text-right text-orange-600">${formatNumberFC(remise)} FC<\/td><td class="px-4 py-3 text-right font-bold text-emerald-600">${formatNumberFC(data.total - remise)} FC<\/td><td class="px-4 py-3 text-center"><button onclick="genererFactureClientRapport('${id}', ${mois}, ${annee})" class="bg-purple-600 text-white px-2 py-1 rounded text-xs">🧾<\/button><\/td><\/tr>`;
         tbody.appendChild(tr);
       }
       document.getElementById("rapportFootNbVentes").textContent = nbGlobal;
@@ -2718,7 +2719,7 @@ window.genererFactureClientRapport = async function (clientId, mois, annee) {
     doc.setFontSize(10);
     doc.text(client.nom, m + 30, 68);
     doc.text(`Tél: ${client.telephone || "N/A"}`, m, 75);
-    doc.text(`ID: ${client.id}`, m, 82);
+    doc.text(`Code: ${client.id}`, m, 82);
     doc.line(m, 90, rt, 90);
     doc.setFontSize(11);
     doc.setFont("helvetica", "bold");
@@ -2839,7 +2840,7 @@ async function exporterRapportCSV(clientId, mois, annee) {
 
     const separator = ";";
     const headers = [
-      "Client ID",
+      "Code Client",
       "Client Nom",
       "Nb Ventes",
       "Total (FC)",
@@ -2923,7 +2924,7 @@ function genererFacturePanier(vente, client) {
   doc.setFontSize(10);
   doc.text(client.nom, m + 30, 68);
   doc.text(`Tél: ${client.telephone || "N/A"}`, m, 75);
-  doc.text(`ID: ${client.id}`, m, 82);
+  doc.text(`Code: ${client.id}`, m, 82);
   doc.line(m, 90, rt, 90);
   doc.setFontSize(11);
   doc.setFont("helvetica", "bold");
@@ -2963,6 +2964,7 @@ function genererFacturePanier(vente, client) {
   );
   showTemporaryNotification("✅ Facture générée");
 }
+
 function genererFactureMensuelleMulti(ventes, client) {
   if (typeof window.jspdf === "undefined") {
     showTemporaryNotification("❌ Erreur PDF", "error");
@@ -3017,7 +3019,7 @@ function genererFactureMensuelleMulti(ventes, client) {
   doc.setFontSize(10);
   doc.text(client.nom, m + 30, 68);
   doc.text(`Tél: ${client.telephone || "N/A"}`, m, 75);
-  doc.text(`ID: ${client.id}`, m, 82);
+  doc.text(`Code: ${client.id}`, m, 82);
   doc.line(m, 90, rt, 90);
   doc.setFontSize(11);
   doc.setFont("helvetica", "bold");
@@ -3069,6 +3071,7 @@ function genererFactureMensuelleMulti(ventes, client) {
   );
   showTemporaryNotification("✅ Facture mensuelle générée");
 }
+
 function exportToCSV(ventes, client) {
   if (!ventes || ventes.length === 0) {
     showTemporaryNotification("📭 Aucune donnée", "error");
@@ -3113,28 +3116,18 @@ function exportToCSV(ventes, client) {
 }
 
 // ============================================
-// MODULE ACHATS AVEC API (SYNCHRONISÉ)
+// MODULE ACHATS
 // ============================================
-
 async function chargerAchats() {
   try {
     const response = await fetch(ACHATS_URL);
     if (!response.ok) throw new Error("Erreur chargement achats");
     const achatsData = await response.json();
-
-    achats = {
-      BRACONGO: [],
-      BRALIMA: [],
-    };
-
+    achats = { BRACONGO: [], BRALIMA: [] };
     achatsData.forEach((achat) => {
-      if (achat.fournisseur === "BRACONGO") {
-        achats.BRACONGO.push(achat);
-      } else if (achat.fournisseur === "BRALIMA") {
-        achats.BRALIMA.push(achat);
-      }
+      if (achat.fournisseur === "BRACONGO") achats.BRACONGO.push(achat);
+      else if (achat.fournisseur === "BRALIMA") achats.BRALIMA.push(achat);
     });
-
     return achats;
   } catch (error) {
     console.error("Erreur chargement achats:", error);
@@ -3154,16 +3147,13 @@ async function ajouterAchat(fournisseur, item) {
     mois: new Date().getMonth() + 1,
     annee: new Date().getFullYear(),
   };
-
   try {
     const response = await fetch(ACHATS_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(nouvelAchat),
     });
-
     if (!response.ok) throw new Error("Erreur ajout achat");
-
     const achatCree = await response.json();
     achats[fournisseur].push(achatCree);
     return achatCree;
@@ -3181,17 +3171,12 @@ async function modifierAchat(achatId, updatedData) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(updatedData),
     });
-
     if (!response.ok) throw new Error("Erreur modification achat");
-
     const achatModifie = await response.json();
-
     await chargerAchats();
-
     const fournisseur = updatedData.fournisseur;
     afficherListeAchats(fournisseur);
     mettreAJourStatsAchats();
-
     showTemporaryNotification("✅ Achat modifié avec succès !");
     return achatModifie;
   } catch (error) {
@@ -3207,7 +3192,6 @@ async function supprimerAchat(achatId, fournisseur) {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
     });
-
     if (response.status === 404) {
       showTemporaryNotification("⚠️ Cet achat n'existe plus", "warning");
       await chargerAchats();
@@ -3215,13 +3199,10 @@ async function supprimerAchat(achatId, fournisseur) {
       mettreAJourStatsAchats();
       return false;
     }
-
     if (!response.ok) throw new Error("Erreur suppression achat");
-
     await chargerAchats();
     afficherListeAchats(fournisseur);
     mettreAJourStatsAchats();
-
     showTemporaryNotification("✅ Achat supprimé avec succès !");
     return true;
   } catch (error) {
@@ -3276,44 +3257,35 @@ function ouvrirModalModificationAchat(achat) {
       </div>
     </div>
   `;
-
   document.body.appendChild(modal);
-
   const quantiteInput = modal.querySelector("#editAchatQuantite");
   const prixInput = modal.querySelector("#editAchatPrixUnitaire");
   const nouveauTotalPreview = modal.querySelector(
     "#nouveauTotalPreview span:last-child",
   );
-
   function updateTotalPreview() {
     const quantite = parseInt(quantiteInput.value) || 0;
     const prix = parseFloat(prixInput.value) || 0;
     const nouveauTotal = quantite * prix;
     nouveauTotalPreview.innerHTML = `${formatNumberFC(nouveauTotal)} FC`;
   }
-
   quantiteInput.addEventListener("input", updateTotalPreview);
   prixInput.addEventListener("input", updateTotalPreview);
-
   const saveBtn = modal.querySelector("#saveEditAchatBtn");
   saveBtn.addEventListener("click", async () => {
     const nouvelleQuantite = parseInt(quantiteInput.value);
     const nouveauPrixUnitaire = parseFloat(prixInput.value);
     const nouvelleDate = modal.querySelector("#editAchatDate").value;
-
     if (isNaN(nouvelleQuantite) || nouvelleQuantite <= 0) {
       showTemporaryNotification("❌ Quantité invalide", "error");
       return;
     }
-
     if (isNaN(nouveauPrixUnitaire) || nouveauPrixUnitaire <= 0) {
       showTemporaryNotification("❌ Prix invalide", "error");
       return;
     }
-
     const nouveauTotal = nouvelleQuantite * nouveauPrixUnitaire;
     const nouvelleDateObj = new Date(nouvelleDate);
-
     const updatedData = {
       ...achat,
       quantite: nouvelleQuantite,
@@ -3323,18 +3295,14 @@ function ouvrirModalModificationAchat(achat) {
       mois: nouvelleDateObj.getMonth() + 1,
       annee: nouvelleDateObj.getFullYear(),
     };
-
     await modifierAchat(achat.id, updatedData);
     modal.remove();
   });
-
   const cancelBtn = modal.querySelector("#cancelEditAchatBtn");
   cancelBtn.addEventListener("click", () => modal.remove());
-
   modal.addEventListener("click", (e) => {
     if (e.target === modal) modal.remove();
   });
-
   updateTotalPreview();
 }
 
@@ -3349,11 +3317,8 @@ function afficherListeAchats(
   const footer = document.getElementById(
     `${fournisseur.toLowerCase()}AchatsFooter`,
   );
-
   if (!tbody) return;
-
   let achatsFiltres = achats[fournisseur];
-
   if (moisFiltre && anneeFiltre) {
     achatsFiltres = achatsFiltres.filter((a) => {
       const dateAchat = new Date(a.date);
@@ -3363,14 +3328,12 @@ function afficherListeAchats(
       );
     });
   }
-
   if (achatsFiltres.length === 0) {
     tbody.innerHTML =
       '<tr><td colspan="7" class="text-center py-8 text-gray-400">📭 Aucun achat trouvé<\/td><\/tr>';
     if (footer) footer.classList.add("hidden");
     return;
   }
-
   let totalGeneral = 0;
   tbody.innerHTML = achatsFiltres
     .sort((a, b) => new Date(b.date) - new Date(a.date))
@@ -3381,38 +3344,32 @@ function afficherListeAchats(
         achat.statut === "actif"
           ? '<span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-700">Actif</span>'
           : '<span class="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-700">Archivé</span>';
-
       return `<tr class="${idx % 2 === 0 ? "bg-white" : "bg-gray-50"} hover:bg-gray-100 transition">
-                <td class="px-4 py-3 text-sm">${date.toLocaleDateString("fr-FR")} ${date.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}<\/td>
-                <td class="px-4 py-3 font-medium">${escapeHtml(achat.produit)}<\/td>
-                <td class="px-4 py-3 text-center">${achat.quantite}<\/td>
-                <td class="px-4 py-3 text-right">${formatNumberFC(achat.prixUnitaire)} FC<\/td>
-                <td class="px-4 py-3 text-right font-bold text-emerald-600">${formatNumberFC(achat.total)} FC<\/td>
-                <td class="px-4 py-3 text-center">${statutBadge}<\/td>
-                <td class="px-4 py-3 text-center">
-                  <div class="flex gap-2 justify-center">
-                    ${
-                      achat.statut === "actif"
-                        ? `
-                      <button onclick='ouvrirModalModificationAchat(${JSON.stringify(achat).replace(/'/g, "\\'")})' 
-                              class="text-blue-600 hover:text-blue-800 transition" title="Modifier">
-                        <i class="fas fa-edit"></i>
-                      </button>
-                      <button onclick="confirmerSuppressionAchat('${achat.id}', '${fournisseur}')" 
-                              class="text-red-600 hover:text-red-800 transition" title="Supprimer">
-                        <i class="fas fa-trash"></i>
-                      </button>
-                    `
-                        : `
-                      <span class="text-gray-400 text-xs">Non modifiable</span>
-                    `
-                    }
-                  </div>
-                <\/td>
-              <\/tr>`;
+      <td class="px-4 py-3 text-sm">${date.toLocaleDateString("fr-FR")} ${date.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}<\/td>
+      <td class="px-4 py-3 font-medium">${escapeHtml(achat.produit)}<\/td>
+      <td class="px-4 py-3 text-center">${achat.quantite}<\/td>
+      <td class="px-4 py-3 text-right">${formatNumberFC(achat.prixUnitaire)} FC<\/td>
+      <td class="px-4 py-3 text-right font-bold text-emerald-600">${formatNumberFC(achat.total)} FC<\/td>
+      <td class="px-4 py-3 text-center">${statutBadge}<\/td>
+      <td class="px-4 py-3 text-center">
+        <div class="flex gap-2 justify-center">
+          ${
+            achat.statut === "actif"
+              ? `
+            <button onclick='ouvrirModalModificationAchat(${JSON.stringify(achat).replace(/'/g, "\\'")})' class="text-blue-600 hover:text-blue-800 transition" title="Modifier">
+              <i class="fas fa-edit"></i>
+            </button>
+            <button onclick="confirmerSuppressionAchat('${achat.id}', '${fournisseur}')" class="text-red-600 hover:text-red-800 transition" title="Supprimer">
+              <i class="fas fa-trash"></i>
+            </button>
+          `
+              : '<span class="text-gray-400 text-xs">Non modifiable</span>'
+          }
+        </div>
+      <\/td>
+    <\/tr>`;
     })
     .join("");
-
   if (footer) {
     footer.classList.remove("hidden");
     const footerTotal = document.getElementById(
@@ -3444,18 +3401,14 @@ function confirmerSuppressionAchat(achatId, fournisseur) {
       </div>
     </div>
   `;
-
   document.body.appendChild(modal);
-
   const confirmBtn = modal.querySelector("#confirmDeleteBtn");
   confirmBtn.addEventListener("click", async () => {
     await supprimerAchat(achatId, fournisseur);
     modal.remove();
   });
-
   const cancelBtn = modal.querySelector("#cancelDeleteBtn");
   cancelBtn.addEventListener("click", () => modal.remove());
-
   modal.addEventListener("click", (e) => {
     if (e.target === modal) modal.remove();
   });
@@ -3465,7 +3418,6 @@ async function archiverMois(fournisseur, mois, annee) {
   try {
     const response = await fetch(ACHATS_URL);
     const tousAchats = await response.json();
-
     const achatsArchiver = tousAchats.filter(
       (a) =>
         a.fournisseur === fournisseur &&
@@ -3473,7 +3425,6 @@ async function archiverMois(fournisseur, mois, annee) {
         new Date(a.date).getFullYear() === annee &&
         a.statut === "actif",
     );
-
     if (achatsArchiver.length === 0) {
       showTemporaryNotification(
         `📭 Aucun achat à archiver pour ${mois}/${annee}`,
@@ -3481,10 +3432,8 @@ async function archiverMois(fournisseur, mois, annee) {
       );
       return false;
     }
-
     const total = achatsArchiver.reduce((sum, a) => sum + a.total, 0);
     const remise = total * 0.05;
-
     for (const achat of achatsArchiver) {
       await fetch(`${ACHATS_URL}/${achat.id}`, {
         method: "PUT",
@@ -3492,9 +3441,7 @@ async function archiverMois(fournisseur, mois, annee) {
         body: JSON.stringify({ ...achat, statut: "archive" }),
       });
     }
-
     await chargerAchats();
-
     showTemporaryNotification(
       `✅ Mois ${mois}/${annee} archivé ! Remise : ${formatNumberFC(remise)} FC`,
     );
@@ -3522,16 +3469,13 @@ function mettreAJourStatsAchats() {
   const now = new Date();
   const moisActuel = now.getMonth() + 1;
   const anneeActuelle = now.getFullYear();
-
-  let totalGlobal = 0;
-  let totalRemise = 0;
-  let totalNbAchats = 0;
-
+  let totalGlobal = 0,
+    totalRemise = 0,
+    totalNbAchats = 0;
   const statsFournisseur = {
     BRACONGO: { total: 0, remise: 0, net: 0, nb: 0 },
     BRALIMA: { total: 0, remise: 0, net: 0, nb: 0 },
   };
-
   ["BRACONGO", "BRALIMA"].forEach((fournisseur) => {
     const achatsMois = achats[fournisseur].filter(
       (a) =>
@@ -3539,24 +3483,19 @@ function mettreAJourStatsAchats() {
         new Date(a.date).getMonth() + 1 === moisActuel &&
         new Date(a.date).getFullYear() === anneeActuelle,
     );
-
     const total = achatsMois.reduce((sum, a) => sum + a.total, 0);
     const remise = total * 0.05;
     const net = total - remise;
     const nb = achatsMois.length;
-
     statsFournisseur[fournisseur] = { total, remise, net, nb };
-
     totalGlobal += total;
     totalRemise += remise;
     totalNbAchats += nb;
   });
-
   const statTotalAchats = document.getElementById("statTotalAchats");
   const statMontantAchats = document.getElementById("statMontantAchats");
   const statRemiseMois = document.getElementById("statRemiseMois");
   const statNetAPayer = document.getElementById("statNetAPayer");
-
   if (statTotalAchats) statTotalAchats.textContent = totalNbAchats;
   if (statMontantAchats)
     statMontantAchats.textContent = formatNumberFC(totalGlobal) + " FC";
@@ -3565,12 +3504,10 @@ function mettreAJourStatsAchats() {
   if (statNetAPayer)
     statNetAPayer.textContent =
       formatNumberFC(totalGlobal - totalRemise) + " FC";
-
   const bracongoNb = document.getElementById("statBracongoNb");
   const bracongoMontant = document.getElementById("statBracongoMontant");
   const bracongoRemise = document.getElementById("statBracongoRemise");
   const bracongoNet = document.getElementById("statBracongoNet");
-
   if (bracongoNb) bracongoNb.textContent = statsFournisseur.BRACONGO.nb;
   if (bracongoMontant)
     bracongoMontant.textContent =
@@ -3581,12 +3518,10 @@ function mettreAJourStatsAchats() {
   if (bracongoNet)
     bracongoNet.textContent =
       formatNumberFC(statsFournisseur.BRACONGO.net) + " FC";
-
   const bralimaNb = document.getElementById("statBralimaNb");
   const bralimaMontant = document.getElementById("statBralimaMontant");
   const bralimaRemise = document.getElementById("statBralimaRemise");
   const bralimaNet = document.getElementById("statBralimaNet");
-
   if (bralimaNb) bralimaNb.textContent = statsFournisseur.BRALIMA.nb;
   if (bralimaMontant)
     bralimaMontant.textContent =
@@ -3604,30 +3539,27 @@ function initPanierAchat(fournisseur) {
     `${fournisseur.toLowerCase()}Panier`,
   );
   const panierActuel = panierAchats[fournisseur];
-
   if (!container) return;
-
   if (panierActuel.length === 0) {
     container.innerHTML =
       '<div class="text-center text-gray-400 py-4"><i class="fas fa-shopping-cart text-3xl mb-2 block"></i>Panier vide</div>';
     return;
   }
-
   let total = 0;
   let html = '<div class="space-y-2">';
   panierActuel.forEach((item, index) => {
     const sousTotal = item.prix * item.quantite;
     total += sousTotal;
     html += `<div class="flex justify-between items-center p-3 bg-white rounded-lg border border-gray-200">
-                <div>
-                  <span class="font-medium">${escapeHtml(item.nom)}</span>
-                  <div class="text-sm text-gray-500">${item.quantite} x ${formatNumberFC(item.prix)} FC</div>
-                </div>
-                <div class="text-right">
-                  <div class="font-bold text-emerald-600">${formatNumberFC(sousTotal)} FC</div>
-                  <button onclick="supprimerDuPanierAchat('${fournisseur}', ${index})" class="text-red-500 hover:text-red-700 text-xs">Supprimer</button>
-                </div>
-              </div>`;
+      <div>
+        <span class="font-medium">${escapeHtml(item.nom)}</span>
+        <div class="text-sm text-gray-500">${item.quantite} x ${formatNumberFC(item.prix)} FC</div>
+      </div>
+      <div class="text-right">
+        <div class="font-bold text-emerald-600">${formatNumberFC(sousTotal)} FC</div>
+        <button onclick="supprimerDuPanierAchat('${fournisseur}', ${index})" class="text-red-500 hover:text-red-700 text-xs">Supprimer</button>
+      </div>
+    </div>`;
   });
   html += `<div class="mt-3 pt-2 border-t text-right"><strong class="text-lg">Total: ${formatNumberFC(total)} FC</strong></div></div>`;
   container.innerHTML = html;
@@ -3645,34 +3577,26 @@ function ajouterAuPanierAchat(fournisseur) {
   const quantite = parseInt(
     document.getElementById(`${fournisseur.toLowerCase()}Quantite`).value,
   );
-
   if (!produitSelect || !produitSelect.value) {
     showTemporaryNotification("❌ Veuillez sélectionner un produit", "error");
     return;
   }
-
   const [type, nom] = produitSelect.value.split("|");
   let prix = 0;
-
   if (type === "bouteille") {
-    if (produits[fournisseur].bouteille[nom]) {
+    if (produits[fournisseur].bouteille[nom])
       prix = produits[fournisseur].bouteille[nom].prix;
-    }
   } else if (type === "cassier") {
-    if (produits[fournisseur].cassier[nom]) {
+    if (produits[fournisseur].cassier[nom])
       prix = produits[fournisseur].cassier[nom].prixCassier;
-    }
   }
-
   if (prix === 0) {
     showTemporaryNotification("❌ Prix non trouvé", "error");
     return;
   }
-
   panierAchats[fournisseur].push({ nom, quantite, prix, type });
   initPanierAchat(fournisseur);
   showTemporaryNotification(`✅ ${nom} ajouté au panier`);
-
   if (produitSelect) produitSelect.value = "";
   const quantiteInput = document.getElementById(
     `${fournisseur.toLowerCase()}Quantite`,
@@ -3682,24 +3606,20 @@ function ajouterAuPanierAchat(fournisseur) {
 
 async function validerAchat(fournisseur) {
   const panierActuel = panierAchats[fournisseur];
-
   if (panierActuel.length === 0) {
     showTemporaryNotification("❌ Panier vide", "error");
     return;
   }
-
   let total = 0;
   for (const item of panierActuel) {
     await ajouterAchat(fournisseur, item);
     total += item.prix * item.quantite;
   }
-
   panierAchats[fournisseur] = [];
   initPanierAchat(fournisseur);
   await chargerAchats();
   afficherListeAchats(fournisseur);
   mettreAJourStatsAchats();
-
   showTemporaryNotification(
     `✅ Achat validé ! Total: ${formatNumberFC(total)} FC`,
   );
@@ -3707,7 +3627,6 @@ async function validerAchat(fournisseur) {
 
 function exporterAchatsCSV(fournisseur, mois = null, annee = null) {
   let achatsExporter = achats[fournisseur].filter((a) => a.statut === "actif");
-
   if (mois && annee) {
     achatsExporter = achatsExporter.filter((a) => {
       const dateAchat = new Date(a.date);
@@ -3716,12 +3635,10 @@ function exporterAchatsCSV(fournisseur, mois = null, annee = null) {
       );
     });
   }
-
   if (achatsExporter.length === 0) {
     showTemporaryNotification("📭 Aucune donnée à exporter", "error");
     return;
   }
-
   const stats =
     mois && annee ? calculerTotalMois(fournisseur, mois, annee) : null;
   const separator = ";";
@@ -3739,17 +3656,14 @@ function exporterAchatsCSV(fournisseur, mois = null, annee = null) {
     a.prixUnitaire,
     a.total,
   ]);
-
   let csvContent = [headers, ...rows]
     .map((row) => row.join(separator))
     .join("\n");
-
   if (stats) {
     csvContent += `\n\n"Total général","${stats.total} FC"`;
     csvContent += `\n"Remise 5%","${stats.remise} FC"`;
     csvContent += `\n"Net à payer","${stats.net} FC"`;
   }
-
   const blob = new Blob(["\uFEFF" + csvContent], {
     type: "text/csv;charset=utf-8;",
   });
@@ -3769,10 +3683,8 @@ function initSelecteursProduitsAchats() {
       `${fournisseur.toLowerCase()}ProduitSelect`,
     );
     if (!select) return;
-
     select.innerHTML =
       '<option value="">-- Sélectionner un produit --</option>';
-
     const bouteilleGroup = document.createElement("optgroup");
     bouteilleGroup.label = "🍾 Bouteilles";
     Object.entries(produits[fournisseur].bouteille).forEach(([nom, data]) => {
@@ -3782,7 +3694,6 @@ function initSelecteursProduitsAchats() {
       bouteilleGroup.appendChild(option);
     });
     select.appendChild(bouteilleGroup);
-
     const cassierGroup = document.createElement("optgroup");
     cassierGroup.label = "📦 Cassiers";
     Object.entries(produits[fournisseur].cassier).forEach(([nom, data]) => {
@@ -3799,7 +3710,6 @@ function initAchatsTabs() {
   const fournisseurBtns = document.querySelectorAll(".fournisseur-tab");
   const bracongoContainer = document.getElementById("bracongoAchatsContainer");
   const bralimaContainer = document.getElementById("bralimaAchatsContainer");
-
   fournisseurBtns.forEach((btn) => {
     btn.addEventListener("click", () => {
       fournisseurBtns.forEach((b) => {
@@ -3808,10 +3718,8 @@ function initAchatsTabs() {
       });
       btn.classList.add("border-blue-600", "text-blue-600");
       btn.classList.remove("text-gray-600", "border-transparent");
-
       const fournisseur = btn.dataset.fournisseur;
       currentFournisseurAchat = fournisseur;
-
       if (fournisseur === "BRACONGO") {
         bracongoContainer.classList.remove("hidden");
         bralimaContainer.classList.add("hidden");
@@ -3821,14 +3729,12 @@ function initAchatsTabs() {
       }
     });
   });
-
   const bracongoListeTab = document.getElementById("bracongoListeTab");
   const bracongoAddTab = document.getElementById("bracongoAddTab");
   const bracongoListeContainer = document.getElementById(
     "bracongoListeContainer",
   );
   const bracongoAddContainer = document.getElementById("bracongoAddContainer");
-
   if (bracongoListeTab) {
     bracongoListeTab.addEventListener("click", () => {
       bracongoListeTab.classList.add(
@@ -3847,7 +3753,6 @@ function initAchatsTabs() {
       afficherListeAchats("BRACONGO");
     });
   }
-
   if (bracongoAddTab) {
     bracongoAddTab.addEventListener("click", () => {
       bracongoAddTab.classList.add(
@@ -3866,14 +3771,12 @@ function initAchatsTabs() {
       initSelecteursProduitsAchats();
     });
   }
-
   const bralimaListeTab = document.getElementById("bralimaListeTab");
   const bralimaAddTab = document.getElementById("bralimaAddTab");
   const bralimaListeContainer = document.getElementById(
     "bralimaListeContainer",
   );
   const bralimaAddContainer = document.getElementById("bralimaAddContainer");
-
   if (bralimaListeTab) {
     bralimaListeTab.addEventListener("click", () => {
       bralimaListeTab.classList.add(
@@ -3892,7 +3795,6 @@ function initAchatsTabs() {
       afficherListeAchats("BRALIMA");
     });
   }
-
   if (bralimaAddTab) {
     bralimaAddTab.addEventListener("click", () => {
       bralimaAddTab.classList.add("active", "text-blue-600", "border-blue-500");
@@ -3913,7 +3815,6 @@ function handleNouvelAchat() {
   const activeFournisseur =
     document.querySelector(".fournisseur-tab.active")?.dataset.fournisseur ||
     "BRACONGO";
-
   if (activeFournisseur === "BRACONGO") {
     const bracongoAddTab = document.getElementById("bracongoAddTab");
     const bracongoListeTab = document.getElementById("bracongoListeTab");
@@ -3923,7 +3824,6 @@ function handleNouvelAchat() {
     const bracongoAddContainer = document.getElementById(
       "bracongoAddContainer",
     );
-
     if (bracongoAddTab && bracongoListeTab) {
       bracongoAddTab.classList.add(
         "active",
@@ -3948,7 +3848,6 @@ function handleNouvelAchat() {
       "bralimaListeContainer",
     );
     const bralimaAddContainer = document.getElementById("bralimaAddContainer");
-
     if (bralimaAddTab && bralimaListeTab) {
       bralimaAddTab.classList.add("active", "text-blue-600", "border-blue-500");
       bralimaListeTab.classList.remove(
@@ -3969,28 +3868,21 @@ async function initModuleAchats() {
   mettreAJourStatsAchats();
   afficherListeAchats("BRACONGO");
   afficherListeAchats("BRALIMA");
-
   const nouvelAchatBtn = document.getElementById("nouvelAchatBtn");
-  if (nouvelAchatBtn) {
+  if (nouvelAchatBtn)
     nouvelAchatBtn.addEventListener("click", handleNouvelAchat);
-  }
-
   const bracongoAjouterBtn = document.getElementById(
     "bracongoAjouterPanierBtn",
   );
-  if (bracongoAjouterBtn) {
+  if (bracongoAjouterBtn)
     bracongoAjouterBtn.addEventListener("click", () =>
       ajouterAuPanierAchat("BRACONGO"),
     );
-  }
-
   const bracongoValiderBtn = document.getElementById("bracongoValiderAchatBtn");
-  if (bracongoValiderBtn) {
+  if (bracongoValiderBtn)
     bracongoValiderBtn.addEventListener("click", () =>
       validerAchat("BRACONGO"),
     );
-  }
-
   const bracongoFiltrerBtn = document.getElementById("bracongoFiltrerBtn");
   if (bracongoFiltrerBtn) {
     bracongoFiltrerBtn.addEventListener("click", () => {
@@ -4003,7 +3895,6 @@ async function initModuleAchats() {
       }
     });
   }
-
   const bracongoArchiverBtn = document.getElementById("bracongoArchiverBtn");
   if (bracongoArchiverBtn) {
     bracongoArchiverBtn.addEventListener("click", () => {
@@ -4029,7 +3920,6 @@ async function initModuleAchats() {
       }
     });
   }
-
   const bracongoExporterBtn = document.getElementById("bracongoExporterBtn");
   if (bracongoExporterBtn) {
     bracongoExporterBtn.addEventListener("click", () => {
@@ -4042,19 +3932,14 @@ async function initModuleAchats() {
       }
     });
   }
-
   const bralimaAjouterBtn = document.getElementById("bralimaAjouterPanierBtn");
-  if (bralimaAjouterBtn) {
+  if (bralimaAjouterBtn)
     bralimaAjouterBtn.addEventListener("click", () =>
       ajouterAuPanierAchat("BRALIMA"),
     );
-  }
-
   const bralimaValiderBtn = document.getElementById("bralimaValiderAchatBtn");
-  if (bralimaValiderBtn) {
+  if (bralimaValiderBtn)
     bralimaValiderBtn.addEventListener("click", () => validerAchat("BRALIMA"));
-  }
-
   const bralimaFiltrerBtn = document.getElementById("bralimaFiltrerBtn");
   if (bralimaFiltrerBtn) {
     bralimaFiltrerBtn.addEventListener("click", () => {
@@ -4067,7 +3952,6 @@ async function initModuleAchats() {
       }
     });
   }
-
   const bralimaArchiverBtn = document.getElementById("bralimaArchiverBtn");
   if (bralimaArchiverBtn) {
     bralimaArchiverBtn.addEventListener("click", () => {
@@ -4093,7 +3977,6 @@ async function initModuleAchats() {
       }
     });
   }
-
   const bralimaExporterBtn = document.getElementById("bralimaExporterBtn");
   if (bralimaExporterBtn) {
     bralimaExporterBtn.addEventListener("click", () => {
@@ -4106,9 +3989,196 @@ async function initModuleAchats() {
       }
     });
   }
-
   initAchatsTabs();
 }
+
+// ============================================
+// HISTORIQUE
+// ============================================
+const showHistoriqueBtn = document.getElementById("showHistoriqueBtn");
+const historiqueClientIdElem = document.getElementById("historiqueClientId");
+const historiqueMessageDiv = document.getElementById("historiqueMessage");
+const historiqueTableElem = document.getElementById("historiqueTable");
+const historiqueTableBody = document.getElementById("historiqueTableBody");
+if (showHistoriqueBtn)
+  showHistoriqueBtn.addEventListener("click", afficherHistorique);
+
+async function afficherHistorique() {
+  const clientId = historiqueClientIdElem.value.trim();
+  if (!clientId) {
+    historiqueMessageDiv.innerHTML =
+      '<span class="text-red-600">⚠️ Entrez un code client</span>';
+    return;
+  }
+  try {
+    const cr = await fetch(`${CLIENTS_URL}/${String(clientId)}`);
+    if (!cr.ok) {
+      historiqueMessageDiv.innerHTML = `<span class="text-red-600">❌ Client "${clientId}" non trouvé</span>`;
+      return;
+    }
+    const clientData = await cr.json();
+    const ventesRes = await fetch(VENTES_URL);
+    const allVentes = await ventesRes.json();
+    const ventes = allVentes.filter(
+      (v) => String(v.clientId) === String(clientId),
+    );
+    if (ventes.length === 0) {
+      historiqueMessageDiv.innerHTML = `<span class="text-blue-600">📭 Aucune vente pour ${clientData.nom}</span>`;
+      historiqueTableElem.classList.add("hidden");
+      return;
+    }
+    window.currentVentesData = ventes;
+    window.currentClientData = clientData;
+    historiqueMessageDiv.innerHTML = `<span class="text-emerald-600">✅ ${ventes.length} vente(s) pour ${escapeHtml(clientData.nom)} (Code: ${clientData.id})</span>`;
+    displayVentesMulti(ventes, clientData);
+  } catch (e) {
+    historiqueMessageDiv.innerHTML = `<span class="text-red-600">❌ Erreur: ${e.message}</span>`;
+  }
+}
+
+function displayVentesMulti(ventes, clientData) {
+  if (!historiqueTableBody) return;
+  historiqueTableBody.innerHTML = "";
+  let totalQuantite = 0,
+    totalPrix = 0;
+  ventes
+    .sort((a, b) => parseDate(b.date) - parseDate(a.date))
+    .forEach((v, idx) => {
+      const vn = nettoyerVente(v);
+      const produitsListe = vn.produits;
+      const total = vn.total;
+      let qt = produitsListe.reduce((s, p) => s + p.quantite, 0);
+      const prixMoyen = qt > 0 ? total / qt : 0;
+      if (isNaN(total)) return;
+      const row = document.createElement("tr");
+      row.className = idx % 2 === 0 ? "bg-gray-50" : "";
+      row.innerHTML = `<td class="px-4 py-3 text-sm font-mono">${v.id.substring(0, 8)}<\/td><td class="px-4 py-3 text-sm">${afficherProduitsListe(produitsListe)}<\/td><td class="px-4 py-3 text-center font-medium">${qt}<\/td><td class="px-4 py-3 text-right">${formatNumberFC(prixMoyen)} FC<\/td><td class="px-4 py-3 text-right font-bold text-emerald-600">${formatNumberFC(total)} FC<\/td><td class="px-4 py-3 text-sm">${formatDate(v.date)}<\/td><td class="px-4 py-3 text-center"><button onclick="showVenteDetail('${v.id}')" class="bg-blue-600 text-white px-2 py-1 rounded text-xs mr-1">📄 Détails<\/button><button onclick="genererFactureVente('${v.id}', '${clientData.id}')" class="bg-emerald-600 text-white px-2 py-1 rounded text-xs">🧾 Facture<\/button><\/td>`;
+      historiqueTableBody.appendChild(row);
+      totalQuantite += qt;
+      totalPrix += total;
+    });
+  document.getElementById("totalQuantite").textContent = totalQuantite;
+  document.getElementById("totalPrix").textContent =
+    formatNumberFC(totalPrix) + " FC";
+  historiqueTableElem.classList.remove("hidden");
+  const oldFilter = document.getElementById("filterContainerHisto");
+  if (oldFilter) oldFilter.remove();
+  const filterContainer = document.createElement("div");
+  filterContainer.id = "filterContainerHisto";
+  filterContainer.className =
+    "mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200";
+  filterContainer.innerHTML = `<div class="flex flex-wrap items-center justify-between gap-4"><div><strong><i class="fas fa-filter mr-1"></i> 🔍 Filtrer :</strong></div><div class="flex flex-wrap gap-3"><label class="inline-flex items-center gap-2"><input type="radio" name="filterTypeHisto" value="all" checked class="text-emerald-600"> 📅 Toutes</label><label class="inline-flex items-center gap-2"><input type="radio" name="filterTypeHisto" value="today" class="text-emerald-600"> 📆 Aujourd'hui</label><label class="inline-flex items-center gap-2"><input type="radio" name="filterTypeHisto" value="week" class="text-emerald-600"> 📊 Semaine</label><label class="inline-flex items-center gap-2"><input type="radio" name="filterTypeHisto" value="month" class="text-emerald-600"> 📈 Mois</label><button id="applyFilterHistoBtn" class="bg-emerald-600 text-white px-3 py-1 rounded text-sm">Appliquer</button><button id="resetFilterHistoBtn" class="bg-gray-500 text-white px-3 py-1 rounded text-sm">Réinitialiser</button></div></div>`;
+  const histContainer =
+    document.getElementById("historiqueTable").parentElement;
+  histContainer.appendChild(filterContainer);
+  document
+    .getElementById("applyFilterHistoBtn")
+    ?.addEventListener("click", () => {
+      const val = document.querySelector(
+        'input[name="filterTypeHisto"]:checked',
+      ).value;
+      appliquerFiltreHisto(val, ventes, clientData);
+    });
+  document
+    .getElementById("resetFilterHistoBtn")
+    ?.addEventListener("click", () => {
+      document.querySelector(
+        'input[name="filterTypeHisto"][value="all"]',
+      ).checked = true;
+      displayVentesMulti(ventes, clientData);
+      showTemporaryNotification("📋 Filtre réinitialisé");
+    });
+  const oldActions = document.querySelector(".action-buttons-container");
+  if (oldActions) oldActions.remove();
+  const actionDiv = document.createElement("div");
+  actionDiv.className = "action-buttons-container flex gap-3 mt-4 justify-end";
+  actionDiv.innerHTML = `<button id="exportCsvBtn" class="bg-orange-600 text-white px-4 py-2 rounded-lg flex items-center gap-2"><i class="fas fa-file-excel"></i> Exporter CSV</button><button id="factureMensuelleBtn" class="bg-purple-600 text-white px-4 py-2 rounded-lg flex items-center gap-2"><i class="fas fa-file-invoice"></i> Facture mensuelle</button>`;
+  histContainer.appendChild(actionDiv);
+  document
+    .getElementById("exportCsvBtn")
+    ?.addEventListener("click", () => exportToCSV(ventes, clientData));
+  document
+    .getElementById("factureMensuelleBtn")
+    ?.addEventListener("click", () =>
+      genererFactureMensuelleMulti(ventes, clientData),
+    );
+}
+
+function appliquerFiltreHisto(filterType, ventesOriginales, clientData) {
+  const now = new Date();
+  let filtrees = [];
+  let msg = "";
+  switch (filterType) {
+    case "today":
+      filtrees = ventesOriginales.filter(
+        (v) => parseDate(v.date).toDateString() === now.toDateString(),
+      );
+      msg = "aujourd'hui";
+      break;
+    case "week":
+      const weekAgo = new Date();
+      weekAgo.setDate(weekAgo.getDate() - 7);
+      weekAgo.setHours(0, 0, 0, 0);
+      filtrees = ventesOriginales.filter((v) => parseDate(v.date) >= weekAgo);
+      msg = "cette semaine";
+      break;
+    case "month":
+      const year = now.getFullYear(),
+        month = now.getMonth();
+      filtrees = ventesOriginales.filter((v) => {
+        const d = parseDate(v.date);
+        return (
+          !isNaN(d.getTime()) &&
+          d.getMonth() === month &&
+          d.getFullYear() === year
+        );
+      });
+      msg = "ce mois";
+      break;
+    default:
+      filtrees = [...ventesOriginales];
+      msg = "toutes";
+  }
+  if (filtrees.length === 0) {
+    historiqueMessageDiv.innerHTML = `<span class="text-blue-600">📭 Aucune vente pour ${msg}</span>`;
+    historiqueTableBody.innerHTML = "";
+    document.getElementById("totalQuantite").textContent = "0";
+    document.getElementById("totalPrix").textContent = "0 FC";
+  } else {
+    displayVentesMulti(filtrees, clientData);
+    historiqueMessageDiv.innerHTML = `<span class="text-emerald-600">✅ ${filtrees.length} vente(s) pour ${msg}</span>`;
+  }
+}
+
+window.showVenteDetail = async function (venteId) {
+  try {
+    const response = await fetch(`${VENTES_URL}/${venteId}`);
+    if (!response.ok) throw new Error("Vente non trouvée");
+    const vente = await response.json();
+    let clientNom = "Client inconnu";
+    try {
+      const cr = await fetch(`${CLIENTS_URL}/${String(vente.clientId)}`);
+      if (cr.ok) clientNom = (await cr.json()).nom;
+    } catch (e) {}
+    const vn = nettoyerVente(vente);
+    const produits = vn.produits;
+    const total = vn.total;
+    let produitsHtml = produits
+      .map(
+        (p) =>
+          `<li class="flex justify-between items-center py-2 border-b border-gray-100"><span class="font-medium">${escapeHtml(p.nom)}</span><span class="text-gray-600">${p.quantite} x ${formatNumberFC(p.prix)} FC</span><span class="font-bold text-emerald-600">${formatNumberFC(p.prix * p.quantite)} FC</span></li>`,
+      )
+      .join("");
+    let totalArticles = produits.reduce((sum, p) => sum + p.quantite, 0);
+    const modal = document.createElement("div");
+    modal.className =
+      "fixed inset-0 bg-black/50 z-50 flex items-center justify-center";
+    modal.innerHTML = `<div class="bg-white rounded-xl shadow-xl max-w-md w-full mx-4 animate-fadeIn"><div class="px-6 py-4 border-b bg-gradient-to-r from-blue-50 to-white"><h3 class="text-lg font-semibold text-blue-800"><i class="fas fa-receipt text-blue-600 mr-2"></i> Détails de la vente</h3></div><div class="p-6 space-y-3"><div class="grid grid-cols-2 gap-2 text-sm"><p class="text-gray-500">🆔 ID Vente :</p><p class="font-mono font-medium">${vente.id}</p><p class="text-gray-500">👤 Client :</p><p class="font-medium">${escapeHtml(clientNom)}</p><p class="text-gray-500">🆔 Code Client :</p><p class="font-mono">${vente.clientId}</p></div><div class="border-t border-gray-100 pt-3"><p class="text-gray-500 text-sm mb-2">📦 Produits :</p><ul class="space-y-1 max-h-48 overflow-y-auto">${produitsHtml || '<li class="text-gray-400 text-center py-2">Aucun produit</li>'}</ul></div><div class="border-t border-gray-100 pt-3"><div class="flex justify-between items-center"><span class="text-gray-500">📊 Total articles :</span><span class="font-semibold">${totalArticles}</span></div><div class="flex justify-between items-center mt-2"><span class="text-gray-500">💰 Montant total :</span><span class="text-xl font-bold text-emerald-600">${formatNumberFC(total)} FC</span></div><div class="flex justify-between items-center mt-2"><span class="text-gray-500">📅 Date :</span><span class="text-sm">${formatDate(vente.date)}</span></div></div></div><div class="px-6 py-4 border-t flex justify-end gap-3"><button onclick="genererFactureVente('${vente.id}', '${vente.clientId}')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg transition text-sm"><i class="fas fa-print mr-1"></i> Imprimer facture</button><button onclick="this.closest('.fixed').remove()" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg transition text-sm">Fermer</button></div></div>`;
+    document.body.appendChild(modal);
+  } catch (e) {
+    showTemporaryNotification("❌ Erreur", "error");
+  }
+};
 
 // ============================================
 // INITIALISATION
@@ -4130,3 +4200,4 @@ showTemporaryNotification("Bienvenue sur VentesPro !");
 
 window.ouvrirModalModificationAchat = ouvrirModalModificationAchat;
 window.confirmerSuppressionAchat = confirmerSuppressionAchat;
+window.selectClientAndFill = selectClientAndFill;
