@@ -481,7 +481,7 @@ function displayDailySalesDetail(ventesDetail, dateStr) {
   if (!tbody) return;
   if (ventesDetail.length === 0) {
     tbody.innerHTML =
-      '<tr><td colspan="7" class="px-4 py-8 text-center text-gray-400">📭 Aucune vente enregistrée ce jour<\/td><\/tr>';
+      '<tr><td colspan="7" class="px-4 py-8 text-center text-gray-400">📭 Aucune vente enregistrée ce jour</td></tr>';
     if (footer) footer.classList.add("hidden");
     return;
   }
@@ -493,7 +493,7 @@ function displayDailySalesDetail(ventesDetail, dateStr) {
       tb += v.bouteilles;
       tc += v.cassiers;
       tm += v.total;
-      return `<tr class="${i % 2 === 0 ? "bg-white" : "bg-gray-50"} hover:bg-gray-100 transition"><td class="px-4 py-3 text-sm font-mono">${v.heure}<\/td><td class="px-4 py-3"><div class="font-medium">${escapeHtml(v.clientNom)}</div><div class="text-xs text-gray-400">Code: ${v.clientId}</div><\/td><td class="px-4 py-3 text-sm">${v.produits.map((p) => `<div class="text-xs">${escapeHtml(p.nom)} (${p.quantite})</div>`).join("")}<\/td><td class="px-4 py-3 text-center text-orange-600">${v.bouteilles}<\/td><td class="px-4 py-3 text-center text-purple-600">${v.cassiers}<\/td><td class="px-4 py-3 text-right font-bold text-emerald-600">${formatNumberFC(v.total)} FC<\/td><td class="px-4 py-3 text-center"><button onclick="genererFactureVenteSpecifique('${v.id}')" class="bg-blue-600 text-white px-2 py-1 rounded text-xs">🧾 Facture<\/button><\/td><\/tr>`;
+      return `<tr class="${i % 2 === 0 ? "bg-white" : "bg-gray-50"} hover:bg-gray-100 transition"><td class="px-4 py-3 text-sm font-mono">${v.heure}</td><td class="px-4 py-3"><div class="font-medium">${escapeHtml(v.clientNom)}</div><div class="text-xs text-gray-400">Code: ${v.clientId}</div></td><td class="px-4 py-3 text-sm">${v.produits.map((p) => `<div class="text-xs">${escapeHtml(p.nom)} (${p.quantite})</div>`).join("")}</td><td class="px-4 py-3 text-center text-orange-600">${v.bouteilles}</td><td class="px-4 py-3 text-center text-purple-600">${v.cassiers}</td><td class="px-4 py-3 text-right font-bold text-emerald-600">${formatNumberFC(v.total)} FC</td><td class="px-4 py-3 text-center"><button onclick="genererFactureVenteSpecifique('${v.id}')" class="bg-blue-600 text-white px-2 py-1 rounded text-xs">🧾 Facture</button></td></tr>`;
     })
     .join("");
   if (footer) {
@@ -1396,8 +1396,8 @@ function imprimerEcheancier(echeancierId) {
           <tr><th>Description</th><th>Montant (FC)</th></tr>
         </thead>
         <tbody>
-          <tr><td>Total des achats</td><td>${formatNumberFC(echeancier.totalAchats)}</td></tr>
-          <tr style="background:#f0fdf4"><td>Remise 5%</td><td class="remise">- ${formatNumberFC(echeancier.remise)}</td></tr>
+          <tr><td>Total des achats</td><td>${formatNumberFC(echeancier.totalAchats)}</td><tr>
+          <tr style="background:#f0fdf4"><td>Remise 5%</td><td class="remise">- ${formatNumberFC(echeancier.remise)}</td><tr>
         </tbody>
       </table>
       <div class="total">
@@ -3680,7 +3680,7 @@ function exportToCSV(ventes, client) {
 }
 
 // ============================================
-// MODULE ACHATS
+// MODULE ACHATS (CORRIGÉ)
 // ============================================
 async function chargerAchats() {
   try {
@@ -3882,7 +3882,9 @@ function afficherListeAchats(
     `${fournisseur.toLowerCase()}AchatsFooter`,
   );
   if (!tbody) return;
-  let achatsFiltres = achats[fournisseur];
+
+  let achatsFiltres = [...achats[fournisseur]];
+
   if (moisFiltre && anneeFiltre) {
     achatsFiltres = achatsFiltres.filter((a) => {
       const dateAchat = new Date(a.date);
@@ -3892,12 +3894,14 @@ function afficherListeAchats(
       );
     });
   }
+
   if (achatsFiltres.length === 0) {
     tbody.innerHTML =
       '<tr><td colspan="7" class="text-center py-8 text-gray-400">📭 Aucun achat trouvé<\/td><\/tr>';
     if (footer) footer.classList.add("hidden");
     return;
   }
+
   let totalGeneral = 0;
   tbody.innerHTML = achatsFiltres
     .sort((a, b) => new Date(b.date) - new Date(a.date))
@@ -3934,6 +3938,7 @@ function afficherListeAchats(
     <\/tr>`;
     })
     .join("");
+
   if (footer) {
     footer.classList.remove("hidden");
     const footerTotal = document.getElementById(
@@ -4182,7 +4187,10 @@ async function validerAchat(fournisseur) {
   panierAchats[fournisseur] = [];
   initPanierAchat(fournisseur);
   await chargerAchats();
-  afficherListeAchats(fournisseur);
+  const dateActuelle = new Date();
+  const moisActuel = dateActuelle.getMonth() + 1;
+  const anneeActuelle = dateActuelle.getFullYear();
+  afficherListeAchats(fournisseur, moisActuel, anneeActuelle);
   mettreAJourStatsAchats();
   showTemporaryNotification(
     `✅ Achat validé ! Total: ${formatNumberFC(total)} FC`,
@@ -4274,31 +4282,51 @@ function initAchatsTabs() {
   const fournisseurBtns = document.querySelectorAll(".fournisseur-tab");
   const bracongoContainer = document.getElementById("bracongoAchatsContainer");
   const bralimaContainer = document.getElementById("bralimaAchatsContainer");
+
   fournisseurBtns.forEach((btn) => {
     btn.addEventListener("click", () => {
+      const fournisseur = btn.dataset.fournisseur;
+
       fournisseurBtns.forEach((b) => {
         b.classList.remove("border-blue-600", "text-blue-600");
         b.classList.add("text-gray-600", "border-transparent");
       });
       btn.classList.add("border-blue-600", "text-blue-600");
       btn.classList.remove("text-gray-600", "border-transparent");
-      const fournisseur = btn.dataset.fournisseur;
-      currentFournisseurAchat = fournisseur;
+
       if (fournisseur === "BRACONGO") {
         bracongoContainer.classList.remove("hidden");
         bralimaContainer.classList.add("hidden");
+        const moisInput = document.getElementById("bracongoFiltreMois");
+        if (moisInput && moisInput.value) {
+          const [annee, mois] = moisInput.value.split("-");
+          afficherListeAchats("BRACONGO", parseInt(mois), parseInt(annee));
+        } else {
+          afficherListeAchats("BRACONGO");
+        }
       } else {
         bracongoContainer.classList.add("hidden");
         bralimaContainer.classList.remove("hidden");
+        const moisInput = document.getElementById("bralimaFiltreMois");
+        if (moisInput && moisInput.value) {
+          const [annee, mois] = moisInput.value.split("-");
+          afficherListeAchats("BRALIMA", parseInt(mois), parseInt(annee));
+        } else {
+          afficherListeAchats("BRALIMA");
+        }
       }
+
+      currentFournisseurAchat = fournisseur;
     });
   });
+
   const bracongoListeTab = document.getElementById("bracongoListeTab");
   const bracongoAddTab = document.getElementById("bracongoAddTab");
   const bracongoListeContainer = document.getElementById(
     "bracongoListeContainer",
   );
   const bracongoAddContainer = document.getElementById("bracongoAddContainer");
+
   if (bracongoListeTab) {
     bracongoListeTab.addEventListener("click", () => {
       bracongoListeTab.classList.add(
@@ -4314,9 +4342,16 @@ function initAchatsTabs() {
       bracongoAddTab.classList.add("text-gray-600");
       bracongoListeContainer.classList.remove("hidden");
       bracongoAddContainer.classList.add("hidden");
-      afficherListeAchats("BRACONGO");
+      const moisInput = document.getElementById("bracongoFiltreMois");
+      if (moisInput && moisInput.value) {
+        const [annee, mois] = moisInput.value.split("-");
+        afficherListeAchats("BRACONGO", parseInt(mois), parseInt(annee));
+      } else {
+        afficherListeAchats("BRACONGO");
+      }
     });
   }
+
   if (bracongoAddTab) {
     bracongoAddTab.addEventListener("click", () => {
       bracongoAddTab.classList.add(
@@ -4335,12 +4370,14 @@ function initAchatsTabs() {
       initSelecteursProduitsAchats();
     });
   }
+
   const bralimaListeTab = document.getElementById("bralimaListeTab");
   const bralimaAddTab = document.getElementById("bralimaAddTab");
   const bralimaListeContainer = document.getElementById(
     "bralimaListeContainer",
   );
   const bralimaAddContainer = document.getElementById("bralimaAddContainer");
+
   if (bralimaListeTab) {
     bralimaListeTab.addEventListener("click", () => {
       bralimaListeTab.classList.add(
@@ -4356,9 +4393,16 @@ function initAchatsTabs() {
       bralimaAddTab.classList.add("text-gray-600");
       bralimaListeContainer.classList.remove("hidden");
       bralimaAddContainer.classList.add("hidden");
-      afficherListeAchats("BRALIMA");
+      const moisInput = document.getElementById("bralimaFiltreMois");
+      if (moisInput && moisInput.value) {
+        const [annee, mois] = moisInput.value.split("-");
+        afficherListeAchats("BRALIMA", parseInt(mois), parseInt(annee));
+      } else {
+        afficherListeAchats("BRALIMA");
+      }
     });
   }
+
   if (bralimaAddTab) {
     bralimaAddTab.addEventListener("click", () => {
       bralimaAddTab.classList.add("active", "text-blue-600", "border-blue-500");
@@ -4430,11 +4474,42 @@ function handleNouvelAchat() {
 async function initModuleAchats() {
   await chargerAchats();
   mettreAJourStatsAchats();
-  afficherListeAchats("BRACONGO");
-  afficherListeAchats("BRALIMA");
+
+  const dateActuelle = new Date();
+  const anneeActuelle = dateActuelle.getFullYear();
+  const moisActuel = dateActuelle.getMonth() + 1;
+
+  const bracongoFiltre = document.getElementById("bracongoFiltreMois");
+  const bralimaFiltre = document.getElementById("bralimaFiltreMois");
+
+  if (bracongoFiltre && !bracongoFiltre.value) {
+    bracongoFiltre.value = `${anneeActuelle}-${String(moisActuel).padStart(2, "0")}`;
+  }
+  if (bralimaFiltre && !bralimaFiltre.value) {
+    bralimaFiltre.value = `${anneeActuelle}-${String(moisActuel).padStart(2, "0")}`;
+  }
+
+  afficherListeAchats("BRACONGO", moisActuel, anneeActuelle);
+  afficherListeAchats("BRALIMA", moisActuel, anneeActuelle);
+
+  const activeFournisseur =
+    document.querySelector(".fournisseur-tab.active")?.dataset.fournisseur ||
+    "BRACONGO";
+  const bracongoContainer = document.getElementById("bracongoAchatsContainer");
+  const bralimaContainer = document.getElementById("bralimaAchatsContainer");
+
+  if (activeFournisseur === "BRACONGO") {
+    if (bracongoContainer) bracongoContainer.classList.remove("hidden");
+    if (bralimaContainer) bralimaContainer.classList.add("hidden");
+  } else {
+    if (bracongoContainer) bracongoContainer.classList.add("hidden");
+    if (bralimaContainer) bralimaContainer.classList.remove("hidden");
+  }
+
   const nouvelAchatBtn = document.getElementById("nouvelAchatBtn");
   if (nouvelAchatBtn)
     nouvelAchatBtn.addEventListener("click", handleNouvelAchat);
+
   const bracongoAjouterBtn = document.getElementById(
     "bracongoAjouterPanierBtn",
   );
@@ -4442,11 +4517,13 @@ async function initModuleAchats() {
     bracongoAjouterBtn.addEventListener("click", () =>
       ajouterAuPanierAchat("BRACONGO"),
     );
+
   const bracongoValiderBtn = document.getElementById("bracongoValiderAchatBtn");
   if (bracongoValiderBtn)
     bracongoValiderBtn.addEventListener("click", () =>
       validerAchat("BRACONGO"),
     );
+
   const bracongoFiltrerBtn = document.getElementById("bracongoFiltrerBtn");
   if (bracongoFiltrerBtn) {
     bracongoFiltrerBtn.addEventListener("click", () => {
@@ -4459,6 +4536,7 @@ async function initModuleAchats() {
       }
     });
   }
+
   const bracongoArchiverBtn = document.getElementById("bracongoArchiverBtn");
   if (bracongoArchiverBtn) {
     bracongoArchiverBtn.addEventListener("click", () => {
@@ -4484,6 +4562,7 @@ async function initModuleAchats() {
       }
     });
   }
+
   const bracongoExporterBtn = document.getElementById("bracongoExporterBtn");
   if (bracongoExporterBtn) {
     bracongoExporterBtn.addEventListener("click", () => {
@@ -4496,14 +4575,17 @@ async function initModuleAchats() {
       }
     });
   }
+
   const bralimaAjouterBtn = document.getElementById("bralimaAjouterPanierBtn");
   if (bralimaAjouterBtn)
     bralimaAjouterBtn.addEventListener("click", () =>
       ajouterAuPanierAchat("BRALIMA"),
     );
+
   const bralimaValiderBtn = document.getElementById("bralimaValiderAchatBtn");
   if (bralimaValiderBtn)
     bralimaValiderBtn.addEventListener("click", () => validerAchat("BRALIMA"));
+
   const bralimaFiltrerBtn = document.getElementById("bralimaFiltrerBtn");
   if (bralimaFiltrerBtn) {
     bralimaFiltrerBtn.addEventListener("click", () => {
@@ -4516,6 +4598,7 @@ async function initModuleAchats() {
       }
     });
   }
+
   const bralimaArchiverBtn = document.getElementById("bralimaArchiverBtn");
   if (bralimaArchiverBtn) {
     bralimaArchiverBtn.addEventListener("click", () => {
@@ -4541,6 +4624,7 @@ async function initModuleAchats() {
       }
     });
   }
+
   const bralimaExporterBtn = document.getElementById("bralimaExporterBtn");
   if (bralimaExporterBtn) {
     bralimaExporterBtn.addEventListener("click", () => {
@@ -4553,6 +4637,7 @@ async function initModuleAchats() {
       }
     });
   }
+
   initAchatsTabs();
 }
 

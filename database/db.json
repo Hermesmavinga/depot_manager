@@ -251,11 +251,6 @@
       "telephone": "+243 828 790 728"
     },
     {
-      "id": "54",
-      "nom": "beni lomako",
-      "telephone": "+243 828 790 728"
-    },
-    {
       "id": "55",
       "nom": "aline",
       "telephone": "+243 828 790 728"
@@ -321,15 +316,6 @@
       "nbBouteilles": 12
     },
     {
-      "nom": "Sprite",
-      "prixCassier": 50000,
-      "format": "33cl",
-      "type": "cassier",
-      "fournisseur": "BRACONGO",
-      "nbBouteilles": 20,
-      "id": "lYmi4QI"
-    },
-    {
       "nom": "fanta",
       "prix": 1200,
       "format": "30 cl",
@@ -353,6 +339,24 @@
       "fournisseur": "BRALIMA",
       "nbBouteilles": 24,
       "id": "IJJAMPB"
+    },
+    {
+      "nom": "Sprite",
+      "prixCassier": 45000,
+      "format": "33 cl",
+      "type": "cassier",
+      "fournisseur": "BRACONGO",
+      "nbBouteilles": 24,
+      "id": "mb4laHr"
+    },
+    {
+      "nom": "coca",
+      "prixCassier": 40000,
+      "format": "33 cl",
+      "type": "cassier",
+      "fournisseur": "BRALIMA",
+      "nbBouteilles": 24,
+      "id": "duTSPeW"
     }
   ],
   "ventes": [
@@ -467,33 +471,23 @@
       "total": 1200,
       "date": "2026-05-18T18:41:10.965Z",
       "id": "RkLh_Mq"
+    },
+    {
+      "clientId": "1",
+      "produits": [
+        {
+          "nom": "Nkoy",
+          "quantite": 1,
+          "prix": 2500,
+          "type": "bouteille"
+        }
+      ],
+      "total": 2500,
+      "date": "2026-05-19T05:47:37.289Z",
+      "id": "PSOYEjr"
     }
   ],
   "achats": [
-    {
-      "id": "2",
-      "fournisseur": "BRALIMA",
-      "produit": "Primus",
-      "quantite": 1,
-      "prixUnitaire": 60000,
-      "total": 60000,
-      "statut": "actif",
-      "date": "2026-05-13T12:34:36.030Z",
-      "mois": 5,
-      "annee": 2026
-    },
-    {
-      "fournisseur": "BRALIMA",
-      "produit": "Primus",
-      "quantite": 1,
-      "prixUnitaire": 2500,
-      "total": 2500,
-      "statut": "actif",
-      "date": "2026-05-18T07:23:01.446Z",
-      "mois": 5,
-      "annee": 2026,
-      "id": "2PRiNWn"
-    },
     {
       "fournisseur": "BRALIMA",
       "produit": "Primus",
@@ -507,28 +501,28 @@
       "id": "gBJ8i3Y"
     },
     {
-      "fournisseur": "BRACONGO",
-      "produit": "fanta",
+      "fournisseur": "BRALIMA",
+      "produit": "Primus",
       "quantite": 1,
-      "prixUnitaire": 1200,
-      "total": 1200,
+      "prixUnitaire": 60000,
+      "total": 60000,
       "statut": "actif",
-      "date": "2026-05-18T10:36:16.099Z",
+      "date": "2026-05-19T04:55:30.672Z",
       "mois": 5,
       "annee": 2026,
-      "id": "H9qkF5x"
+      "id": "rRKOiER"
     },
     {
-      "fournisseur": "BRACONGO",
-      "produit": "fanta",
+      "fournisseur": "BRALIMA",
+      "produit": "Primus",
       "quantite": 1,
-      "prixUnitaire": 1200,
-      "total": 1200,
+      "prixUnitaire": 2500,
+      "total": 2500,
       "statut": "actif",
-      "date": "2026-05-18T11:10:07.558Z",
+      "date": "2026-05-19T04:58:26.976Z",
       "mois": 5,
       "annee": 2026,
-      "id": "Us0vLbA"
+      "id": "I5NWVYr"
     },
     {
       "fournisseur": "BRACONGO",
@@ -537,10 +531,10 @@
       "prixUnitaire": 2500,
       "total": 2500,
       "statut": "actif",
-      "date": "2026-05-18T11:10:29.475Z",
+      "date": "2026-05-19T05:06:16.072Z",
       "mois": 5,
       "annee": 2026,
-      "id": "qXTh2vv"
+      "id": "xqWbrvF"
     }
   ],
   "echeanciers": []
