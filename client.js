@@ -35,6 +35,9 @@ let lastDailyVentesDetail = [];
 let currentClientData = null;
 let currentClientVentes = [];
 let currentFilterYear = "all";
+window.currentFilterType = "all";
+window.originalVentesData = [];
+window.originalClientData = null;
 
 // ============================================
 // VARIABLES POUR LES ACHATS
@@ -481,7 +484,7 @@ function displayDailySalesDetail(ventesDetail, dateStr) {
   if (!tbody) return;
   if (ventesDetail.length === 0) {
     tbody.innerHTML =
-      '<tr><td colspan="7" class="px-4 py-8 text-center text-gray-400">📭 Aucune vente enregistrée ce jour</td></tr>';
+      '<tr><td colspan="7" class="px-4 py-8 text-center text-gray-400">📭 Aucune vente enregistrée ce jour<\/td><\/tr>';
     if (footer) footer.classList.add("hidden");
     return;
   }
@@ -493,7 +496,7 @@ function displayDailySalesDetail(ventesDetail, dateStr) {
       tb += v.bouteilles;
       tc += v.cassiers;
       tm += v.total;
-      return `<tr class="${i % 2 === 0 ? "bg-white" : "bg-gray-50"} hover:bg-gray-100 transition"><td class="px-4 py-3 text-sm font-mono">${v.heure}</td><td class="px-4 py-3"><div class="font-medium">${escapeHtml(v.clientNom)}</div><div class="text-xs text-gray-400">Code: ${v.clientId}</div></td><td class="px-4 py-3 text-sm">${v.produits.map((p) => `<div class="text-xs">${escapeHtml(p.nom)} (${p.quantite})</div>`).join("")}</td><td class="px-4 py-3 text-center text-orange-600">${v.bouteilles}</td><td class="px-4 py-3 text-center text-purple-600">${v.cassiers}</td><td class="px-4 py-3 text-right font-bold text-emerald-600">${formatNumberFC(v.total)} FC</td><td class="px-4 py-3 text-center"><button onclick="genererFactureVenteSpecifique('${v.id}')" class="bg-blue-600 text-white px-2 py-1 rounded text-xs">🧾 Facture</button></td></tr>`;
+      return `<tr class="${i % 2 === 0 ? "bg-white" : "bg-gray-50"} hover:bg-gray-100 transition"><td class="px-4 py-3 text-sm font-mono">${v.heure}<\/td><td class="px-4 py-3"><div class="font-medium">${escapeHtml(v.clientNom)}<\/div><div class="text-xs text-gray-400">Code: ${v.clientId}<\/div><\/td><td class="px-4 py-3 text-sm">${v.produits.map((p) => `<div class="text-xs">${escapeHtml(p.nom)} (${p.quantite})<\/div>`).join("")}<\/td><td class="px-4 py-3 text-center text-orange-600">${v.bouteilles}<\/td><td class="px-4 py-3 text-center text-purple-600">${v.cassiers}<\/td><td class="px-4 py-3 text-right font-bold text-emerald-600">${formatNumberFC(v.total)} FC<\/td><td class="px-4 py-3 text-center"><button onclick="genererFactureVenteSpecifique('${v.id}')" class="bg-blue-600 text-white px-2 py-1 rounded text-xs">🧾 Facture<\/button><\/td><\/tr>`;
     })
     .join("");
   if (footer) {
@@ -1396,8 +1399,8 @@ function imprimerEcheancier(echeancierId) {
           <tr><th>Description</th><th>Montant (FC)</th></tr>
         </thead>
         <tbody>
-          <tr><td>Total des achats</td><td>${formatNumberFC(echeancier.totalAchats)}</td><tr>
-          <tr style="background:#f0fdf4"><td>Remise 5%</td><td class="remise">- ${formatNumberFC(echeancier.remise)}</td><tr>
+          <tr><td>Total des achats</td><td>${formatNumberFC(echeancier.totalAchats)}</td></tr>
+          <tr style="background:#f0fdf4"><td>Remise 5%</td><td class="remise">- ${formatNumberFC(echeancier.remise)}</td></tr>
         </tbody>
       </table>
       <div class="total">
@@ -1573,29 +1576,29 @@ function afficherListeEcheanciers() {
                       <div class="font-medium">${escapeHtml(e.clientNom)}</div>
                       <div class="text-xs text-gray-400">${e.clientId}</div>
                     </td>
-                    <td class="px-4 py-3 text-center text-sm">${new Date(e.annee, e.mois - 1, 1).toLocaleDateString("fr-FR", { month: "short", year: "numeric" })}</td>
-                    <td class="px-4 py-3 text-right text-sm">${formatNumberFC(e.totalAchats)} FC</td>
-                    <td class="px-4 py-3 text-right text-sm text-green-600">- ${formatNumberFC(e.remise)} FC</td>
-                    <td class="px-4 py-3 text-right font-bold text-emerald-600">${formatNumberFC(e.netAPayer)} FC</td>
-                    <td class="px-4 py-3 text-center text-sm">${new Date(e.dateLimite).toLocaleDateString("fr-FR")}</td>
+                    <td class="px-4 py-3 text-center text-sm">${new Date(e.annee, e.mois - 1, 1).toLocaleDateString("fr-FR", { month: "short", year: "numeric" })}<\/td>
+                    <td class="px-4 py-3 text-right text-sm">${formatNumberFC(e.totalAchats)} FC<\/td>
+                    <td class="px-4 py-3 text-right text-sm text-green-600">- ${formatNumberFC(e.remise)} FC<\/td>
+                    <td class="px-4 py-3 text-right font-bold text-emerald-600">${formatNumberFC(e.netAPayer)} FC<\/td>
+                    <td class="px-4 py-3 text-center text-sm">${new Date(e.dateLimite).toLocaleDateString("fr-FR")}<\/td>
                     <td class="px-4 py-3 text-center">
                       <button onclick="marquerCommePaye('${e.id}')" class="bg-emerald-600 text-white px-2 py-1 rounded text-xs hover:bg-emerald-700">
                         <i class="fas fa-check mr-1"></i> Payé
                       </button>
-                     </td>
-                   </tr>
+                    <\/td>
+                  </tr>
                 `,
                   )
                   .join("")}
               </tbody>
               <tfoot class="bg-gray-50 font-bold">
                 <tr>
-                  <td colspan="2" class="px-4 py-3">TOTAL</td>
-                  <td class="px-4 py-3 text-right">${formatNumberFC(echeanciersNonPayes.reduce((s, e) => s + e.totalAchats, 0))} FC</td>
-                  <td class="px-4 py-3 text-right text-green-600">- ${formatNumberFC(echeanciersNonPayes.reduce((s, e) => s + e.remise, 0))} FC</td>
-                  <td class="px-4 py-3 text-right text-emerald-600">${formatNumberFC(totalGlobal)} FC</td>
-                  <td colspan="2"></td>
-                 </tr>
+                  <td colspan="2" class="px-4 py-3">TOTAL<\/td>
+                  <td class="px-4 py-3 text-right">${formatNumberFC(echeanciersNonPayes.reduce((s, e) => s + e.totalAchats, 0))} FC<\/td>
+                  <td class="px-4 py-3 text-right text-green-600">- ${formatNumberFC(echeanciersNonPayes.reduce((s, e) => s + e.remise, 0))} FC<\/td>
+                  <td class="px-4 py-3 text-right text-emerald-600">${formatNumberFC(totalGlobal)} FC<\/td>
+                  <td colspan="2"><\/td>
+                </tr>
               </tfoot>
             </table>
           </div>
@@ -2000,9 +2003,20 @@ function showLoadingMessage(container) {
 }
 async function copyToClipboard(text) {
   try {
-    await navigator.clipboard.writeText(text.toString());
-    showCopyNotification("✅ Code copié !");
+    if (navigator && navigator.clipboard) {
+      await navigator.clipboard.writeText(text.toString());
+      showCopyNotification("✅ Code copié !");
+    } else {
+      const textarea = document.createElement("textarea");
+      textarea.value = text;
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textarea);
+      showCopyNotification("✅ Code copié !");
+    }
   } catch (err) {
+    console.error("Erreur copie:", err);
     showCopyNotification("❌ Impossible de copier", "error");
   }
 }
@@ -2772,18 +2786,29 @@ function updateTotal() {
   const quantite = parseFloat(document.getElementById("quantite")?.value) || 0;
   const prix = parseFloat(document.getElementById("prix")?.value) || 0;
   const total = quantite * prix;
+
   let totalDisplay = document.getElementById("totalDisplay");
   if (!totalDisplay) {
-    totalDisplay = document.createElement("p");
+    totalDisplay = document.createElement("div");
     totalDisplay.id = "totalDisplay";
-    totalDisplay.className = "mt-3 text-right font-bold text-emerald-600";
+    totalDisplay.className = "mt-3 text-right";
     const prixInput = document.getElementById("prix");
-    if (prixInput) prixInput.insertAdjacentElement("afterend", totalDisplay);
+    if (prixInput && prixInput.parentNode) {
+      prixInput.parentNode.appendChild(totalDisplay);
+    }
   }
+
   if (totalDisplay) {
-    if (quantite > 0 && prix > 0)
-      totalDisplay.innerHTML = `💰 Total : ${formatNumberFC(total)} FC`;
-    else totalDisplay.innerHTML = "";
+    if (quantite > 0 && prix > 0) {
+      totalDisplay.innerHTML = `
+        <div class="inline-block bg-emerald-100 px-4 py-2 rounded-lg">
+          <span class="text-gray-600">💰 Total :</span>
+          <span class="font-bold text-emerald-600 text-lg ml-2">${formatNumberFC(total)} FC</span>
+        </div>
+      `;
+    } else {
+      totalDisplay.innerHTML = "";
+    }
   }
 }
 
@@ -4278,40 +4303,63 @@ function initSelecteursProduitsAchats() {
   });
 }
 
+// ============================================
+// INITIALISATION DES ONGLETS ACHATS (CORRIGÉE)
+// ============================================
+
 function initAchatsTabs() {
   const fournisseurBtns = document.querySelectorAll(".fournisseur-tab");
   const bracongoContainer = document.getElementById("bracongoAchatsContainer");
   const bralimaContainer = document.getElementById("bralimaAchatsContainer");
 
-  fournisseurBtns.forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const fournisseur = btn.dataset.fournisseur;
+  function setActiveFournisseurTab(fournisseur) {
+    fournisseurBtns.forEach((btn) => {
+      if (btn.getAttribute("data-fournisseur") === fournisseur) {
+        btn.classList.add("active", "border-blue-600", "text-blue-600");
+        btn.classList.remove("text-gray-600", "border-transparent");
+        btn.style.borderBottomColor = "#3b82f6";
+        btn.style.color = "#3b82f6";
+      } else {
+        btn.classList.remove("active", "border-blue-600", "text-blue-600");
+        btn.classList.add("text-gray-600", "border-transparent");
+        btn.style.borderBottomColor = "transparent";
+        btn.style.color = "#6b7280";
+      }
+    });
+  }
 
-      fournisseurBtns.forEach((b) => {
-        b.classList.remove("border-blue-600", "text-blue-600");
-        b.classList.add("text-gray-600", "border-transparent");
-      });
-      btn.classList.add("border-blue-600", "text-blue-600");
-      btn.classList.remove("text-gray-600", "border-transparent");
+  fournisseurBtns.forEach((btn) => {
+    const newBtn = btn.cloneNode(true);
+    btn.parentNode.replaceChild(newBtn, btn);
+
+    newBtn.addEventListener("click", () => {
+      const fournisseur = newBtn.getAttribute("data-fournisseur");
+      setActiveFournisseurTab(fournisseur);
 
       if (fournisseur === "BRACONGO") {
-        bracongoContainer.classList.remove("hidden");
-        bralimaContainer.classList.add("hidden");
+        if (bracongoContainer) bracongoContainer.classList.remove("hidden");
+        if (bralimaContainer) bralimaContainer.classList.add("hidden");
+
         const moisInput = document.getElementById("bracongoFiltreMois");
         if (moisInput && moisInput.value) {
           const [annee, mois] = moisInput.value.split("-");
-          afficherListeAchats("BRACONGO", parseInt(mois), parseInt(annee));
-        } else {
+          if (typeof afficherListeAchats === "function") {
+            afficherListeAchats("BRACONGO", parseInt(mois), parseInt(annee));
+          }
+        } else if (typeof afficherListeAchats === "function") {
           afficherListeAchats("BRACONGO");
         }
       } else {
-        bracongoContainer.classList.add("hidden");
-        bralimaContainer.classList.remove("hidden");
+        if (bracongoContainer) bracongoContainer.classList.add("hidden");
+        if (bralimaContainer) bralimaContainer.classList.remove("hidden");
+
         const moisInput = document.getElementById("bralimaFiltreMois");
         if (moisInput && moisInput.value) {
           const [annee, mois] = moisInput.value.split("-");
-          afficherListeAchats("BRALIMA", parseInt(mois), parseInt(annee));
-        } else {
+          if (typeof afficherListeAchats === "function") {
+            afficherListeAchats("BRALIMA", parseInt(mois), parseInt(annee));
+          }
+        } else if (typeof afficherListeAchats === "function") {
           afficherListeAchats("BRALIMA");
         }
       }
@@ -4320,6 +4368,15 @@ function initAchatsTabs() {
     });
   });
 
+  if (bralimaContainer && !bralimaContainer.classList.contains("hidden")) {
+    setActiveFournisseurTab("BRALIMA");
+  } else {
+    setActiveFournisseurTab("BRACONGO");
+  }
+}
+
+function initAchatsSecondaryTabs() {
+  // BRACONGO
   const bracongoListeTab = document.getElementById("bracongoListeTab");
   const bracongoAddTab = document.getElementById("bracongoAddTab");
   const bracongoListeContainer = document.getElementById(
@@ -4327,21 +4384,44 @@ function initAchatsTabs() {
   );
   const bracongoAddContainer = document.getElementById("bracongoAddContainer");
 
-  if (bracongoListeTab) {
-    bracongoListeTab.addEventListener("click", () => {
-      bracongoListeTab.classList.add(
+  function resetBracongoTabs() {
+    if (bracongoListeTab) {
+      bracongoListeTab.classList.remove(
         "active",
         "text-blue-600",
         "border-blue-500",
       );
+      bracongoListeTab.classList.add("text-gray-600");
+      bracongoListeTab.style.borderBottomColor = "transparent";
+      bracongoListeTab.style.color = "#6b7280";
+    }
+    if (bracongoAddTab) {
       bracongoAddTab.classList.remove(
         "active",
         "text-blue-600",
         "border-blue-500",
       );
       bracongoAddTab.classList.add("text-gray-600");
-      bracongoListeContainer.classList.remove("hidden");
-      bracongoAddContainer.classList.add("hidden");
+      bracongoAddTab.style.borderBottomColor = "transparent";
+      bracongoAddTab.style.color = "#6b7280";
+    }
+  }
+
+  if (bracongoListeTab) {
+    const newListeTab = bracongoListeTab.cloneNode(true);
+    bracongoListeTab.parentNode.replaceChild(newListeTab, bracongoListeTab);
+    newListeTab.addEventListener("click", (e) => {
+      e.preventDefault();
+      resetBracongoTabs();
+      newListeTab.classList.add("active", "text-blue-600", "border-blue-500");
+      newListeTab.classList.remove("text-gray-600");
+      newListeTab.style.borderBottomColor = "#3b82f6";
+      newListeTab.style.color = "#3b82f6";
+
+      if (bracongoListeContainer)
+        bracongoListeContainer.classList.remove("hidden");
+      if (bracongoAddContainer) bracongoAddContainer.classList.add("hidden");
+
       const moisInput = document.getElementById("bracongoFiltreMois");
       if (moisInput && moisInput.value) {
         const [annee, mois] = moisInput.value.split("-");
@@ -4353,24 +4433,24 @@ function initAchatsTabs() {
   }
 
   if (bracongoAddTab) {
-    bracongoAddTab.addEventListener("click", () => {
-      bracongoAddTab.classList.add(
-        "active",
-        "text-blue-600",
-        "border-blue-500",
-      );
-      bracongoListeTab.classList.remove(
-        "active",
-        "text-blue-600",
-        "border-blue-500",
-      );
-      bracongoListeTab.classList.add("text-gray-600");
-      bracongoListeContainer.classList.add("hidden");
-      bracongoAddContainer.classList.remove("hidden");
+    const newAddTab = bracongoAddTab.cloneNode(true);
+    bracongoAddTab.parentNode.replaceChild(newAddTab, bracongoAddTab);
+    newAddTab.addEventListener("click", (e) => {
+      e.preventDefault();
+      resetBracongoTabs();
+      newAddTab.classList.add("active", "text-blue-600", "border-blue-500");
+      newAddTab.classList.remove("text-gray-600");
+      newAddTab.style.borderBottomColor = "#3b82f6";
+      newAddTab.style.color = "#3b82f6";
+
+      if (bracongoListeContainer)
+        bracongoListeContainer.classList.add("hidden");
+      if (bracongoAddContainer) bracongoAddContainer.classList.remove("hidden");
       initSelecteursProduitsAchats();
     });
   }
 
+  // BRALIMA
   const bralimaListeTab = document.getElementById("bralimaListeTab");
   const bralimaAddTab = document.getElementById("bralimaAddTab");
   const bralimaListeContainer = document.getElementById(
@@ -4378,21 +4458,44 @@ function initAchatsTabs() {
   );
   const bralimaAddContainer = document.getElementById("bralimaAddContainer");
 
-  if (bralimaListeTab) {
-    bralimaListeTab.addEventListener("click", () => {
-      bralimaListeTab.classList.add(
+  function resetBralimaTabs() {
+    if (bralimaListeTab) {
+      bralimaListeTab.classList.remove(
         "active",
         "text-blue-600",
         "border-blue-500",
       );
+      bralimaListeTab.classList.add("text-gray-600");
+      bralimaListeTab.style.borderBottomColor = "transparent";
+      bralimaListeTab.style.color = "#6b7280";
+    }
+    if (bralimaAddTab) {
       bralimaAddTab.classList.remove(
         "active",
         "text-blue-600",
         "border-blue-500",
       );
       bralimaAddTab.classList.add("text-gray-600");
-      bralimaListeContainer.classList.remove("hidden");
-      bralimaAddContainer.classList.add("hidden");
+      bralimaAddTab.style.borderBottomColor = "transparent";
+      bralimaAddTab.style.color = "#6b7280";
+    }
+  }
+
+  if (bralimaListeTab) {
+    const newListeTab = bralimaListeTab.cloneNode(true);
+    bralimaListeTab.parentNode.replaceChild(newListeTab, bralimaListeTab);
+    newListeTab.addEventListener("click", (e) => {
+      e.preventDefault();
+      resetBralimaTabs();
+      newListeTab.classList.add("active", "text-blue-600", "border-blue-500");
+      newListeTab.classList.remove("text-gray-600");
+      newListeTab.style.borderBottomColor = "#3b82f6";
+      newListeTab.style.color = "#3b82f6";
+
+      if (bralimaListeContainer)
+        bralimaListeContainer.classList.remove("hidden");
+      if (bralimaAddContainer) bralimaAddContainer.classList.add("hidden");
+
       const moisInput = document.getElementById("bralimaFiltreMois");
       if (moisInput && moisInput.value) {
         const [annee, mois] = moisInput.value.split("-");
@@ -4404,16 +4507,18 @@ function initAchatsTabs() {
   }
 
   if (bralimaAddTab) {
-    bralimaAddTab.addEventListener("click", () => {
-      bralimaAddTab.classList.add("active", "text-blue-600", "border-blue-500");
-      bralimaListeTab.classList.remove(
-        "active",
-        "text-blue-600",
-        "border-blue-500",
-      );
-      bralimaListeTab.classList.add("text-gray-600");
-      bralimaListeContainer.classList.add("hidden");
-      bralimaAddContainer.classList.remove("hidden");
+    const newAddTab = bralimaAddTab.cloneNode(true);
+    bralimaAddTab.parentNode.replaceChild(newAddTab, bralimaAddTab);
+    newAddTab.addEventListener("click", (e) => {
+      e.preventDefault();
+      resetBralimaTabs();
+      newAddTab.classList.add("active", "text-blue-600", "border-blue-500");
+      newAddTab.classList.remove("text-gray-600");
+      newAddTab.style.borderBottomColor = "#3b82f6";
+      newAddTab.style.color = "#3b82f6";
+
+      if (bralimaListeContainer) bralimaListeContainer.classList.add("hidden");
+      if (bralimaAddContainer) bralimaAddContainer.classList.remove("hidden");
       initSelecteursProduitsAchats();
     });
   }
@@ -4421,8 +4526,10 @@ function initAchatsTabs() {
 
 function handleNouvelAchat() {
   const activeFournisseur =
-    document.querySelector(".fournisseur-tab.active")?.dataset.fournisseur ||
-    "BRACONGO";
+    document
+      .querySelector(".fournisseur-tab.active")
+      ?.getAttribute("data-fournisseur") || "BRACONGO";
+
   if (activeFournisseur === "BRACONGO") {
     const bracongoAddTab = document.getElementById("bracongoAddTab");
     const bracongoListeTab = document.getElementById("bracongoListeTab");
@@ -4432,18 +4539,26 @@ function handleNouvelAchat() {
     const bracongoAddContainer = document.getElementById(
       "bracongoAddContainer",
     );
+
     if (bracongoAddTab && bracongoListeTab) {
-      bracongoAddTab.classList.add(
-        "active",
-        "text-blue-600",
-        "border-blue-500",
-      );
       bracongoListeTab.classList.remove(
         "active",
         "text-blue-600",
         "border-blue-500",
       );
       bracongoListeTab.classList.add("text-gray-600");
+      bracongoListeTab.style.borderBottomColor = "transparent";
+      bracongoListeTab.style.color = "#6b7280";
+
+      bracongoAddTab.classList.add(
+        "active",
+        "text-blue-600",
+        "border-blue-500",
+      );
+      bracongoAddTab.classList.remove("text-gray-600");
+      bracongoAddTab.style.borderBottomColor = "#3b82f6";
+      bracongoAddTab.style.color = "#3b82f6";
+
       if (bracongoListeContainer)
         bracongoListeContainer.classList.add("hidden");
       if (bracongoAddContainer) bracongoAddContainer.classList.remove("hidden");
@@ -4456,14 +4571,22 @@ function handleNouvelAchat() {
       "bralimaListeContainer",
     );
     const bralimaAddContainer = document.getElementById("bralimaAddContainer");
+
     if (bralimaAddTab && bralimaListeTab) {
-      bralimaAddTab.classList.add("active", "text-blue-600", "border-blue-500");
       bralimaListeTab.classList.remove(
         "active",
         "text-blue-600",
         "border-blue-500",
       );
       bralimaListeTab.classList.add("text-gray-600");
+      bralimaListeTab.style.borderBottomColor = "transparent";
+      bralimaListeTab.style.color = "#6b7280";
+
+      bralimaAddTab.classList.add("active", "text-blue-600", "border-blue-500");
+      bralimaAddTab.classList.remove("text-gray-600");
+      bralimaAddTab.style.borderBottomColor = "#3b82f6";
+      bralimaAddTab.style.color = "#3b82f6";
+
       if (bralimaListeContainer) bralimaListeContainer.classList.add("hidden");
       if (bralimaAddContainer) bralimaAddContainer.classList.remove("hidden");
       initSelecteursProduitsAchats();
@@ -4492,9 +4615,12 @@ async function initModuleAchats() {
   afficherListeAchats("BRACONGO", moisActuel, anneeActuelle);
   afficherListeAchats("BRALIMA", moisActuel, anneeActuelle);
 
-  const activeFournisseur =
-    document.querySelector(".fournisseur-tab.active")?.dataset.fournisseur ||
-    "BRACONGO";
+  let activeFournisseur = "BRACONGO";
+  const activeTab = document.querySelector(".fournisseur-tab.active");
+  if (activeTab) {
+    activeFournisseur = activeTab.getAttribute("data-fournisseur");
+  }
+
   const bracongoContainer = document.getElementById("bracongoAchatsContainer");
   const bralimaContainer = document.getElementById("bralimaAchatsContainer");
 
@@ -4507,26 +4633,36 @@ async function initModuleAchats() {
   }
 
   const nouvelAchatBtn = document.getElementById("nouvelAchatBtn");
-  if (nouvelAchatBtn)
-    nouvelAchatBtn.addEventListener("click", handleNouvelAchat);
+  if (nouvelAchatBtn) {
+    const newBtn = nouvelAchatBtn.cloneNode(true);
+    nouvelAchatBtn.parentNode.replaceChild(newBtn, nouvelAchatBtn);
+    newBtn.addEventListener("click", handleNouvelAchat);
+  }
+
+  initAchatsSecondaryTabs();
+  initAchatsTabs();
 
   const bracongoAjouterBtn = document.getElementById(
     "bracongoAjouterPanierBtn",
   );
-  if (bracongoAjouterBtn)
-    bracongoAjouterBtn.addEventListener("click", () =>
-      ajouterAuPanierAchat("BRACONGO"),
-    );
+  if (bracongoAjouterBtn) {
+    const newBtn = bracongoAjouterBtn.cloneNode(true);
+    bracongoAjouterBtn.parentNode.replaceChild(newBtn, bracongoAjouterBtn);
+    newBtn.addEventListener("click", () => ajouterAuPanierAchat("BRACONGO"));
+  }
 
   const bracongoValiderBtn = document.getElementById("bracongoValiderAchatBtn");
-  if (bracongoValiderBtn)
-    bracongoValiderBtn.addEventListener("click", () =>
-      validerAchat("BRACONGO"),
-    );
+  if (bracongoValiderBtn) {
+    const newBtn = bracongoValiderBtn.cloneNode(true);
+    bracongoValiderBtn.parentNode.replaceChild(newBtn, bracongoValiderBtn);
+    newBtn.addEventListener("click", () => validerAchat("BRACONGO"));
+  }
 
   const bracongoFiltrerBtn = document.getElementById("bracongoFiltrerBtn");
   if (bracongoFiltrerBtn) {
-    bracongoFiltrerBtn.addEventListener("click", () => {
+    const newBtn = bracongoFiltrerBtn.cloneNode(true);
+    bracongoFiltrerBtn.parentNode.replaceChild(newBtn, bracongoFiltrerBtn);
+    newBtn.addEventListener("click", () => {
       const moisInput = document.getElementById("bracongoFiltreMois");
       if (moisInput && moisInput.value) {
         const [annee, mois] = moisInput.value.split("-");
@@ -4539,7 +4675,9 @@ async function initModuleAchats() {
 
   const bracongoArchiverBtn = document.getElementById("bracongoArchiverBtn");
   if (bracongoArchiverBtn) {
-    bracongoArchiverBtn.addEventListener("click", () => {
+    const newBtn = bracongoArchiverBtn.cloneNode(true);
+    bracongoArchiverBtn.parentNode.replaceChild(newBtn, bracongoArchiverBtn);
+    newBtn.addEventListener("click", () => {
       const moisInput = document.getElementById("bracongoFiltreMois");
       if (!moisInput || !moisInput.value) {
         showTemporaryNotification(
@@ -4565,7 +4703,9 @@ async function initModuleAchats() {
 
   const bracongoExporterBtn = document.getElementById("bracongoExporterBtn");
   if (bracongoExporterBtn) {
-    bracongoExporterBtn.addEventListener("click", () => {
+    const newBtn = bracongoExporterBtn.cloneNode(true);
+    bracongoExporterBtn.parentNode.replaceChild(newBtn, bracongoExporterBtn);
+    newBtn.addEventListener("click", () => {
       const moisInput = document.getElementById("bracongoFiltreMois");
       if (moisInput && moisInput.value) {
         const [annee, mois] = moisInput.value.split("-");
@@ -4577,18 +4717,24 @@ async function initModuleAchats() {
   }
 
   const bralimaAjouterBtn = document.getElementById("bralimaAjouterPanierBtn");
-  if (bralimaAjouterBtn)
-    bralimaAjouterBtn.addEventListener("click", () =>
-      ajouterAuPanierAchat("BRALIMA"),
-    );
+  if (bralimaAjouterBtn) {
+    const newBtn = bralimaAjouterBtn.cloneNode(true);
+    bralimaAjouterBtn.parentNode.replaceChild(newBtn, bralimaAjouterBtn);
+    newBtn.addEventListener("click", () => ajouterAuPanierAchat("BRALIMA"));
+  }
 
   const bralimaValiderBtn = document.getElementById("bralimaValiderAchatBtn");
-  if (bralimaValiderBtn)
-    bralimaValiderBtn.addEventListener("click", () => validerAchat("BRALIMA"));
+  if (bralimaValiderBtn) {
+    const newBtn = bralimaValiderBtn.cloneNode(true);
+    bralimaValiderBtn.parentNode.replaceChild(newBtn, bralimaValiderBtn);
+    newBtn.addEventListener("click", () => validerAchat("BRALIMA"));
+  }
 
   const bralimaFiltrerBtn = document.getElementById("bralimaFiltrerBtn");
   if (bralimaFiltrerBtn) {
-    bralimaFiltrerBtn.addEventListener("click", () => {
+    const newBtn = bralimaFiltrerBtn.cloneNode(true);
+    bralimaFiltrerBtn.parentNode.replaceChild(newBtn, bralimaFiltrerBtn);
+    newBtn.addEventListener("click", () => {
       const moisInput = document.getElementById("bralimaFiltreMois");
       if (moisInput && moisInput.value) {
         const [annee, mois] = moisInput.value.split("-");
@@ -4601,7 +4747,9 @@ async function initModuleAchats() {
 
   const bralimaArchiverBtn = document.getElementById("bralimaArchiverBtn");
   if (bralimaArchiverBtn) {
-    bralimaArchiverBtn.addEventListener("click", () => {
+    const newBtn = bralimaArchiverBtn.cloneNode(true);
+    bralimaArchiverBtn.parentNode.replaceChild(newBtn, bralimaArchiverBtn);
+    newBtn.addEventListener("click", () => {
       const moisInput = document.getElementById("bralimaFiltreMois");
       if (!moisInput || !moisInput.value) {
         showTemporaryNotification(
@@ -4627,7 +4775,9 @@ async function initModuleAchats() {
 
   const bralimaExporterBtn = document.getElementById("bralimaExporterBtn");
   if (bralimaExporterBtn) {
-    bralimaExporterBtn.addEventListener("click", () => {
+    const newBtn = bralimaExporterBtn.cloneNode(true);
+    bralimaExporterBtn.parentNode.replaceChild(newBtn, bralimaExporterBtn);
+    newBtn.addEventListener("click", () => {
       const moisInput = document.getElementById("bralimaFiltreMois");
       if (moisInput && moisInput.value) {
         const [annee, mois] = moisInput.value.split("-");
@@ -4637,8 +4787,6 @@ async function initModuleAchats() {
       }
     });
   }
-
-  initAchatsTabs();
 }
 
 // ============================================
@@ -4676,8 +4824,9 @@ async function afficherHistorique() {
       historiqueTableElem.classList.add("hidden");
       return;
     }
-    window.currentVentesData = ventes;
-    window.currentClientData = clientData;
+    window.originalVentesData = ventes;
+    window.originalClientData = clientData;
+    window.currentFilterType = "all";
     historiqueMessageDiv.innerHTML = `<span class="text-emerald-600">✅ ${ventes.length} vente(s) pour ${escapeHtml(clientData.nom)} (Code: ${clientData.id})</span>`;
     displayVentesMulti(ventes, clientData);
   } catch (e) {
@@ -4710,53 +4859,131 @@ function displayVentesMulti(ventes, clientData) {
   document.getElementById("totalPrix").textContent =
     formatNumberFC(totalPrix) + " FC";
   historiqueTableElem.classList.remove("hidden");
+
   const oldFilter = document.getElementById("filterContainerHisto");
   if (oldFilter) oldFilter.remove();
+
   const filterContainer = document.createElement("div");
   filterContainer.id = "filterContainerHisto";
   filterContainer.className =
     "mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200";
-  filterContainer.innerHTML = `<div class="flex flex-wrap items-center justify-between gap-4"><div><strong><i class="fas fa-filter mr-1"></i> 🔍 Filtrer :</strong></div><div class="flex flex-wrap gap-3"><label class="inline-flex items-center gap-2"><input type="radio" name="filterTypeHisto" value="all" checked class="text-emerald-600"> 📅 Toutes</label><label class="inline-flex items-center gap-2"><input type="radio" name="filterTypeHisto" value="today" class="text-emerald-600"> 📆 Aujourd'hui</label><label class="inline-flex items-center gap-2"><input type="radio" name="filterTypeHisto" value="week" class="text-emerald-600"> 📊 Semaine</label><label class="inline-flex items-center gap-2"><input type="radio" name="filterTypeHisto" value="month" class="text-emerald-600"> 📈 Mois</label><button id="applyFilterHistoBtn" class="bg-emerald-600 text-white px-3 py-1 rounded text-sm">Appliquer</button><button id="resetFilterHistoBtn" class="bg-gray-500 text-white px-3 py-1 rounded text-sm">Réinitialiser</button></div></div>`;
+  filterContainer.innerHTML = `
+    <div class="flex flex-wrap items-center justify-between gap-4">
+      <div>
+        <strong><i class="fas fa-filter mr-1"></i> 🔍 Filtrer :</strong>
+      </div>
+      <div class="flex flex-wrap gap-3">
+        <label class="inline-flex items-center gap-2 cursor-pointer">
+          <input type="radio" name="filterTypeHisto" value="all" class="filter-radio text-emerald-600" ${window.currentFilterType === "all" ? "checked" : ""}>
+          <span>📅 Toutes</span>
+        </label>
+        <label class="inline-flex items-center gap-2 cursor-pointer">
+          <input type="radio" name="filterTypeHisto" value="today" class="filter-radio text-emerald-600" ${window.currentFilterType === "today" ? "checked" : ""}>
+          <span>📆 Aujourd'hui</span>
+        </label>
+        <label class="inline-flex items-center gap-2 cursor-pointer">
+          <input type="radio" name="filterTypeHisto" value="week" class="filter-radio text-emerald-600" ${window.currentFilterType === "week" ? "checked" : ""}>
+          <span>📊 Semaine</span>
+        </label>
+        <label class="inline-flex items-center gap-2 cursor-pointer">
+          <input type="radio" name="filterTypeHisto" value="month" class="filter-radio text-emerald-600" ${window.currentFilterType === "month" ? "checked" : ""}>
+          <span>📈 Mois</span>
+        </label>
+        <button id="applyFilterHistoBtn" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1 rounded text-sm transition">
+          Appliquer
+        </button>
+        <button id="resetFilterHistoBtn" class="bg-gray-500 hover:bg-gray-600 text-white px-3 py-1 rounded text-sm transition">
+          Réinitialiser
+        </button>
+      </div>
+    </div>
+  `;
+
   const histContainer =
     document.getElementById("historiqueTable").parentElement;
   histContainer.appendChild(filterContainer);
-  document
-    .getElementById("applyFilterHistoBtn")
-    ?.addEventListener("click", () => {
-      const val = document.querySelector(
+
+  const applyBtn = document.getElementById("applyFilterHistoBtn");
+  if (applyBtn) {
+    const newApplyBtn = applyBtn.cloneNode(true);
+    applyBtn.parentNode.replaceChild(newApplyBtn, applyBtn);
+
+    newApplyBtn.addEventListener("click", () => {
+      const selectedRadio = document.querySelector(
         'input[name="filterTypeHisto"]:checked',
-      ).value;
-      appliquerFiltreHisto(val, ventes, clientData);
+      );
+      if (selectedRadio) {
+        const filterValue = selectedRadio.value;
+        window.currentFilterType = filterValue;
+        appliquerFiltreHisto(
+          filterValue,
+          window.originalVentesData,
+          window.originalClientData,
+        );
+      }
     });
-  document
-    .getElementById("resetFilterHistoBtn")
-    ?.addEventListener("click", () => {
-      document.querySelector(
+  }
+
+  const resetBtn = document.getElementById("resetFilterHistoBtn");
+  if (resetBtn) {
+    const newResetBtn = resetBtn.cloneNode(true);
+    resetBtn.parentNode.replaceChild(newResetBtn, resetBtn);
+
+    newResetBtn.addEventListener("click", () => {
+      const allRadio = document.querySelector(
         'input[name="filterTypeHisto"][value="all"]',
-      ).checked = true;
-      displayVentesMulti(ventes, clientData);
+      );
+      if (allRadio) {
+        allRadio.checked = true;
+        window.currentFilterType = "all";
+      }
+      displayVentesMulti(window.originalVentesData, window.originalClientData);
       showTemporaryNotification("📋 Filtre réinitialisé");
     });
+  }
+
   const oldActions = document.querySelector(".action-buttons-container");
   if (oldActions) oldActions.remove();
+
   const actionDiv = document.createElement("div");
   actionDiv.className = "action-buttons-container flex gap-3 mt-4 justify-end";
-  actionDiv.innerHTML = `<button id="exportCsvBtn" class="bg-orange-600 text-white px-4 py-2 rounded-lg flex items-center gap-2"><i class="fas fa-file-excel"></i> Exporter CSV</button><button id="factureMensuelleBtn" class="bg-purple-600 text-white px-4 py-2 rounded-lg flex items-center gap-2"><i class="fas fa-file-invoice"></i> Facture mensuelle</button>`;
+  actionDiv.innerHTML = `
+    <button id="exportCsvBtn" class="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition">
+      <i class="fas fa-file-excel"></i> Exporter CSV
+    </button>
+    <button id="factureMensuelleBtn" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition">
+      <i class="fas fa-file-invoice"></i> Facture mensuelle
+    </button>
+  `;
   histContainer.appendChild(actionDiv);
-  document
-    .getElementById("exportCsvBtn")
-    ?.addEventListener("click", () => exportToCSV(ventes, clientData));
-  document
-    .getElementById("factureMensuelleBtn")
-    ?.addEventListener("click", () =>
-      genererFactureMensuelleMulti(ventes, clientData),
+
+  const exportBtn = document.getElementById("exportCsvBtn");
+  if (exportBtn) {
+    const newExportBtn = exportBtn.cloneNode(true);
+    exportBtn.parentNode.replaceChild(newExportBtn, exportBtn);
+    newExportBtn.addEventListener("click", () =>
+      exportToCSV(window.originalVentesData, window.originalClientData),
     );
+  }
+
+  const factureBtn = document.getElementById("factureMensuelleBtn");
+  if (factureBtn) {
+    const newFactureBtn = factureBtn.cloneNode(true);
+    factureBtn.parentNode.replaceChild(newFactureBtn, factureBtn);
+    newFactureBtn.addEventListener("click", () =>
+      genererFactureMensuelleMulti(
+        window.originalVentesData,
+        window.originalClientData,
+      ),
+    );
+  }
 }
 
 function appliquerFiltreHisto(filterType, ventesOriginales, clientData) {
   const now = new Date();
   let filtrees = [];
   let msg = "";
+
   switch (filterType) {
     case "today":
       filtrees = ventesOriginales.filter(
@@ -4787,7 +5014,14 @@ function appliquerFiltreHisto(filterType, ventesOriginales, clientData) {
     default:
       filtrees = [...ventesOriginales];
       msg = "toutes";
+      window.currentFilterType = "all";
+      const allRadio = document.querySelector(
+        'input[name="filterTypeHisto"][value="all"]',
+      );
+      if (allRadio) allRadio.checked = true;
+      break;
   }
+
   if (filtrees.length === 0) {
     historiqueMessageDiv.innerHTML = `<span class="text-blue-600">📭 Aucune vente pour ${msg}</span>`;
     historiqueTableBody.innerHTML = "";

@@ -1,274 +1,9 @@
 {
   "clients": [
     {
-      "id": "1",
-      "nom": "Hermes",
-      "telephone": "0999999999"
-    },
-    {
-      "id": "2",
-      "nom": "Jean",
-      "telephone": "0888888888"
-    },
-    {
-      "id": "3",
-      "nom": "rose",
-      "telephone": "+243 828 790 728"
-    },
-    {
-      "id": "4",
-      "nom": "sharone",
-      "telephone": "0995087107"
-    },
-    {
-      "id": "5",
-      "nom": "liyah",
-      "telephone": "+243 828 790 728"
-    },
-    {
-      "id": "6",
-      "nom": "binek",
-      "telephone": "+243 828 790 728"
-    },
-    {
-      "id": "7",
-      "nom": "debeers",
-      "telephone": "+243 828 790 728"
-    },
-    {
-      "id": "8",
-      "nom": "janice",
-      "telephone": "+243 828 790 728"
-    },
-    {
-      "id": "9",
-      "nom": "georges",
-      "telephone": "+243 828 790 728"
-    },
-    {
-      "id": "11",
-      "nom": "julie",
-      "telephone": "+243 828 790 728"
-    },
-    {
-      "id": "12",
-      "nom": "ercic",
-      "telephone": "+243 828 790 728"
-    },
-    {
-      "id": "13",
-      "nom": "Mavinga",
-      "telephone": "+243 828 790 728"
-    },
-    {
-      "id": "14",
-      "nom": "Mavinga",
-      "telephone": "+243 828 790 728"
-    },
-    {
-      "id": "15",
-      "nom": "Mavinga",
-      "telephone": "+243 828 790 728"
-    },
-    {
-      "id": "16",
-      "nom": "Mavinga",
-      "telephone": "+243 828 790 728"
-    },
-    {
-      "id": "17",
-      "nom": "Mavinga",
-      "telephone": "+243 828 790 728"
-    },
-    {
-      "id": "18",
-      "nom": "Mavinga",
-      "telephone": "+243 828 790 728"
-    },
-    {
-      "id": "19",
-      "nom": "paolina",
-      "telephone": "+243 828 790 728"
-    },
-    {
-      "id": "20",
-      "nom": "Mavinga",
-      "telephone": "+243 828 790 728"
-    },
-    {
-      "id": "21",
-      "nom": "papa jean",
-      "telephone": "+243 828 790 728"
-    },
-    {
-      "id": "22",
-      "nom": "Mavinga",
-      "telephone": "+243 828 790 728"
-    },
-    {
-      "id": "23",
-      "nom": "eben",
-      "telephone": "+243 828 790 728"
-    },
-    {
-      "id": "24",
-      "nom": "premice",
-      "telephone": "+243 828 790 728"
-    },
-    {
-      "id": "25",
-      "nom": "ruth",
-      "telephone": "+243 828 790 728"
-    },
-    {
-      "id": "26",
-      "nom": "roro",
-      "telephone": "+243 828 790 728"
-    },
-    {
-      "id": "27",
-      "nom": "jacko",
-      "telephone": "+243 828 790 728"
-    },
-    {
-      "id": "28",
-      "nom": "hamilton",
-      "telephone": "+243 828 790 728"
-    },
-    {
-      "id": "29",
-      "nom": "charo",
-      "telephone": "+243 828 790 728"
-    },
-    {
-      "id": "30",
-      "nom": "linda",
-      "telephone": "+243 828 790 728"
-    },
-    {
-      "id": "31",
-      "nom": "hamilton",
-      "telephone": "+243 828 790 728"
-    },
-    {
-      "id": "32",
-      "nom": "roger madila",
-      "telephone": "+243 828 790 728"
-    },
-    {
-      "id": "33",
-      "nom": "henry",
-      "telephone": "+243 828 790 728"
-    },
-    {
-      "id": "34",
-      "nom": "Mavinga",
-      "telephone": "+243 828 790 728"
-    },
-    {
-      "id": "35",
-      "nom": "papa jean",
-      "telephone": "+243 828 790 728"
-    },
-    {
-      "id": "37",
-      "nom": "paolina",
-      "telephone": "+243 828 790 728"
-    },
-    {
-      "id": "39",
-      "nom": "Kapashi",
-      "telephone": "0814448955"
-    },
-    {
-      "id": "40",
-      "nom": "Hamillton",
-      "telephone": "0814448958"
-    },
-    {
-      "id": "41",
-      "nom": "toussaint",
-      "telephone": "+243 828 790 728"
-    },
-    {
-      "id": "42",
-      "nom": "range niati",
-      "telephone": "+243 828 790 728"
-    },
-    {
-      "id": "43",
-      "nom": "lufuma",
-      "telephone": "+243 828 790 728"
-    },
-    {
-      "id": "44",
-      "nom": "henock",
-      "telephone": "+243 828 790 728"
-    },
-    {
-      "id": "45",
-      "nom": "celeste",
-      "telephone": "+243 828 790 728"
-    },
-    {
-      "id": "46",
-      "nom": "MAVINGA LUFUNDISU",
-      "telephone": "+243 828 790 728"
-    },
-    {
-      "id": "47",
-      "nom": "HENRY",
-      "telephone": "+243 828 790 728"
-    },
-    {
-      "id": "48",
-      "nom": "roberto",
-      "telephone": "+243 828 790 728"
-    },
-    {
-      "id": "49",
-      "nom": "Mavinga",
-      "telephone": "+243 828 790 728"
-    },
-    {
-      "id": "50",
-      "nom": "ROGER",
-      "telephone": "+243 828 790 728"
-    },
-    {
-      "id": "51",
-      "nom": "joyce ngende",
-      "telephone": "+243 828 790 728"
-    },
-    {
-      "id": "52",
-      "nom": "Karl",
-      "telephone": "+243 828 790 728"
-    },
-    {
-      "id": "53",
-      "nom": "range",
-      "telephone": "+243 828 790 728"
-    },
-    {
-      "id": "55",
-      "nom": "aline",
-      "telephone": "+243 828 790 728"
-    },
-    {
-      "nom": "kapinga",
-      "telephone": "+243 828 790 728",
-      "id": "VIgqJ9p"
-    },
-    {
-      "id": "JEAN001",
-      "nom": "JEAN LIEVIN",
-      "telephone": "+243 828 790 728"
-    },
-    {
-      "id": "ROSE001",
-      "nom": "rosie",
-      "telephone": "+243 828 790 728"
+      "nom": "Hermes Mavinga",
+      "telephone": "0999999999",
+      "id": "1"
     }
   ],
   "produits": [
@@ -357,6 +92,59 @@
       "fournisseur": "BRALIMA",
       "nbBouteilles": 24,
       "id": "duTSPeW"
+    },
+    {
+      "nom": "likofi",
+      "prixCassier": 50000,
+      "format": "33 cl",
+      "type": "cassier",
+      "fournisseur": "BRACONGO",
+      "nbBouteilles": 24,
+      "id": "inl5sYb"
+    },
+    {
+      "nom": "likofi",
+      "prixCassier": 50000,
+      "format": "33 cl",
+      "type": "cassier",
+      "fournisseur": "BRACONGO",
+      "nbBouteilles": 24,
+      "id": "8jQrR4Q"
+    },
+    {
+      "nom": "castel",
+      "prixCassier": 40000,
+      "format": "20 cl",
+      "type": "cassier",
+      "fournisseur": "BRACONGO",
+      "nbBouteilles": 24,
+      "id": "zHLd5B7"
+    },
+    {
+      "nom": "castel",
+      "prixCassier": 50000,
+      "format": "20 cl",
+      "type": "cassier",
+      "fournisseur": "BRACONGO",
+      "nbBouteilles": 24,
+      "id": "-3GEd4e"
+    },
+    {
+      "nom": "grd primus",
+      "prixCassier": 35000,
+      "format": "40 cl",
+      "type": "cassier",
+      "fournisseur": "BRALIMA",
+      "nbBouteilles": 24,
+      "id": "SW44chd"
+    },
+    {
+      "nom": "KKK",
+      "prix": 1000,
+      "format": "",
+      "type": "bouteille",
+      "fournisseur": "BRALIMA",
+      "id": "23fJPeQ"
     }
   ],
   "ventes": [
@@ -403,34 +191,6 @@
       "id": "lYdFIPt"
     },
     {
-      "clientId": "VIgqJ9p",
-      "produits": [
-        {
-          "nom": "Nkoy",
-          "quantite": 1,
-          "prix": 2500,
-          "type": "bouteille"
-        }
-      ],
-      "total": 2500,
-      "date": "2026-05-18T10:24:31.949Z",
-      "id": "jrlD5r9"
-    },
-    {
-      "clientId": "JEAN001",
-      "produits": [
-        {
-          "nom": "Nkoy",
-          "quantite": 1,
-          "prix": 2500,
-          "type": "bouteille"
-        }
-      ],
-      "total": 2500,
-      "date": "2026-05-18T11:07:26.480Z",
-      "id": "HYQiDME"
-    },
-    {
       "clientId": "1",
       "produits": [
         {
@@ -459,20 +219,6 @@
       "id": "4oHSJJj"
     },
     {
-      "clientId": "ROSE001",
-      "produits": [
-        {
-          "nom": "fanta",
-          "quantite": 1,
-          "prix": 1200,
-          "type": "bouteille"
-        }
-      ],
-      "total": 1200,
-      "date": "2026-05-18T18:41:10.965Z",
-      "id": "RkLh_Mq"
-    },
-    {
       "clientId": "1",
       "produits": [
         {
@@ -485,6 +231,34 @@
       "total": 2500,
       "date": "2026-05-19T05:47:37.289Z",
       "id": "PSOYEjr"
+    },
+    {
+      "clientId": "1",
+      "produits": [
+        {
+          "nom": "KKK",
+          "quantite": 1,
+          "prix": 1000,
+          "type": "bouteille"
+        }
+      ],
+      "total": 1000,
+      "date": "2026-05-31T17:08:58.050Z",
+      "id": "Z9O3o5p"
+    },
+    {
+      "clientId": "1",
+      "produits": [
+        {
+          "nom": "castel",
+          "quantite": 1,
+          "prix": 50000,
+          "type": "cassier"
+        }
+      ],
+      "total": 50000,
+      "date": "2026-05-31T18:12:52.415Z",
+      "id": "hnI0HOb"
     }
   ],
   "achats": [
@@ -513,18 +287,6 @@
       "id": "rRKOiER"
     },
     {
-      "fournisseur": "BRALIMA",
-      "produit": "Primus",
-      "quantite": 1,
-      "prixUnitaire": 2500,
-      "total": 2500,
-      "statut": "actif",
-      "date": "2026-05-19T04:58:26.976Z",
-      "mois": 5,
-      "annee": 2026,
-      "id": "I5NWVYr"
-    },
-    {
       "fournisseur": "BRACONGO",
       "produit": "Nkoy",
       "quantite": 1,
@@ -535,6 +297,18 @@
       "mois": 5,
       "annee": 2026,
       "id": "xqWbrvF"
+    },
+    {
+      "fournisseur": "BRALIMA",
+      "produit": "Primus",
+      "quantite": 1,
+      "prixUnitaire": 60000,
+      "total": 60000,
+      "statut": "actif",
+      "date": "2026-05-31T18:15:57.490Z",
+      "mois": 5,
+      "annee": 2026,
+      "id": "Ig8FTW6"
     }
   ],
   "echeanciers": []
