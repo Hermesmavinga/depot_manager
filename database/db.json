@@ -1,9 +1,14 @@
 {
   "clients": [
     {
-      "nom": "Hermes Mavinga",
+      "nom": "Hermes",
       "telephone": "0999999999",
       "id": "1"
+    },
+    {
+      "id": "PA11",
+      "nom": "pao",
+      "telephone": "+243 828 790 728"
     }
   ],
   "produits": [
@@ -139,12 +144,12 @@
       "id": "SW44chd"
     },
     {
-      "nom": "KKK",
-      "prix": 1000,
-      "format": "",
+      "nom": "ffff",
+      "prix": 3000,
+      "format": "30 cl",
       "type": "bouteille",
       "fournisseur": "BRALIMA",
-      "id": "23fJPeQ"
+      "id": "kn4fjDl"
     }
   ],
   "ventes": [
@@ -259,6 +264,34 @@
       "total": 50000,
       "date": "2026-05-31T18:12:52.415Z",
       "id": "hnI0HOb"
+    },
+    {
+      "clientId": "PA11",
+      "produits": [
+        {
+          "nom": "Primus",
+          "quantite": 1,
+          "prix": 60000,
+          "type": "cassier"
+        }
+      ],
+      "total": 60000,
+      "date": "2026-05-31T18:50:26.825Z",
+      "id": "7QjjOqT"
+    },
+    {
+      "clientId": "1",
+      "produits": [
+        {
+          "nom": "Nkoy",
+          "quantite": 1,
+          "prix": 2500,
+          "type": "bouteille"
+        }
+      ],
+      "total": 2500,
+      "date": "2026-05-31T19:02:30.911Z",
+      "id": "LeRczTe"
     }
   ],
   "achats": [
@@ -309,6 +342,18 @@
       "mois": 5,
       "annee": 2026,
       "id": "Ig8FTW6"
+    },
+    {
+      "fournisseur": "BRACONGO",
+      "produit": "Nkoy",
+      "quantite": 1,
+      "prixUnitaire": 60000,
+      "total": 60000,
+      "statut": "actif",
+      "date": "2026-05-31T18:52:43.673Z",
+      "mois": 5,
+      "annee": 2026,
+      "id": "j-qoyyr"
     }
   ],
   "echeanciers": []

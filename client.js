@@ -1399,8 +1399,8 @@ function imprimerEcheancier(echeancierId) {
           <tr><th>Description</th><th>Montant (FC)</th></tr>
         </thead>
         <tbody>
-          <tr><td>Total des achats</td><td>${formatNumberFC(echeancier.totalAchats)}</td></tr>
-          <tr style="background:#f0fdf4"><td>Remise 5%</td><td class="remise">- ${formatNumberFC(echeancier.remise)}</td></tr>
+          <tr><td>Total des achats</td><td>${formatNumberFC(echeancier.totalAchats)} FC</td></tr>
+          <tr style="background:#f0fdf4"><td>Remise 5%</td><td class="remise">- ${formatNumberFC(echeancier.remise)} FC</td></tr>
         </tbody>
       </table>
       <div class="total">
@@ -1576,16 +1576,16 @@ function afficherListeEcheanciers() {
                       <div class="font-medium">${escapeHtml(e.clientNom)}</div>
                       <div class="text-xs text-gray-400">${e.clientId}</div>
                     </td>
-                    <td class="px-4 py-3 text-center text-sm">${new Date(e.annee, e.mois - 1, 1).toLocaleDateString("fr-FR", { month: "short", year: "numeric" })}<\/td>
-                    <td class="px-4 py-3 text-right text-sm">${formatNumberFC(e.totalAchats)} FC<\/td>
-                    <td class="px-4 py-3 text-right text-sm text-green-600">- ${formatNumberFC(e.remise)} FC<\/td>
-                    <td class="px-4 py-3 text-right font-bold text-emerald-600">${formatNumberFC(e.netAPayer)} FC<\/td>
-                    <td class="px-4 py-3 text-center text-sm">${new Date(e.dateLimite).toLocaleDateString("fr-FR")}<\/td>
+                    <td class="px-4 py-3 text-center text-sm">${new Date(e.annee, e.mois - 1, 1).toLocaleDateString("fr-FR", { month: "short", year: "numeric" })}</td>
+                    <td class="px-4 py-3 text-right text-sm">${formatNumberFC(e.totalAchats)} FC</td>
+                    <td class="px-4 py-3 text-right text-sm text-green-600">- ${formatNumberFC(e.remise)} FC</td>
+                    <td class="px-4 py-3 text-right font-bold text-emerald-600">${formatNumberFC(e.netAPayer)} FC</td>
+                    <td class="px-4 py-3 text-center text-sm">${new Date(e.dateLimite).toLocaleDateString("fr-FR")}</td>
                     <td class="px-4 py-3 text-center">
                       <button onclick="marquerCommePaye('${e.id}')" class="bg-emerald-600 text-white px-2 py-1 rounded text-xs hover:bg-emerald-700">
                         <i class="fas fa-check mr-1"></i> Payé
                       </button>
-                    <\/td>
+                    </td>
                   </tr>
                 `,
                   )
@@ -1593,11 +1593,11 @@ function afficherListeEcheanciers() {
               </tbody>
               <tfoot class="bg-gray-50 font-bold">
                 <tr>
-                  <td colspan="2" class="px-4 py-3">TOTAL<\/td>
-                  <td class="px-4 py-3 text-right">${formatNumberFC(echeanciersNonPayes.reduce((s, e) => s + e.totalAchats, 0))} FC<\/td>
-                  <td class="px-4 py-3 text-right text-green-600">- ${formatNumberFC(echeanciersNonPayes.reduce((s, e) => s + e.remise, 0))} FC<\/td>
-                  <td class="px-4 py-3 text-right text-emerald-600">${formatNumberFC(totalGlobal)} FC<\/td>
-                  <td colspan="2"><\/td>
+                  <td colspan="2" class="px-4 py-3">TOTAL</td>
+                  <td class="px-4 py-3 text-right">${formatNumberFC(echeanciersNonPayes.reduce((s, e) => s + e.totalAchats, 0))} FC</td>
+                  <td class="px-4 py-3 text-right text-green-600">- ${formatNumberFC(echeanciersNonPayes.reduce((s, e) => s + e.remise, 0))} FC</td>
+                  <td class="px-4 py-3 text-right text-emerald-600">${formatNumberFC(totalGlobal)} FC</td>
+                  <td colspan="2"></td>
                 </tr>
               </tfoot>
             </table>
@@ -4304,7 +4304,7 @@ function initSelecteursProduitsAchats() {
 }
 
 // ============================================
-// INITIALISATION DES ONGLETS ACHATS (CORRIGÉE)
+// INITIALISATION DES ONGLETS ACHATS (CORRIGÉE FINAL)
 // ============================================
 
 function initAchatsTabs() {
@@ -4312,28 +4312,33 @@ function initAchatsTabs() {
   const bracongoContainer = document.getElementById("bracongoAchatsContainer");
   const bralimaContainer = document.getElementById("bralimaAchatsContainer");
 
+  // Fonction pour activer le bon onglet fournisseur
   function setActiveFournisseurTab(fournisseur) {
-    fournisseurBtns.forEach((btn) => {
+    console.log("setActiveFournisseurTab appelé avec:", fournisseur);
+    const btns = document.querySelectorAll(".fournisseur-tab");
+    btns.forEach((btn) => {
       if (btn.getAttribute("data-fournisseur") === fournisseur) {
         btn.classList.add("active", "border-blue-600", "text-blue-600");
         btn.classList.remove("text-gray-600", "border-transparent");
-        btn.style.borderBottomColor = "#3b82f6";
-        btn.style.color = "#3b82f6";
       } else {
         btn.classList.remove("active", "border-blue-600", "text-blue-600");
         btn.classList.add("text-gray-600", "border-transparent");
-        btn.style.borderBottomColor = "transparent";
-        btn.style.color = "#6b7280";
       }
     });
   }
 
+  // Ajouter les écouteurs d'événements SANS clonage problématique
   fournisseurBtns.forEach((btn) => {
+    // Supprimer les anciens écouteurs
+    const oldBtn = btn;
     const newBtn = btn.cloneNode(true);
-    btn.parentNode.replaceChild(newBtn, btn);
+    oldBtn.parentNode.replaceChild(newBtn, oldBtn);
 
-    newBtn.addEventListener("click", () => {
+    newBtn.addEventListener("click", (e) => {
+      e.preventDefault();
       const fournisseur = newBtn.getAttribute("data-fournisseur");
+      console.log("Clic sur l'onglet:", fournisseur);
+
       setActiveFournisseurTab(fournisseur);
 
       if (fournisseur === "BRACONGO") {
@@ -4368,6 +4373,7 @@ function initAchatsTabs() {
     });
   });
 
+  // Initialiser l'état actif basé sur le conteneur visible
   if (bralimaContainer && !bralimaContainer.classList.contains("hidden")) {
     setActiveFournisseurTab("BRALIMA");
   } else {
@@ -4529,6 +4535,7 @@ function handleNouvelAchat() {
     document
       .querySelector(".fournisseur-tab.active")
       ?.getAttribute("data-fournisseur") || "BRACONGO";
+  console.log("Nouvel achat pour fournisseur actif:", activeFournisseur);
 
   if (activeFournisseur === "BRACONGO") {
     const bracongoAddTab = document.getElementById("bracongoAddTab");
@@ -4615,21 +4622,21 @@ async function initModuleAchats() {
   afficherListeAchats("BRACONGO", moisActuel, anneeActuelle);
   afficherListeAchats("BRALIMA", moisActuel, anneeActuelle);
 
-  let activeFournisseur = "BRACONGO";
-  const activeTab = document.querySelector(".fournisseur-tab.active");
-  if (activeTab) {
-    activeFournisseur = activeTab.getAttribute("data-fournisseur");
-  }
-
   const bracongoContainer = document.getElementById("bracongoAchatsContainer");
   const bralimaContainer = document.getElementById("bralimaAchatsContainer");
 
-  if (activeFournisseur === "BRACONGO") {
-    if (bracongoContainer) bracongoContainer.classList.remove("hidden");
-    if (bralimaContainer) bralimaContainer.classList.add("hidden");
-  } else {
-    if (bracongoContainer) bracongoContainer.classList.add("hidden");
-    if (bralimaContainer) bralimaContainer.classList.remove("hidden");
+  // Par défaut, montrer BRACONGO si aucun n'est visible
+  if (bracongoContainer && bralimaContainer) {
+    const bracongoHidden = bracongoContainer.classList.contains("hidden");
+    const bralimaHidden = bralimaContainer.classList.contains("hidden");
+
+    if (
+      (bracongoHidden && bralimaHidden) ||
+      (!bracongoHidden && !bralimaHidden)
+    ) {
+      bracongoContainer.classList.remove("hidden");
+      bralimaContainer.classList.add("hidden");
+    }
   }
 
   const nouvelAchatBtn = document.getElementById("nouvelAchatBtn");
