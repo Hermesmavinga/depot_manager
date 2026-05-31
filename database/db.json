@@ -292,6 +292,88 @@
       "total": 2500,
       "date": "2026-05-31T19:02:30.911Z",
       "id": "LeRczTe"
+    },
+    {
+      "clientId": "1",
+      "produits": [
+        {
+          "nom": "Nkoy",
+          "quantite": 1,
+          "prix": 2500,
+          "type": "bouteille"
+        }
+      ],
+      "total": 2500,
+      "date": "2026-05-31T20:21:16.396Z",
+      "id": "eaJ_1iZ"
+    },
+    {
+      "clientId": "1",
+      "produits": [
+        {
+          "nom": "Sprite",
+          "quantite": 1,
+          "prix": 45000,
+          "type": "cassier"
+        },
+        {
+          "nom": "heineken",
+          "quantite": 1,
+          "prix": 40000,
+          "type": "cassier"
+        },
+        {
+          "nom": "ffff",
+          "quantite": 1,
+          "prix": 3000,
+          "type": "bouteille"
+        },
+        {
+          "nom": "vitalo",
+          "quantite": 1,
+          "prix": 2500,
+          "type": "bouteille"
+        },
+        {
+          "nom": "Primus",
+          "quantite": 1,
+          "prix": 60000,
+          "type": "cassier"
+        },
+        {
+          "nom": "fanta",
+          "quantite": 1,
+          "prix": 1200,
+          "type": "bouteille"
+        },
+        {
+          "nom": "Primus",
+          "quantite": 1,
+          "prix": 2500,
+          "type": "bouteille"
+        },
+        {
+          "nom": "fanta",
+          "quantite": 1,
+          "prix": 1200,
+          "type": "bouteille"
+        },
+        {
+          "nom": "heineken",
+          "quantite": 1,
+          "prix": 40000,
+          "type": "cassier"
+        },
+        {
+          "nom": "likofi",
+          "quantite": 1,
+          "prix": 50000,
+          "type": "cassier"
+        }
+      ],
+      "total": 245400,
+      "date": "2026-05-31T20:24:51.205Z",
+      "id": "qkBzch9"
     }
   ],
   "achats": [

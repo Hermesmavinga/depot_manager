@@ -3496,28 +3496,51 @@ function genererFacturePanier(vente, client) {
   const total = vn.total,
     produits = vn.produits;
   const dateF = new Date().toLocaleString("fr-FR");
+
   doc.setFontSize(22);
   doc.setFont("helvetica", "bold");
   doc.text("FACTURE", w / 2, 20, { align: "center" });
+
   doc.setFontSize(9);
   doc.setFont("helvetica", "normal");
   doc.text("VentesPro SARL", m, 35);
-  doc.text("Kinshasa, RDC", m, 45);
+  doc.text("Kinshasa, RDC", m, 43);
   doc.text(`Facture N°: ${vente.id || "N/A"}`, rt - 40, 35, { align: "right" });
-  doc.text(`Date: ${dateF}`, rt - 40, 40, { align: "right" });
-  doc.line(m, 55, rt, 55);
+  doc.text(`Date: ${dateF}`, rt - 40, 43, { align: "right" });
+
+  doc.line(m, 52, rt, 52);
+
+  // SECTION CLIENT - VERSION CORRIGÉE AVEC ALIGNEMENT DYNAMIQUE
   doc.setFontSize(11);
   doc.setFont("helvetica", "bold");
   doc.text("Client :", m, 68);
+
+  const largeurLabelClient = doc.getTextWidth("Client :");
+
   doc.setFont("helvetica", "normal");
   doc.setFontSize(10);
-  doc.text(client.nom, m + 30, 68);
-  doc.text(`Tél: ${client.telephone || "N/A"}`, m, 75);
-  doc.text(`Code: ${client.id}`, m, 82);
+  doc.text(client.nom, m + largeurLabelClient + 2, 68);
+
+  // Téléphone avec alignement dynamique
+  doc.setFont("helvetica", "bold");
+  doc.text("Tél :", m, 75);
+  const largeurTel = doc.getTextWidth("Tél :");
+  doc.setFont("helvetica", "normal");
+  doc.text(client.telephone || "N/A", m + largeurTel + 2, 75);
+
+  // Code avec alignement dynamique
+  doc.setFont("helvetica", "bold");
+  doc.text("Code :", m, 82);
+  const largeurCode = doc.getTextWidth("Code :");
+  doc.setFont("helvetica", "normal");
+  doc.text(String(client.id), m + largeurCode + 2, 82);
+
   doc.line(m, 90, rt, 90);
+
   doc.setFontSize(11);
   doc.setFont("helvetica", "bold");
   doc.text("Détails", m, 102);
+
   doc.setFontSize(9);
   doc.setFont("helvetica", "bold");
   doc.text("Produit", m, 112);
@@ -3525,9 +3548,11 @@ function genererFacturePanier(vente, client) {
   doc.text("Prix unit.", 130, 112);
   doc.text("Total", 165, 112);
   doc.line(m, 114, rt, 114);
+
   let y = 122;
   doc.setFont("helvetica", "normal");
   doc.setFontSize(9);
+
   produits.forEach((p) => {
     const st = p.prix * p.quantite;
     doc.text(p.nom.substring(0, 30), m, y);
@@ -3536,18 +3561,22 @@ function genererFacturePanier(vente, client) {
     doc.text(`${formatNumberFC(st)} FC`, 165, y);
     y += 7;
   });
+
   y += 5;
   doc.line(m, y, rt, y);
   y += 8;
+
   doc.setFont("helvetica", "bold");
   doc.setFontSize(11);
   doc.text("TOTAL À PAYER :", 130, y);
   doc.setFontSize(14);
   doc.setTextColor(76, 175, 80);
   doc.text(`${formatNumberFC(total)} FC`, rt, y, { align: "right" });
+
   doc.setFontSize(8);
   doc.setTextColor(100, 100, 100);
   doc.text("Merci de votre confiance !", w / 2, 280, { align: "center" });
+
   doc.save(
     `facture_${client.nom.replace(/\s/g, "_")}_${vente.id || Date.now()}.pdf`,
   );
@@ -3591,37 +3620,62 @@ function genererFactureMensuelleMulti(ventes, client) {
   const w = doc.internal.pageSize.getWidth();
   const m = 20,
     rt = w - m;
+
   doc.setFontSize(20);
   doc.setFont("helvetica", "bold");
   doc.text("FACTURE MENSUELLE", w / 2, 20, { align: "center" });
+
   doc.setFontSize(9);
   doc.setFont("helvetica", "normal");
   doc.text("VentesPro SARL", m, 35);
-  doc.text("Kinshasa, RDC", m, 45);
+  doc.text("Kinshasa, RDC", m, 43);
   doc.text(`Période: ${moisTexte}`, rt - 40, 35, { align: "right" });
-  doc.text(`Date: ${dateF}`, rt - 40, 40, { align: "right" });
-  doc.line(m, 55, rt, 55);
+  doc.text(`Date: ${dateF}`, rt - 40, 43, { align: "right" });
+
+  doc.line(m, 52, rt, 52);
+
+  // SECTION CLIENT - VERSION CORRIGÉE AVEC ALIGNEMENT DYNAMIQUE
   doc.setFontSize(11);
   doc.setFont("helvetica", "bold");
   doc.text("Client :", m, 68);
+
+  const largeurLabelClient = doc.getTextWidth("Client :");
+
   doc.setFont("helvetica", "normal");
   doc.setFontSize(10);
-  doc.text(client.nom, m + 30, 68);
-  doc.text(`Tél: ${client.telephone || "N/A"}`, m, 75);
-  doc.text(`Code: ${client.id}`, m, 82);
+  doc.text(client.nom, m + largeurLabelClient + 2, 68);
+
+  // Téléphone avec alignement dynamique
+  doc.setFont("helvetica", "bold");
+  doc.text("Tél :", m, 75);
+  const largeurTel = doc.getTextWidth("Tél :");
+  doc.setFont("helvetica", "normal");
+  doc.text(client.telephone || "N/A", m + largeurTel + 2, 75);
+
+  // Code avec alignement dynamique
+  doc.setFont("helvetica", "bold");
+  doc.text("Code :", m, 82);
+  const largeurCode = doc.getTextWidth("Code :");
+  doc.setFont("helvetica", "normal");
+  doc.text(String(client.id), m + largeurCode + 2, 82);
+
   doc.line(m, 90, rt, 90);
+
   doc.setFontSize(11);
   doc.setFont("helvetica", "bold");
   doc.text(`Achats - ${moisTexte}`, m, 102);
+
   doc.setFontSize(9);
   doc.setFont("helvetica", "bold");
   doc.text("Date", m, 112);
   doc.text("Produits", 55, 112);
   doc.text("Total", 160, 112);
   doc.line(m, 114, rt, 114);
+
   let y = 122;
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8);
+
   ventesDuMois.forEach((v, idx) => {
     const vn = nettoyerVente(v);
     const prods = vn.produits.map((p) => `${p.nom}(${p.quantite})`).join(", ");
@@ -3635,9 +3689,11 @@ function genererFactureMensuelleMulti(ventes, client) {
       y = 20;
     }
   });
+
   y += 5;
   doc.line(m, y, rt, y);
   y += 8;
+
   doc.setFont("helvetica", "normal");
   doc.setFontSize(10);
   doc.text("Sous-total:", 130, y);
@@ -3646,15 +3702,18 @@ function genererFactureMensuelleMulti(ventes, client) {
   doc.text("Remise (5%):", 130, y);
   doc.text(`-${formatNumberFC(remise)} FC`, rt, y, { align: "right" });
   y += 10;
+
   doc.setFont("helvetica", "bold");
   doc.setFontSize(12);
   doc.text("TOTAL À PAYER :", 130, y);
   doc.setFontSize(14);
   doc.setTextColor(76, 175, 80);
   doc.text(`${formatNumberFC(totalFinal)} FC`, rt, y, { align: "right" });
+
   doc.setFontSize(8);
   doc.setTextColor(100, 100, 100);
   doc.text("Merci de votre confiance !", w / 2, 280, { align: "center" });
+
   doc.save(
     `facture_mensuelle_${client.nom.replace(/\s/g, "_")}_${moisTexte.replace(/\s/g, "_")}.pdf`,
   );
@@ -3703,7 +3762,6 @@ function exportToCSV(ventes, client) {
   URL.revokeObjectURL(url);
   showTemporaryNotification("📥 Export CSV effectué");
 }
-
 // ============================================
 // MODULE ACHATS (CORRIGÉ)
 // ============================================
