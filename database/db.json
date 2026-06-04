@@ -1,7 +1,2838 @@
 {
-  "clients": [],
-  "ventes": [],
-  "produits": [],
-  "achats": [],
+  "clients": [
+    {
+      "id": "0033671",
+      "nom": "Lungu",
+      "telephone": "0977231379"
+    },
+    {
+      "id": "033672",
+      "nom": "Hermite",
+      "telephone": "0893625142"
+    },
+    {
+      "id": "0033673",
+      "nom": "Lor Kayembe",
+      "telephone": "08124780369"
+    },
+    {
+      "id": "0033674",
+      "nom": "Jose baka",
+      "telephone": "0895552116"
+    },
+    {
+      "id": "033675",
+      "nom": "Bukoko",
+      "telephone": "0815971499"
+    },
+    {
+      "id": "033676",
+      "nom": "Lydie ch5",
+      "telephone": "0896491640"
+    },
+    {
+      "id": "0336707",
+      "nom": "Alpha ch 2",
+      "telephone": "0850445315"
+    },
+    {
+      "id": "033879",
+      "nom": "Tingana",
+      "telephone": "0815242070"
+    },
+    {
+      "id": "033578",
+      "nom": "Mavungu",
+      "telephone": "0813577605"
+    },
+    {
+      "id": "0336710",
+      "nom": "Solange botamba",
+      "telephone": "0991430105"
+    },
+    {
+      "id": "0336711",
+      "nom": "Julie sasa",
+      "telephone": "0853818567"
+    },
+    {
+      "id": "0336712",
+      "nom": "Inenge michael",
+      "telephone": "0976087180"
+    },
+    {
+      "id": "033673",
+      "nom": "Nelly musiti",
+      "telephone": "0855537951"
+    },
+    {
+      "id": "0336714",
+      "nom": "MP boketsu",
+      "telephone": "0894013994"
+    },
+    {
+      "id": "0336715",
+      "nom": "Mere double esther",
+      "telephone": "0840502669"
+    },
+    {
+      "id": "0336716",
+      "nom": "Robert Amani",
+      "telephone": "0815490756"
+    },
+    {
+      "id": "0336717",
+      "nom": "Rose",
+      "telephone": "0813777839"
+    },
+    {
+      "id": "0336718",
+      "nom": "Kevine",
+      "telephone": "0839662661"
+    },
+    {
+      "id": "0336719",
+      "nom": "Theo",
+      "telephone": "0851480636"
+    },
+    {
+      "id": "0336720",
+      "nom": "Moselu",
+      "telephone": "0810394148"
+    },
+    {
+      "id": "0336721",
+      "nom": "Nyangwe",
+      "telephone": "0897597895"
+    },
+    {
+      "id": "0336722",
+      "nom": "Ramy",
+      "telephone": "0812470530"
+    },
+    {
+      "id": "0336723",
+      "nom": "Trésor",
+      "telephone": "0829591367"
+    },
+    {
+      "id": "0336724",
+      "nom": "Champs Élisée 5",
+      "telephone": "0896491640"
+    },
+    {
+      "id": "0336725",
+      "nom": "Mbomba",
+      "telephone": "0857383155"
+    },
+    {
+      "id": "0336727",
+      "nom": "Jolie dibala",
+      "telephone": "0898628026"
+    },
+    {
+      "id": "0336728",
+      "nom": "Tarlyne",
+      "telephone": "0813006425"
+    },
+    {
+      "id": "00336729",
+      "nom": "Indenge",
+      "telephone": "0976087180"
+    },
+    {
+      "id": "00336730",
+      "nom": "Mb0mbo divine",
+      "telephone": "0897538172"
+    },
+    {
+      "id": "00336731",
+      "nom": "Mbombo",
+      "telephone": "0897538172"
+    },
+    {
+      "id": "00336732",
+      "nom": "Mbombo",
+      "telephone": "0897538172"
+    },
+    {
+      "id": "00336733",
+      "nom": "Daniel",
+      "telephone": "0848500712"
+    },
+    {
+      "id": "00336734",
+      "nom": "Migo",
+      "telephone": "0999430978"
+    },
+    {
+      "id": "00336735",
+      "nom": "Migo",
+      "telephone": "0999430978"
+    },
+    {
+      "id": "AMANDA",
+      "nom": "00336732",
+      "telephone": "0836727300"
+    },
+    {
+      "id": "0336734",
+      "nom": "Tigana kass",
+      "telephone": "0815242070"
+    },
+    {
+      "id": "0336735",
+      "nom": "A manda",
+      "telephone": "0830903364"
+    },
+    {
+      "id": "0336736",
+      "nom": "FK",
+      "telephone": "0851882455"
+    },
+    {
+      "id": "0336737",
+      "nom": "Giselle",
+      "telephone": "0830903363"
+    },
+    {
+      "id": "0336738",
+      "nom": "Ma rosine",
+      "telephone": "0990286391"
+    },
+    {
+      "id": "0336739",
+      "nom": "Tgv",
+      "telephone": "0857680250"
+    },
+    {
+      "id": "0336740",
+      "nom": "Bijoux",
+      "telephone": "0820583592"
+    },
+    {
+      "id": "00336741",
+      "nom": "Tgv",
+      "telephone": "0830903363"
+    },
+    {
+      "id": "00336742",
+      "nom": "Augustino",
+      "telephone": "0997392314"
+    },
+    {
+      "id": "00336743",
+      "nom": "Amanda",
+      "telephone": "0852122782"
+    },
+    {
+      "id": "00336744",
+      "nom": "Ma claudine",
+      "telephone": "0861209468"
+    },
+    {
+      "id": "0336747",
+      "nom": "8h30",
+      "telephone": "0830903363"
+    },
+    {
+      "id": "00336745",
+      "nom": "Sam",
+      "telephone": "0896101092"
+    },
+    {
+      "id": "00336746",
+      "nom": "Les aubins",
+      "telephone": "0811717074"
+    },
+    {
+      "id": "00336747",
+      "nom": "Grevice",
+      "telephone": "0892090455"
+    },
+    {
+      "id": "00336748",
+      "nom": "Ruffin",
+      "telephone": "0842544186"
+    },
+    {
+      "id": "00336749",
+      "nom": "Bukolo",
+      "telephone": "0815971499"
+    },
+    {
+      "id": "00336750",
+      "nom": "Regi",
+      "telephone": "0830903363"
+    },
+    {
+      "id": "00334651",
+      "nom": "Ruth",
+      "telephone": "0830903363"
+    },
+    {
+      "id": "003346512",
+      "nom": "Maman bibi",
+      "telephone": "0816567673"
+    },
+    {
+      "id": "00334652",
+      "nom": "Migo",
+      "telephone": "0999430978"
+    },
+    {
+      "id": "00334653",
+      "nom": "Philo",
+      "telephone": "0891005258"
+    },
+    {
+      "id": "0336754",
+      "nom": "Joel",
+      "telephone": "0830903363"
+    },
+    {
+      "id": "00334654",
+      "nom": "Mwanza",
+      "telephone": "0896594043"
+    },
+    {
+      "id": "00334655",
+      "nom": "Mama Lucie",
+      "telephone": "0895680135"
+    }
+  ],
+  "ventes": [
+    {
+      "clientId": "0336716",
+      "produits": [
+        {
+          "nom": "grd NKOY",
+          "quantite": 1,
+          "prix": 37000,
+          "type": "cassier"
+        }
+      ],
+      "total": 37000,
+      "date": "2026-06-01T17:18:08.517Z",
+      "id": 1
+    },
+    {
+      "clientId": "0336716",
+      "produits": [
+        {
+          "nom": "TURBO",
+          "quantite": 2,
+          "prix": 44000,
+          "type": "cassier"
+        }
+      ],
+      "total": 88000,
+      "date": "2026-06-01T17:18:40.820Z",
+      "id": 2
+    },
+    {
+      "clientId": "0336716",
+      "produits": [
+        {
+          "nom": "grd FANTA",
+          "quantite": 1,
+          "prix": 33500,
+          "type": "cassier"
+        }
+      ],
+      "total": 33500,
+      "date": "2026-06-01T17:19:22.766Z",
+      "id": 3
+    },
+    {
+      "clientId": "0336716",
+      "produits": [
+        {
+          "nom": "grd COCA",
+          "quantite": 1,
+          "prix": 33500,
+          "type": "cassier"
+        }
+      ],
+      "total": 33500,
+      "date": "2026-06-01T17:20:08.275Z",
+      "id": 4
+    },
+    {
+      "clientId": "0336716",
+      "produits": [
+        {
+          "nom": "TOP",
+          "quantite": 1,
+          "prix": 27000,
+          "type": "cassier"
+        }
+      ],
+      "total": 27000,
+      "date": "2026-06-01T17:23:22.029Z",
+      "id": 5
+    },
+    {
+      "clientId": "033578",
+      "produits": [
+        {
+          "nom": "TURBO",
+          "quantite": 1,
+          "prix": 44000,
+          "type": "cassier"
+        }
+      ],
+      "total": 44000,
+      "date": "2026-06-01T17:48:01.757Z",
+      "id": 6
+    },
+    {
+      "clientId": "033578",
+      "produits": [
+        {
+          "nom": "Maltina 33 cl",
+          "quantite": 1,
+          "prix": 32000,
+          "type": "bouteille"
+        }
+      ],
+      "total": 32000,
+      "date": "2026-06-01T17:50:50.956Z",
+      "id": 7
+    },
+    {
+      "clientId": "0336717",
+      "produits": [
+        {
+          "nom": "NKOY 65 cl",
+          "quantite": 1,
+          "prix": 37000,
+          "type": "cassier"
+        },
+        {
+          "nom": "CASTEL",
+          "quantite": 1,
+          "prix": 52500,
+          "type": "cassier"
+        }
+      ],
+      "total": 89500,
+      "date": "2026-06-02T17:44:54.633Z",
+      "id": 8
+    },
+    {
+      "clientId": "0336718",
+      "produits": [
+        {
+          "nom": "CASTEL 50cl",
+          "quantite": 6,
+          "prix": 2650,
+          "type": "bouteille"
+        },
+        {
+          "nom": "Heineken 50 Cl",
+          "quantite": 5,
+          "prix": 2650,
+          "type": "bouteille"
+        }
+      ],
+      "total": 29150,
+      "date": "2026-06-02T17:50:24.758Z",
+      "id": 9
+    },
+    {
+      "clientId": "0336719",
+      "produits": [
+        {
+          "nom": "NKOY 65 cl",
+          "quantite": 1,
+          "prix": 37000,
+          "type": "cassier"
+        },
+        {
+          "nom": "Tembo 65 cl",
+          "quantite": 6,
+          "prix": 3850,
+          "type": "bouteille"
+        }
+      ],
+      "total": 60100,
+      "date": "2026-06-02T18:23:08.022Z",
+      "id": 10
+    },
+    {
+      "clientId": "0336720",
+      "produits": [
+        {
+          "nom": "HEINEKEN",
+          "quantite": 1,
+          "prix": 53000,
+          "type": "cassier"
+        },
+        {
+          "nom": "TIGER",
+          "quantite": 1,
+          "prix": 44000,
+          "type": "cassier"
+        },
+        {
+          "nom": "grd COCA",
+          "quantite": 1,
+          "prix": 33500,
+          "type": "cassier"
+        },
+        {
+          "nom": "grd FANTA",
+          "quantite": 1,
+          "prix": 33500,
+          "type": "cassier"
+        },
+        {
+          "nom": "VITALO",
+          "quantite": 1,
+          "prix": 33500,
+          "type": "cassier"
+        },
+        {
+          "nom": "Maltina 33 cl",
+          "quantite": 1,
+          "prix": 32000,
+          "type": "cassier"
+        },
+        {
+          "nom": "Maltina 50cl cl",
+          "quantite": 1,
+          "prix": 35000,
+          "type": "cassier"
+        },
+        {
+          "nom": "grd HEINEKEN",
+          "quantite": 1,
+          "prix": 52500,
+          "type": "cassier"
+        }
+      ],
+      "total": 317000,
+      "date": "2026-06-03T07:03:13.173Z",
+      "id": 11
+    },
+    {
+      "clientId": "0336720",
+      "produits": [
+        {
+          "nom": "Énergie 33 cl",
+          "quantite": 1,
+          "prix": 32000,
+          "type": "cassier"
+        },
+        {
+          "nom": "PRIMUS",
+          "quantite": 1,
+          "prix": 37000,
+          "type": "cassier"
+        }
+      ],
+      "total": 69000,
+      "date": "2026-06-03T07:05:03.107Z",
+      "id": 12
+    },
+    {
+      "clientId": "0336721",
+      "produits": [
+        {
+          "nom": "CASTEL",
+          "quantite": 2,
+          "prix": 52500,
+          "type": "cassier"
+        },
+        {
+          "nom": "TOP",
+          "quantite": 2,
+          "prix": 27000,
+          "type": "cassier"
+        },
+        {
+          "nom": "NKOY 65 cl",
+          "quantite": 1,
+          "prix": 37000,
+          "type": "cassier"
+        }
+      ],
+      "total": 196000,
+      "date": "2026-06-03T07:16:22.131Z",
+      "id": 13
+    },
+    {
+      "clientId": "0336721",
+      "produits": [
+        {
+          "nom": "NKOY 65 cl",
+          "quantite": 2,
+          "prix": 37000,
+          "type": "cassier"
+        }
+      ],
+      "total": 74000,
+      "date": "2026-06-03T07:16:51.567Z",
+      "id": 14
+    },
+    {
+      "clientId": "0336722",
+      "produits": [
+        {
+          "nom": "CASTEL",
+          "quantite": 2,
+          "prix": 52500,
+          "type": "cassier"
+        }
+      ],
+      "total": 105000,
+      "date": "2026-06-03T07:25:13.011Z",
+      "id": 15
+    },
+    {
+      "clientId": "0336721",
+      "produits": [
+        {
+          "nom": "Maltina 50cl cl",
+          "quantite": 2,
+          "prix": 35000,
+          "type": "cassier"
+        },
+        {
+          "nom": "SPRITE",
+          "quantite": 1,
+          "prix": 30000,
+          "type": "cassier"
+        },
+        {
+          "nom": "grd HEINEKEN",
+          "quantite": 1,
+          "prix": 52500,
+          "type": "cassier"
+        }
+      ],
+      "total": 152500,
+      "date": "2026-06-03T07:31:21.501Z",
+      "id": 16
+    },
+    {
+      "clientId": "0336723",
+      "produits": [
+        {
+          "nom": "TEMBO 65 cl",
+          "quantite": 1,
+          "prix": 46000,
+          "type": "cassier"
+        },
+        {
+          "nom": "Ujana 50 Cl",
+          "quantite": 10,
+          "prix": 1675,
+          "type": "bouteille"
+        },
+        {
+          "nom": "Maltina 33 cl",
+          "quantite": 12,
+          "prix": 1600,
+          "type": "bouteille"
+        }
+      ],
+      "total": 81950,
+      "date": "2026-06-03T08:40:55.623Z",
+      "id": 17
+    },
+    {
+      "clientId": "0336724",
+      "produits": [
+        {
+          "nom": "TOP",
+          "quantite": 1,
+          "prix": 27000,
+          "type": "cassier"
+        },
+        {
+          "nom": "FANTA 50 cl",
+          "quantite": 4,
+          "prix": 33500,
+          "type": "cassier"
+        },
+        {
+          "nom": "BEAUFORT 50 cl",
+          "quantite": 5,
+          "prix": 52500,
+          "type": "cassier"
+        }
+      ],
+      "total": 423500,
+      "date": "2026-06-03T09:21:26.007Z",
+      "id": 18
+    },
+    {
+      "clientId": "0336725",
+      "produits": [
+        {
+          "nom": "Maltina 33 cl",
+          "quantite": 1,
+          "prix": 32000,
+          "type": "cassier"
+        }
+      ],
+      "total": 32000,
+      "date": "2026-06-03T09:28:32.186Z",
+      "id": 19
+    },
+    {
+      "clientId": "0336719",
+      "produits": [
+        {
+          "nom": "CASTEL",
+          "quantite": 1,
+          "prix": 52500,
+          "type": "cassier"
+        }
+      ],
+      "total": 52500,
+      "date": "2026-06-03T10:13:23.626Z",
+      "id": 20
+    },
+    {
+      "clientId": "0336727",
+      "produits": [
+        {
+          "nom": "Tembo 65 cl",
+          "quantite": 6,
+          "prix": 3850,
+          "type": "bouteille"
+        },
+        {
+          "nom": "NKOY 65 CL",
+          "quantite": 6,
+          "prix": 3100,
+          "type": "bouteille"
+        },
+        {
+          "nom": "HEINEKEN",
+          "quantite": 1,
+          "prix": 52500,
+          "type": "cassier"
+        },
+        {
+          "nom": "CASTEL 50cl",
+          "quantite": 10,
+          "prix": 2650,
+          "type": "bouteille"
+        },
+        {
+          "nom": "Coca 50 Cl",
+          "quantite": 10,
+          "prix": 1675,
+          "type": "bouteille"
+        }
+      ],
+      "total": 137450,
+      "date": "2026-06-03T10:20:02.934Z",
+      "id": 21
+    },
+    {
+      "clientId": "0336728",
+      "produits": [
+        {
+          "nom": "NKOY BLACK",
+          "quantite": 2,
+          "prix": 44000,
+          "type": "cassier"
+        },
+        {
+          "nom": "CASTEL",
+          "quantite": 1,
+          "prix": 52500,
+          "type": "cassier"
+        },
+        {
+          "nom": "NKOY 65 cl",
+          "quantite": 1,
+          "prix": 37000,
+          "type": "cassier"
+        },
+        {
+          "nom": "BEAUFORT 50 cl",
+          "quantite": 2,
+          "prix": 52500,
+          "type": "cassier"
+        }
+      ],
+      "total": 282500,
+      "date": "2026-06-03T10:25:14.771Z",
+      "id": 22
+    },
+    {
+      "clientId": "00336729",
+      "produits": [
+        {
+          "nom": "TEMBO 65 cl",
+          "quantite": 1,
+          "prix": 46000,
+          "type": "cassier"
+        },
+        {
+          "nom": "NKOY 65 cl",
+          "quantite": 1,
+          "prix": 37000,
+          "type": "cassier"
+        },
+        {
+          "nom": "Maltina 50cl cl",
+          "quantite": 1,
+          "prix": 35000,
+          "type": "cassier"
+        }
+      ],
+      "total": 118000,
+      "date": "2026-06-03T11:08:01.751Z",
+      "id": 23
+    },
+    {
+      "clientId": "00336730",
+      "produits": [
+        {
+          "nom": "TEMBO 65 cl",
+          "quantite": 2,
+          "prix": 46000,
+          "type": "cassier"
+        }
+      ],
+      "total": 92000,
+      "date": "2026-06-03T11:12:21.160Z",
+      "id": 24
+    },
+    {
+      "clientId": "00336730",
+      "produits": [
+        {
+          "nom": "CASTEL",
+          "quantite": 2,
+          "prix": 52500,
+          "type": "cassier"
+        },
+        {
+          "nom": "NKOY 65 cl",
+          "quantite": 2,
+          "prix": 37000,
+          "type": "cassier"
+        },
+        {
+          "nom": "HEINEKEN",
+          "quantite": 1,
+          "prix": 52500,
+          "type": "cassier"
+        },
+        {
+          "nom": "COCA 50 cl",
+          "quantite": 1,
+          "prix": 33500,
+          "type": "cassier"
+        }
+      ],
+      "total": 265000,
+      "date": "2026-06-03T11:31:46.774Z",
+      "id": 25
+    },
+    {
+      "clientId": "00336733",
+      "produits": [
+        {
+          "nom": "HEINEKEN",
+          "quantite": 1,
+          "prix": 52500,
+          "type": "cassier"
+        },
+        {
+          "nom": "Tembo 65 cl",
+          "quantite": 6,
+          "prix": 3850,
+          "type": "bouteille"
+        }
+      ],
+      "total": 75600,
+      "date": "2026-06-03T11:35:14.694Z",
+      "id": 26
+    },
+    {
+      "clientId": "0336734",
+      "produits": [
+        {
+          "nom": "HEINEKEN",
+          "quantite": 1,
+          "prix": 52500,
+          "type": "cassier"
+        },
+        {
+          "nom": "COCA 50 cl",
+          "quantite": 1,
+          "prix": 33500,
+          "type": "cassier"
+        }
+      ],
+      "total": 86000,
+      "date": "2026-06-03T12:19:37.490Z",
+      "id": 27
+    },
+    {
+      "clientId": "0336736",
+      "produits": [
+        {
+          "nom": "TEMBO 65 cl",
+          "quantite": 1,
+          "prix": 46000,
+          "type": "cassier"
+        }
+      ],
+      "total": 46000,
+      "date": "2026-06-03T12:37:24.054Z",
+      "id": 28
+    },
+    {
+      "clientId": "0336727",
+      "produits": [
+        {
+          "nom": "HEINEKEN",
+          "quantite": 1,
+          "prix": 52500,
+          "type": "cassier"
+        },
+        {
+          "nom": "Coca 50 Cl",
+          "quantite": 10,
+          "prix": 1675,
+          "type": "bouteille"
+        },
+        {
+          "nom": "Ujana 50 Cl",
+          "quantite": 10,
+          "prix": 1675,
+          "type": "bouteille"
+        }
+      ],
+      "total": 86000,
+      "date": "2026-06-03T12:41:11.536Z",
+      "id": 29
+    },
+    {
+      "clientId": "0336737",
+      "produits": [
+        {
+          "nom": "BEAUFORT 50 cl",
+          "quantite": 1,
+          "prix": 52500,
+          "type": "cassier"
+        },
+        {
+          "nom": "NKOY BLACK",
+          "quantite": 2,
+          "prix": 44000,
+          "type": "cassier"
+        },
+        {
+          "nom": "CASTEL",
+          "quantite": 1,
+          "prix": 52500,
+          "type": "cassier"
+        },
+        {
+          "nom": "HEINEKEN",
+          "quantite": 1,
+          "prix": 52500,
+          "type": "cassier"
+        },
+        {
+          "nom": "VITALO",
+          "quantite": 1,
+          "prix": 33500,
+          "type": "cassier"
+        },
+        {
+          "nom": "FANTA 50 cl",
+          "quantite": 1,
+          "prix": 33500,
+          "type": "cassier"
+        },
+        {
+          "nom": "COCA 50 cl",
+          "quantite": 1,
+          "prix": 33500,
+          "type": "cassier"
+        },
+        {
+          "nom": "Énergie 33 cl",
+          "quantite": 1,
+          "prix": 32000,
+          "type": "cassier"
+        },
+        {
+          "nom": "Maltina 33 cl",
+          "quantite": 1,
+          "prix": 32000,
+          "type": "cassier"
+        },
+        {
+          "nom": "SPRITE",
+          "quantite": 1,
+          "prix": 30000,
+          "type": "cassier"
+        },
+        {
+          "nom": "XXL",
+          "quantite": 1,
+          "prix": 30000,
+          "type": "cassier"
+        },
+        {
+          "nom": "PRIMUS",
+          "quantite": 1,
+          "prix": 37000,
+          "type": "cassier"
+        },
+        {
+          "nom": "TURBO",
+          "quantite": 1,
+          "prix": 44000,
+          "type": "cassier"
+        },
+        {
+          "nom": "TEMBO 65 cl",
+          "quantite": 1,
+          "prix": 46000,
+          "type": "cassier"
+        },
+        {
+          "nom": "TOP",
+          "quantite": 1,
+          "prix": 27000,
+          "type": "cassier"
+        },
+        {
+          "nom": "NKOY 65 cl",
+          "quantite": 1,
+          "prix": 37000,
+          "type": "cassier"
+        },
+        {
+          "nom": "LEGENDE",
+          "quantite": 1,
+          "prix": 52500,
+          "type": "cassier"
+        }
+      ],
+      "total": 713500,
+      "date": "2026-06-03T13:02:09.096Z",
+      "id": 30
+    },
+    {
+      "clientId": "0336738",
+      "produits": [
+        {
+          "nom": "COCA 50 cl",
+          "quantite": 1,
+          "prix": 33500,
+          "type": "cassier"
+        },
+        {
+          "nom": "FANTA 50 cl",
+          "quantite": 1,
+          "prix": 33500,
+          "type": "cassier"
+        },
+        {
+          "nom": "VITALO",
+          "quantite": 1,
+          "prix": 33500,
+          "type": "cassier"
+        },
+        {
+          "nom": "HEINEKEN",
+          "quantite": 1,
+          "prix": 52500,
+          "type": "cassier"
+        },
+        {
+          "nom": "Heineken  33 cl",
+          "quantite": 1,
+          "prix": 53000,
+          "type": "cassier"
+        },
+        {
+          "nom": "Maltina 33 cl",
+          "quantite": 1,
+          "prix": 32000,
+          "type": "cassier"
+        },
+        {
+          "nom": "Énergie 33 cl",
+          "quantite": 1,
+          "prix": 32000,
+          "type": "cassier"
+        }
+      ],
+      "total": 270000,
+      "date": "2026-06-03T13:07:07.947Z",
+      "id": 31
+    },
+    {
+      "clientId": "0336735",
+      "produits": [
+        {
+          "nom": "CASTEL",
+          "quantite": 1,
+          "prix": 52500,
+          "type": "cassier"
+        }
+      ],
+      "total": 52500,
+      "date": "2026-06-03T13:18:51.865Z",
+      "id": 32
+    },
+    {
+      "clientId": "0336740",
+      "produits": [
+        {
+          "nom": "HEINEKEN",
+          "quantite": 1,
+          "prix": 52500,
+          "type": "cassier"
+        },
+        {
+          "nom": "VITALO",
+          "quantite": 1,
+          "prix": 33500,
+          "type": "cassier"
+        }
+      ],
+      "total": 86000,
+      "date": "2026-06-03T14:11:28.297Z",
+      "id": 33
+    },
+    {
+      "clientId": "00336741",
+      "produits": [
+        {
+          "nom": "TOP",
+          "quantite": 1,
+          "prix": 27000,
+          "type": "cassier"
+        },
+        {
+          "nom": "TURBO",
+          "quantite": 1,
+          "prix": 44000,
+          "type": "cassier"
+        },
+        {
+          "nom": "Maltina 33 cl",
+          "quantite": 1,
+          "prix": 32000,
+          "type": "cassier"
+        }
+      ],
+      "total": 103000,
+      "date": "2026-06-03T14:15:55.588Z",
+      "id": 34
+    },
+    {
+      "clientId": "00336742",
+      "produits": [
+        {
+          "nom": "Énergie 33 cl",
+          "quantite": 2,
+          "prix": 32000,
+          "type": "cassier"
+        },
+        {
+          "nom": "TOP",
+          "quantite": 3,
+          "prix": 27000,
+          "type": "cassier"
+        }
+      ],
+      "total": 145000,
+      "date": "2026-06-03T14:18:52.833Z",
+      "id": 35
+    },
+    {
+      "clientId": "00336743",
+      "produits": [
+        {
+          "nom": "Ujana 50 Cl",
+          "quantite": 10,
+          "prix": 1675,
+          "type": "bouteille"
+        },
+        {
+          "nom": "XXL 33cl",
+          "quantite": 12,
+          "prix": 1250,
+          "type": "bouteille"
+        },
+        {
+          "nom": "Maltina 33 cl",
+          "quantite": 12,
+          "prix": 1600,
+          "type": "bouteille"
+        }
+      ],
+      "total": 50950,
+      "date": "2026-06-03T14:25:14.858Z",
+      "id": 36
+    },
+    {
+      "clientId": "00336744",
+      "produits": [
+        {
+          "nom": "Maltina 50cl cl",
+          "quantite": 1,
+          "prix": 35000,
+          "type": "cassier"
+        },
+        {
+          "nom": "PRIMUS",
+          "quantite": 1,
+          "prix": 37000,
+          "type": "cassier"
+        },
+        {
+          "nom": "NKOY 65 cl",
+          "quantite": 1,
+          "prix": 37000,
+          "type": "cassier"
+        }
+      ],
+      "total": 109000,
+      "date": "2026-06-03T14:29:50.039Z",
+      "id": 37
+    },
+    {
+      "clientId": "0336720",
+      "produits": [
+        {
+          "nom": "HEINEKEN",
+          "quantite": 3,
+          "prix": 52500,
+          "type": "cassier"
+        },
+        {
+          "nom": "Heineken  33 cl",
+          "quantite": 1,
+          "prix": 53000,
+          "type": "cassier"
+        },
+        {
+          "nom": "FANTA 50 cl",
+          "quantite": 1,
+          "prix": 33500,
+          "type": "cassier"
+        }
+      ],
+      "total": 244000,
+      "date": "2026-06-04T06:51:48.430Z",
+      "id": 38
+    },
+    {
+      "clientId": "0336707",
+      "produits": [
+        {
+          "nom": "TURBO",
+          "quantite": 2,
+          "prix": 44000,
+          "type": "cassier"
+        },
+        {
+          "nom": "HEINEKEN",
+          "quantite": 2,
+          "prix": 52500,
+          "type": "cassier"
+        },
+        {
+          "nom": "LEGENDE",
+          "quantite": 1,
+          "prix": 52500,
+          "type": "cassier"
+        },
+        {
+          "nom": "LEGENDE 33 cl",
+          "quantite": 1,
+          "prix": 53000,
+          "type": "cassier"
+        },
+        {
+          "nom": "NKOY 65 cl",
+          "quantite": 2,
+          "prix": 37000,
+          "type": "cassier"
+        },
+        {
+          "nom": "CASTEL",
+          "quantite": 2,
+          "prix": 52500,
+          "type": "cassier"
+        }
+      ],
+      "total": 477500,
+      "date": "2026-06-04T07:40:01.658Z",
+      "id": 39
+    },
+    {
+      "clientId": "0336747",
+      "produits": [
+        {
+          "nom": "NKOY 65 cl",
+          "quantite": 1,
+          "prix": 37000,
+          "type": "cassier"
+        },
+        {
+          "nom": "Maltina 33 cl",
+          "quantite": 1,
+          "prix": 32000,
+          "type": "cassier"
+        },
+        {
+          "nom": "HEINEKEN",
+          "quantite": 1,
+          "prix": 52500,
+          "type": "cassier"
+        },
+        {
+          "nom": "VITALO",
+          "quantite": 1,
+          "prix": 33500,
+          "type": "cassier"
+        },
+        {
+          "nom": "TURBO",
+          "quantite": 1,
+          "prix": 44000,
+          "type": "cassier"
+        },
+        {
+          "nom": "COCA 50 cl",
+          "quantite": 1,
+          "prix": 33500,
+          "type": "cassier"
+        }
+      ],
+      "total": 232500,
+      "date": "2026-06-04T07:57:07.396Z",
+      "id": 40
+    },
+    {
+      "clientId": "00336745",
+      "produits": [
+        {
+          "nom": "Maltina 50cl cl",
+          "quantite": 1,
+          "prix": 35000,
+          "type": "cassier"
+        },
+        {
+          "nom": "Heineken 50 Cl",
+          "quantite": 13,
+          "prix": 2650,
+          "type": "bouteille"
+        },
+        {
+          "nom": "NKOY 65 cl",
+          "quantite": 1,
+          "prix": 37000,
+          "type": "cassier"
+        },
+        {
+          "nom": "CASTEL",
+          "quantite": 1,
+          "prix": 52500,
+          "type": "cassier"
+        }
+      ],
+      "total": 158950,
+      "date": "2026-06-04T08:17:12.878Z",
+      "id": 41
+    },
+    {
+      "clientId": "00336746",
+      "produits": [
+        {
+          "nom": "NKOY 65 cl",
+          "quantite": 2,
+          "prix": 37000,
+          "type": "cassier"
+        },
+        {
+          "nom": "CASTEL",
+          "quantite": 2,
+          "prix": 52500,
+          "type": "cassier"
+        },
+        {
+          "nom": "COCA 50 cl",
+          "quantite": 1,
+          "prix": 33500,
+          "type": "cassier"
+        }
+      ],
+      "total": 212500,
+      "date": "2026-06-04T08:25:48.430Z",
+      "id": 42
+    },
+    {
+      "clientId": "00336747",
+      "produits": [
+        {
+          "nom": "CASTEL",
+          "quantite": 1,
+          "prix": 52500,
+          "type": "cassier"
+        },
+        {
+          "nom": "COCA 50 cl",
+          "quantite": 1,
+          "prix": 33500,
+          "type": "cassier"
+        }
+      ],
+      "total": 86000,
+      "date": "2026-06-04T08:40:15.688Z",
+      "id": 43
+    },
+    {
+      "clientId": "00336748",
+      "produits": [
+        {
+          "nom": "Turbo 50 Cl",
+          "quantite": 10,
+          "prix": 2200,
+          "type": "bouteille"
+        }
+      ],
+      "total": 22000,
+      "date": "2026-06-04T08:52:03.676Z",
+      "id": 44
+    },
+    {
+      "clientId": "00336749",
+      "produits": [
+        {
+          "nom": "FANTA 50 cl",
+          "quantite": 1,
+          "prix": 33500,
+          "type": "cassier"
+        },
+        {
+          "nom": "Fanta 50 Cl",
+          "quantite": 10,
+          "prix": 1675,
+          "type": "bouteille"
+        },
+        {
+          "nom": "Heineken 50 Cl",
+          "quantite": 10,
+          "prix": 2650,
+          "type": "bouteille"
+        },
+        {
+          "nom": "NKOY 65 cl",
+          "quantite": 1,
+          "prix": 37000,
+          "type": "cassier"
+        }
+      ],
+      "total": 113750,
+      "date": "2026-06-04T08:55:28.332Z",
+      "id": 45
+    },
+    {
+      "clientId": "00336749",
+      "produits": [
+        {
+          "nom": "NKOY 65 CL",
+          "quantite": 6,
+          "prix": 3100,
+          "type": "bouteille"
+        }
+      ],
+      "total": 18600,
+      "date": "2026-06-04T09:12:43.340Z",
+      "id": 46
+    },
+    {
+      "clientId": "0336710",
+      "produits": [
+        {
+          "nom": "CASTEL",
+          "quantite": 1,
+          "prix": 52500,
+          "type": "cassier"
+        }
+      ],
+      "total": 52500,
+      "date": "2026-06-04T09:41:12.442Z",
+      "id": 47
+    },
+    {
+      "clientId": "0336710",
+      "produits": [
+        {
+          "nom": "BEAUFORT 50 cl",
+          "quantite": 1,
+          "prix": 52500,
+          "type": "cassier"
+        },
+        {
+          "nom": "TURBO",
+          "quantite": 1,
+          "prix": 44000,
+          "type": "cassier"
+        },
+        {
+          "nom": "COCA 50 cl",
+          "quantite": 1,
+          "prix": 33500,
+          "type": "cassier"
+        },
+        {
+          "nom": "TEMBO 65 cl",
+          "quantite": 1,
+          "prix": 46000,
+          "type": "cassier"
+        }
+      ],
+      "total": 176000,
+      "date": "2026-06-04T09:48:41.647Z",
+      "id": 48
+    },
+    {
+      "clientId": "00336748",
+      "produits": [
+        {
+          "nom": "CASTEL",
+          "quantite": 3,
+          "prix": 52500,
+          "type": "cassier"
+        }
+      ],
+      "total": 157500,
+      "date": "2026-06-04T09:51:35.590Z",
+      "id": 49
+    },
+    {
+      "clientId": "00336750",
+      "produits": [
+        {
+          "nom": "CASTEL",
+          "quantite": 5,
+          "prix": 52500,
+          "type": "cassier"
+        },
+        {
+          "nom": "TEMBO 65 cl",
+          "quantite": 2,
+          "prix": 46000,
+          "type": "cassier"
+        },
+        {
+          "nom": "NKOY 65 cl",
+          "quantite": 3,
+          "prix": 37000,
+          "type": "cassier"
+        }
+      ],
+      "total": 465500,
+      "date": "2026-06-04T09:57:01.920Z",
+      "id": 50
+    },
+    {
+      "clientId": "00334651",
+      "produits": [
+        {
+          "nom": "CASTEL 50cl",
+          "quantite": 13,
+          "prix": 2650,
+          "type": "bouteille"
+        },
+        {
+          "nom": "Turbo 50 Cl",
+          "quantite": 10,
+          "prix": 2200,
+          "type": "bouteille"
+        },
+        {
+          "nom": "Coca 50 Cl",
+          "quantite": 10,
+          "prix": 1675,
+          "type": "bouteille"
+        }
+      ],
+      "total": 73200,
+      "date": "2026-06-04T10:00:44.946Z",
+      "id": 51
+    },
+    {
+      "clientId": "003346512",
+      "produits": [
+        {
+          "nom": "NKOY 65 cl",
+          "quantite": 1,
+          "prix": 37000,
+          "type": "cassier"
+        },
+        {
+          "nom": "COCA 50 cl",
+          "quantite": 1,
+          "prix": 33500,
+          "type": "cassier"
+        },
+        {
+          "nom": "Maltina 50cl cl",
+          "quantite": 1,
+          "prix": 35000,
+          "type": "cassier"
+        },
+        {
+          "nom": "CASTEL 50cl",
+          "quantite": 10,
+          "prix": 2650,
+          "type": "bouteille"
+        }
+      ],
+      "total": 132000,
+      "date": "2026-06-04T10:05:57.003Z",
+      "id": 52
+    },
+    {
+      "clientId": "033676",
+      "produits": [
+        {
+          "nom": "NKOY BLACK",
+          "quantite": 3,
+          "prix": 44000,
+          "type": "cassier"
+        },
+        {
+          "nom": "TOP",
+          "quantite": 3,
+          "prix": 27000,
+          "type": "cassier"
+        },
+        {
+          "nom": "BEAUFORT 50 cl",
+          "quantite": 9,
+          "prix": 52500,
+          "type": "cassier"
+        },
+        {
+          "nom": "SPRITE",
+          "quantite": 2,
+          "prix": 30000,
+          "type": "cassier"
+        },
+        {
+          "nom": "Maltina 50cl cl",
+          "quantite": 5,
+          "prix": 35000,
+          "type": "cassier"
+        },
+        {
+          "nom": "VITALO",
+          "quantite": 2,
+          "prix": 33500,
+          "type": "cassier"
+        },
+        {
+          "nom": "TURBO",
+          "quantite": 1,
+          "prix": 44000,
+          "type": "cassier"
+        }
+      ],
+      "total": 1031500,
+      "date": "2026-06-04T10:08:27.368Z",
+      "id": 53
+    },
+    {
+      "clientId": "00334652",
+      "produits": [
+        {
+          "nom": "Coca 50 Cl",
+          "quantite": 10,
+          "prix": 1675,
+          "type": "bouteille"
+        },
+        {
+          "nom": "Heineken 50 Cl",
+          "quantite": 10,
+          "prix": 2650,
+          "type": "bouteille"
+        }
+      ],
+      "total": 43250,
+      "date": "2026-06-04T10:10:55.210Z",
+      "id": 54
+    },
+    {
+      "clientId": "00334653",
+      "produits": [
+        {
+          "nom": "CASTEL",
+          "quantite": 3,
+          "prix": 52500,
+          "type": "cassier"
+        },
+        {
+          "nom": "HEINEKEN",
+          "quantite": 2,
+          "prix": 52500,
+          "type": "cassier"
+        },
+        {
+          "nom": "TURBO",
+          "quantite": 1,
+          "prix": 44000,
+          "type": "cassier"
+        },
+        {
+          "nom": "COCA 50 cl",
+          "quantite": 1,
+          "prix": 33500,
+          "type": "cassier"
+        },
+        {
+          "nom": "FANTA 50 cl",
+          "quantite": 1,
+          "prix": 33500,
+          "type": "cassier"
+        },
+        {
+          "nom": "PRIMUS",
+          "quantite": 1,
+          "prix": 37000,
+          "type": "cassier"
+        }
+      ],
+      "total": 410500,
+      "date": "2026-06-04T10:25:04.327Z",
+      "id": 55
+    },
+    {
+      "clientId": "0336754",
+      "produits": [
+        {
+          "nom": "CASTEL",
+          "quantite": 1,
+          "prix": 52500,
+          "type": "cassier"
+        },
+        {
+          "nom": "NKOY 65 cl",
+          "quantite": 1,
+          "prix": 37000,
+          "type": "cassier"
+        },
+        {
+          "nom": "BEAUFORT 50 cl",
+          "quantite": 1,
+          "prix": 52500,
+          "type": "cassier"
+        },
+        {
+          "nom": "NKOY BLACK",
+          "quantite": 1,
+          "prix": 44000,
+          "type": "cassier"
+        },
+        {
+          "nom": "TURBO",
+          "quantite": 1,
+          "prix": 44000,
+          "type": "cassier"
+        },
+        {
+          "nom": "pt COCA",
+          "quantite": 2,
+          "prix": 30000,
+          "type": "cassier"
+        }
+      ],
+      "total": 290000,
+      "date": "2026-06-04T10:38:46.555Z",
+      "id": 56
+    },
+    {
+      "clientId": "0336754",
+      "produits": [
+        {
+          "nom": "NKOY Black 50 cl",
+          "quantite": 18,
+          "prix": 2200,
+          "type": "bouteille"
+        },
+        {
+          "nom": "Beaufort 50cl",
+          "quantite": 4,
+          "prix": 2650,
+          "type": "bouteille"
+        },
+        {
+          "nom": "Coca 50 Cl",
+          "quantite": 10,
+          "prix": 1675,
+          "type": "bouteille"
+        },
+        {
+          "nom": "NKOY 33 cl",
+          "quantite": 1,
+          "prix": 1850,
+          "type": "bouteille"
+        },
+        {
+          "nom": "Top 50cl",
+          "quantite": 1,
+          "prix": 1350,
+          "type": "bouteille"
+        }
+      ],
+      "total": 70150,
+      "date": "2026-06-04T10:47:00.344Z",
+      "id": 57
+    },
+    {
+      "clientId": "00334654",
+      "produits": [
+        {
+          "nom": "COCA 50 cl",
+          "quantite": 5,
+          "prix": 33500,
+          "type": "cassier"
+        },
+        {
+          "nom": "FANTA 50 cl",
+          "quantite": 15,
+          "prix": 33500,
+          "type": "cassier"
+        },
+        {
+          "nom": "HEINEKEN",
+          "quantite": 5,
+          "prix": 52500,
+          "type": "cassier"
+        },
+        {
+          "nom": "VITALO",
+          "quantite": 5,
+          "prix": 33500,
+          "type": "cassier"
+        },
+        {
+          "nom": "Énergie 33 cl",
+          "quantite": 5,
+          "prix": 32000,
+          "type": "cassier"
+        }
+      ],
+      "total": 1260000,
+      "date": "2026-06-04T11:04:28.940Z",
+      "id": 58
+    },
+    {
+      "clientId": "00334655",
+      "produits": [
+        {
+          "nom": "CASTEL",
+          "quantite": 2,
+          "prix": 52500,
+          "type": "cassier"
+        },
+        {
+          "nom": "BEAUFORT 50 cl",
+          "quantite": 2,
+          "prix": 52500,
+          "type": "cassier"
+        },
+        {
+          "nom": "NKOY BLACK",
+          "quantite": 2,
+          "prix": 44000,
+          "type": "cassier"
+        },
+        {
+          "nom": "TEMBO 65 cl",
+          "quantite": 1,
+          "prix": 46000,
+          "type": "cassier"
+        },
+        {
+          "nom": "HEINEKEN",
+          "quantite": 1,
+          "prix": 52500,
+          "type": "cassier"
+        },
+        {
+          "nom": "FANTA 50 cl",
+          "quantite": 1,
+          "prix": 33500,
+          "type": "cassier"
+        },
+        {
+          "nom": "COCA 50 cl",
+          "quantite": 1,
+          "prix": 33500,
+          "type": "cassier"
+        },
+        {
+          "nom": "Heineken  33 cl",
+          "quantite": 1,
+          "prix": 53000,
+          "type": "cassier"
+        }
+      ],
+      "total": 516500,
+      "date": "2026-06-04T11:09:21.705Z",
+      "id": 59
+    },
+    {
+      "clientId": "00336750",
+      "produits": [
+        {
+          "nom": "Maltina 50cl cl",
+          "quantite": 5,
+          "prix": 35000,
+          "type": "cassier"
+        }
+      ],
+      "total": 175000,
+      "date": "2026-06-04T11:37:49.915Z",
+      "id": 60
+    },
+    {
+      "clientId": "0336719",
+      "produits": [
+        {
+          "nom": "CASTEL",
+          "quantite": 1,
+          "prix": 52500,
+          "type": "cassier"
+        }
+      ],
+      "total": 52500,
+      "date": "2026-06-04T12:08:38.967Z",
+      "id": 61
+    },
+    {
+      "clientId": "0336723",
+      "produits": [
+        {
+          "nom": "BEAUFORT 50 cl",
+          "quantite": 2,
+          "prix": 52500,
+          "type": "cassier"
+        },
+        {
+          "nom": "NKOY 33 cl",
+          "quantite": 2,
+          "prix": 44000,
+          "type": "cassier"
+        },
+        {
+          "nom": "TEMBO 65 cl",
+          "quantite": 1,
+          "prix": 46000,
+          "type": "cassier"
+        },
+        {
+          "nom": "NKOY 65 cl",
+          "quantite": 1,
+          "prix": 37000,
+          "type": "cassier"
+        },
+        {
+          "nom": "CASTEL",
+          "quantite": 1,
+          "prix": 52500,
+          "type": "cassier"
+        }
+      ],
+      "total": 328500,
+      "date": "2026-06-04T12:20:20.219Z",
+      "id": 62
+    },
+    {
+      "clientId": "0336727",
+      "produits": [
+        {
+          "nom": "TURBO",
+          "quantite": 1,
+          "prix": 44000,
+          "type": "cassier"
+        }
+      ],
+      "total": 44000,
+      "date": "2026-06-04T12:53:50.071Z",
+      "id": 63
+    },
+    {
+      "clientId": "0336727",
+      "produits": [
+        {
+          "nom": "TURBO",
+          "quantite": 1,
+          "prix": 44000,
+          "type": "cassier"
+        }
+      ],
+      "total": 44000,
+      "date": "2026-06-04T12:53:50.431Z",
+      "id": 64
+    },
+    {
+      "clientId": "0336727",
+      "produits": [],
+      "total": 0,
+      "date": "2026-06-04T12:53:54.171Z",
+      "id": 65
+    }
+  ],
+  "produits": [
+    {
+      "nom": "NKOY 33 cl",
+      "prixCassier": 44000,
+      "format": "33 cl",
+      "type": "cassier",
+      "fournisseur": "BRACONGO",
+      "nbBouteilles": 24,
+      "id": 1
+    },
+    {
+      "nom": "NKOY 65 cl",
+      "prixCassier": 37000,
+      "format": "65 cl",
+      "type": "cassier",
+      "fournisseur": "BRACONGO",
+      "nbBouteilles": 12,
+      "id": 2
+    },
+    {
+      "nom": "33 export",
+      "prixCassier": 40000,
+      "format": "65 cl",
+      "type": "cassier",
+      "fournisseur": "BRACONGO",
+      "nbBouteilles": 12,
+      "id": 3
+    },
+    {
+      "nom": "TEMBO 65 cl",
+      "prixCassier": 46000,
+      "format": "65 cl",
+      "type": "cassier",
+      "fournisseur": "BRACONGO",
+      "nbBouteilles": 12,
+      "id": 4
+    },
+    {
+      "nom": "NKOY BLACK",
+      "prixCassier": 44000,
+      "format": "50 cl",
+      "type": "cassier",
+      "fournisseur": "BRACONGO",
+      "nbBouteilles": 20,
+      "id": 5
+    },
+    {
+      "nom": "CASTEL",
+      "prixCassier": 52500,
+      "format": "50 cl",
+      "type": "cassier",
+      "fournisseur": "BRACONGO",
+      "nbBouteilles": 20,
+      "id": 6
+    },
+    {
+      "nom": "BEAUFORT 50 cl",
+      "prixCassier": 52500,
+      "format": "50 cl",
+      "type": "cassier",
+      "fournisseur": "BRACONGO",
+      "nbBouteilles": 20,
+      "id": 7
+    },
+    {
+      "nom": "BEAUFORT 33 cl",
+      "prixCassier": 53000,
+      "format": "33 cl",
+      "type": "cassier",
+      "fournisseur": "BRACONGO",
+      "nbBouteilles": 24,
+      "id": 8
+    },
+    {
+      "nom": "XXL",
+      "prixCassier": 30000,
+      "format": "33 cl",
+      "type": "cassier",
+      "fournisseur": "BRACONGO",
+      "nbBouteilles": 24,
+      "id": 9
+    },
+    {
+      "nom": "EAU VIVE",
+      "prixCassier": 14000,
+      "format": "50 cl",
+      "type": "cassier",
+      "fournisseur": "BRACONGO",
+      "nbBouteilles": 20,
+      "id": 10
+    },
+    {
+      "nom": "DOPPEL",
+      "prixCassier": 46000,
+      "format": "50 cl",
+      "type": "cassier",
+      "fournisseur": "BRACONGO",
+      "nbBouteilles": 20,
+      "id": 11
+    },
+    {
+      "nom": "TEMBO 33 cl",
+      "prixCassier": 55000,
+      "format": "33 cl",
+      "type": "cassier",
+      "fournisseur": "BRACONGO",
+      "nbBouteilles": 24,
+      "id": 12
+    },
+    {
+      "nom": "TOP",
+      "prixCassier": 27000,
+      "format": "50 cl",
+      "type": "cassier",
+      "fournisseur": "BRACONGO",
+      "nbBouteilles": 20,
+      "id": 13
+    },
+    {
+      "nom": "PRIMUS",
+      "prixCassier": 37000,
+      "format": "72 cl",
+      "type": "cassier",
+      "fournisseur": "BRALIMA",
+      "nbBouteilles": 12,
+      "id": 14
+    },
+    {
+      "nom": "HEINEKEN",
+      "prixCassier": 53000,
+      "format": "33 cl",
+      "type": "cassier",
+      "fournisseur": "BRALIMA",
+      "nbBouteilles": 24,
+      "id": 15
+    },
+    {
+      "nom": "HEINEKEN",
+      "prixCassier": 53000,
+      "format": "33 cl",
+      "type": "cassier",
+      "fournisseur": "BRALIMA",
+      "nbBouteilles": 24,
+      "id": 16
+    },
+    {
+      "nom": "COCA",
+      "prixCassier": 30000,
+      "format": "33 cl",
+      "type": "cassier",
+      "fournisseur": "BRALIMA",
+      "nbBouteilles": 24,
+      "id": 17
+    },
+    {
+      "nom": "COCA",
+      "prixCassier": 30000,
+      "format": "33 cl",
+      "type": "cassier",
+      "fournisseur": "BRALIMA",
+      "nbBouteilles": 24,
+      "id": 18
+    },
+    {
+      "nom": "TURBO",
+      "prixCassier": 44000,
+      "format": "50 cl",
+      "type": "cassier",
+      "fournisseur": "BRALIMA",
+      "nbBouteilles": 20,
+      "id": 19
+    },
+    {
+      "nom": "COCA 50 cl",
+      "prixCassier": 33500,
+      "format": "50 cl",
+      "type": "cassier",
+      "fournisseur": "BRALIMA",
+      "nbBouteilles": 20,
+      "id": 20
+    },
+    {
+      "nom": "FANTA 50 cl",
+      "prixCassier": 33500,
+      "format": "50 cl",
+      "type": "cassier",
+      "fournisseur": "BRALIMA",
+      "nbBouteilles": 20,
+      "id": 21
+    },
+    {
+      "nom": "VITALO",
+      "prixCassier": 33500,
+      "format": "50 cl",
+      "type": "cassier",
+      "fournisseur": "BRALIMA",
+      "nbBouteilles": 20,
+      "id": 22
+    },
+    {
+      "nom": "pt COCA",
+      "prixCassier": 30000,
+      "format": "33 cl",
+      "type": "cassier",
+      "fournisseur": "BRALIMA",
+      "nbBouteilles": 24,
+      "id": 23
+    },
+    {
+      "nom": "pt FANTA",
+      "prixCassier": 30000,
+      "format": "33 cl",
+      "type": "cassier",
+      "fournisseur": "BRALIMA",
+      "nbBouteilles": 24,
+      "id": 24
+    },
+    {
+      "nom": "SPRITE",
+      "prixCassier": 30000,
+      "format": "33 cl",
+      "type": "cassier",
+      "fournisseur": "BRALIMA",
+      "nbBouteilles": 24,
+      "id": 25
+    },
+    {
+      "nom": "VITAL’O 33 cl",
+      "prixCassier": 30000,
+      "format": "33 cl",
+      "type": "cassier",
+      "fournisseur": "BRALIMA",
+      "nbBouteilles": 24,
+      "id": 26
+    },
+    {
+      "nom": "TONIC",
+      "prixCassier": 30000,
+      "format": "33 cl",
+      "type": "cassier",
+      "fournisseur": "BRALIMA",
+      "nbBouteilles": 24,
+      "id": 27
+    },
+    {
+      "nom": "HEINEKEN",
+      "prixCassier": 52500,
+      "format": "50 cl",
+      "type": "cassier",
+      "fournisseur": "BRALIMA",
+      "nbBouteilles": 20,
+      "id": 28
+    },
+    {
+      "nom": "LEGENDE",
+      "prixCassier": 52500,
+      "format": "50 cl",
+      "type": "cassier",
+      "fournisseur": "BRALIMA",
+      "nbBouteilles": 20,
+      "id": 29
+    },
+    {
+      "nom": "LEGENDE 33 cl",
+      "prixCassier": 53000,
+      "format": "33 cl",
+      "type": "cassier",
+      "fournisseur": "BRALIMA",
+      "nbBouteilles": 24,
+      "id": 30
+    },
+    {
+      "nom": "TIGER",
+      "prixCassier": 46000,
+      "format": "50 cl",
+      "type": "cassier",
+      "fournisseur": "BRALIMA",
+      "nbBouteilles": 20,
+      "id": 31
+    },
+    {
+      "nom": "NKOY 33 cl",
+      "prix": 1850,
+      "format": "33 CL",
+      "type": "bouteille",
+      "fournisseur": "BRACONGO",
+      "id": 32
+    },
+    {
+      "nom": "NKOY 65 CL",
+      "prix": 3100,
+      "format": "65 CL",
+      "type": "bouteille",
+      "fournisseur": "BRACONGO",
+      "id": 33
+    },
+    {
+      "nom": "CASTEL 50cl",
+      "prix": 2650,
+      "format": "5o cl",
+      "type": "bouteille",
+      "fournisseur": "BRACONGO",
+      "id": 34
+    },
+    {
+      "nom": "Beaufort 50cl",
+      "prix": 2650,
+      "format": "5o cl",
+      "type": "bouteille",
+      "fournisseur": "BRACONGO",
+      "id": 35
+    },
+    {
+      "nom": "Top 50cl",
+      "prix": 1350,
+      "format": "5o cl",
+      "type": "bouteille",
+      "fournisseur": "BRACONGO",
+      "id": 36
+    },
+    {
+      "nom": "Tembo 65 cl",
+      "prix": 3850,
+      "format": "65 Cl",
+      "type": "bouteille",
+      "fournisseur": "BRACONGO",
+      "id": 37
+    },
+    {
+      "nom": "XXL 33cl",
+      "prix": 1250,
+      "format": "33 cl",
+      "type": "bouteille",
+      "fournisseur": "BRACONGO",
+      "id": 38
+    },
+    {
+      "nom": "NKOY Black 50 cl",
+      "prix": 2200,
+      "format": "50 cl",
+      "type": "bouteille",
+      "fournisseur": "BRACONGO",
+      "id": 39
+    },
+    {
+      "nom": "33 exp 65 cl",
+      "prix": 3350,
+      "format": "65 Cl",
+      "type": "bouteille",
+      "fournisseur": "BRACONGO",
+      "id": 40
+    },
+    {
+      "nom": "Eau vive 50cl",
+      "prix": 700,
+      "format": "50 cl",
+      "type": "bouteille",
+      "fournisseur": "BRACONGO",
+      "id": 41
+    },
+    {
+      "nom": "Eau gazeuse 50cl",
+      "prix": 750,
+      "format": "50 cl",
+      "type": "bouteille",
+      "fournisseur": "BRACONGO",
+      "id": 42
+    },
+    {
+      "nom": "Eau gazeuse 50cl",
+      "prixCassier": 15000,
+      "format": "50 cl",
+      "type": "cassier",
+      "fournisseur": "BRACONGO",
+      "nbBouteilles": 20,
+      "id": 43
+    },
+    {
+      "nom": "Maltina 33 cl",
+      "prix": 1350,
+      "format": "33 cl",
+      "type": "bouteille",
+      "fournisseur": "BRALIMA",
+      "id": 44
+    },
+    {
+      "nom": "Maltina 33 cl",
+      "prixCassier": 32000,
+      "format": "33 cl",
+      "type": "cassier",
+      "fournisseur": "BRALIMA",
+      "nbBouteilles": 20,
+      "id": 45
+    },
+    {
+      "nom": "Maltina 50cl cl",
+      "prixCassier": 35000,
+      "format": "50 cl",
+      "type": "cassier",
+      "fournisseur": "BRALIMA",
+      "nbBouteilles": 20,
+      "id": 46
+    },
+    {
+      "nom": "Primus 65 cl",
+      "prix": 3100,
+      "format": "65 Cl",
+      "type": "bouteille",
+      "fournisseur": "BRALIMA",
+      "id": 47
+    },
+    {
+      "nom": "HEINEKEN 33 CL",
+      "prix": 2250,
+      "format": "33 cl",
+      "type": "bouteille",
+      "fournisseur": "BRALIMA",
+      "id": 48
+    },
+    {
+      "nom": "Coca 33 cl",
+      "prix": 1250,
+      "format": "33 cl",
+      "type": "bouteille",
+      "fournisseur": "BRALIMA",
+      "id": 49
+    },
+    {
+      "nom": "Turbo 50 Cl",
+      "prix": 2200,
+      "format": "50 Cl",
+      "type": "bouteille",
+      "fournisseur": "BRALIMA",
+      "id": 50
+    },
+    {
+      "nom": "Coca 50 Cl",
+      "prix": 1675,
+      "format": "50 Cl",
+      "type": "bouteille",
+      "fournisseur": "BRALIMA",
+      "id": 51
+    },
+    {
+      "nom": "Fanta 50 Cl",
+      "prix": 1675,
+      "format": "50 Cl",
+      "type": "bouteille",
+      "fournisseur": "BRALIMA",
+      "id": 52
+    },
+    {
+      "nom": "Ujana 50 Cl",
+      "prix": 1675,
+      "format": "50 CL",
+      "type": "bouteille",
+      "fournisseur": "BRALIMA",
+      "id": 53
+    },
+    {
+      "nom": "Fanta 33 Cl",
+      "prix": 1250,
+      "format": "33 CL",
+      "type": "bouteille",
+      "fournisseur": "BRALIMA",
+      "id": 54
+    },
+    {
+      "nom": "Sprite 33 CL",
+      "prix": 1250,
+      "format": "33 CL",
+      "type": "bouteille",
+      "fournisseur": "BRALIMA",
+      "id": 55
+    },
+    {
+      "nom": "Vital'o 33 CL",
+      "prix": 1250,
+      "format": "33 CL",
+      "type": "bouteille",
+      "fournisseur": "BRALIMA",
+      "id": 56
+    },
+    {
+      "nom": "Heineken 50 Cl",
+      "prix": 2650,
+      "format": "50 Cl",
+      "type": "bouteille",
+      "fournisseur": "BRALIMA",
+      "id": 57
+    },
+    {
+      "nom": "Legende 50 Cl",
+      "prix": 2650,
+      "format": "50 Cl",
+      "type": "bouteille",
+      "fournisseur": "BRALIMA",
+      "id": 58
+    },
+    {
+      "nom": "Legende 33 Cl",
+      "prix": 2250,
+      "format": "33 Cl",
+      "type": "bouteille",
+      "fournisseur": "BRALIMA",
+      "id": 59
+    },
+    {
+      "nom": "Tigger 50 CL",
+      "prix": 2200,
+      "format": "50 Cl",
+      "type": "bouteille",
+      "fournisseur": "BRALIMA",
+      "id": 60
+    },
+    {
+      "nom": "Maltina 50 Cl",
+      "prix": 1750,
+      "format": "50 Cl",
+      "type": "bouteille",
+      "fournisseur": "BRALIMA",
+      "id": 61
+    },
+    {
+      "nom": "Tonic 33 Cl",
+      "prix": 1250,
+      "format": "33 Cl",
+      "type": "bouteille",
+      "fournisseur": "BRALIMA",
+      "id": 62
+    },
+    {
+      "nom": "Énergie 33 cl",
+      "prixCassier": 32000,
+      "format": "33  cl",
+      "type": "cassier",
+      "fournisseur": "BRALIMA",
+      "nbBouteilles": 24,
+      "id": 63
+    },
+    {
+      "nom": "Heineken  33 cl",
+      "prixCassier": 53000,
+      "format": "33 cl",
+      "type": "cassier",
+      "fournisseur": "BRALIMA",
+      "nbBouteilles": 24,
+      "id": 64
+    },
+    {
+      "nom": "Énergie 33 cl",
+      "prix": 1350,
+      "format": "33 cl",
+      "type": "bouteille",
+      "fournisseur": "BRALIMA",
+      "id": 65
+    }
+  ],
+  "achats": [
+    {
+      "fournisseur": "BRACONGO",
+      "produit": "NKOY BLACK",
+      "quantite": 150,
+      "prixUnitaire": 44000,
+      "total": 6600000,
+      "statut": "actif",
+      "date": "2026-06-02T14:02:25.889Z",
+      "mois": 6,
+      "annee": 2026,
+      "id": 1
+    },
+    {
+      "fournisseur": "BRACONGO",
+      "produit": "CASTEL",
+      "quantite": 149,
+      "prixUnitaire": 52500,
+      "total": 7822500,
+      "statut": "actif",
+      "date": "2026-06-02T13:02:00.000Z",
+      "mois": 6,
+      "annee": 2026,
+      "id": 2
+    },
+    {
+      "fournisseur": "BRACONGO",
+      "produit": "TOP",
+      "quantite": 20,
+      "prixUnitaire": 27000,
+      "total": 540000,
+      "statut": "actif",
+      "date": "2026-06-02T14:04:40.864Z",
+      "mois": 6,
+      "annee": 2026,
+      "id": 3
+    },
+    {
+      "fournisseur": "BRACONGO",
+      "produit": "NKOY 65 cl",
+      "quantite": 80,
+      "prixUnitaire": 37000,
+      "total": 2960000,
+      "statut": "actif",
+      "date": "2026-06-02T14:05:13.760Z",
+      "mois": 6,
+      "annee": 2026,
+      "id": 4
+    },
+    {
+      "fournisseur": "BRACONGO",
+      "produit": "TEMBO 65 cl",
+      "quantite": 40,
+      "prixUnitaire": 46000,
+      "total": 1840000,
+      "statut": "actif",
+      "date": "2026-06-02T14:09:11.717Z",
+      "mois": 6,
+      "annee": 2026,
+      "id": 5
+    },
+    {
+      "fournisseur": "BRALIMA",
+      "produit": "TURBO",
+      "quantite": 55,
+      "prixUnitaire": 44000,
+      "total": 2420000,
+      "statut": "actif",
+      "date": "2026-06-02T18:32:30.420Z",
+      "mois": 6,
+      "annee": 2026,
+      "id": 25
+    },
+    {
+      "fournisseur": "BRALIMA",
+      "produit": "PRIMUS",
+      "quantite": 20,
+      "prixUnitaire": 37000,
+      "total": 740000,
+      "statut": "actif",
+      "date": "2026-06-02T18:32:30.676Z",
+      "mois": 6,
+      "annee": 2026,
+      "id": 28
+    },
+    {
+      "fournisseur": "BRALIMA",
+      "produit": "grd COCA",
+      "quantite": 22,
+      "prixUnitaire": 33500,
+      "total": 737000,
+      "statut": "actif",
+      "date": "2026-06-02T18:32:30.982Z",
+      "mois": 6,
+      "annee": 2026,
+      "id": 31
+    },
+    {
+      "fournisseur": "BRALIMA",
+      "produit": "grd FANTA",
+      "quantite": 18,
+      "prixUnitaire": 33500,
+      "total": 603000,
+      "statut": "actif",
+      "date": "2026-06-02T18:32:31.308Z",
+      "mois": 6,
+      "annee": 2026,
+      "id": 33
+    },
+    {
+      "fournisseur": "BRALIMA",
+      "produit": "HEINEKEN",
+      "quantite": 6,
+      "prixUnitaire": 53000,
+      "total": 318000,
+      "statut": "actif",
+      "date": "2026-06-02T18:32:31.640Z",
+      "mois": 6,
+      "annee": 2026,
+      "id": 35
+    },
+    {
+      "fournisseur": "BRALIMA",
+      "produit": "grd HEINEKEN",
+      "quantite": 48,
+      "prixUnitaire": 52500,
+      "total": 2520000,
+      "statut": "actif",
+      "date": "2026-06-02T18:32:31.895Z",
+      "mois": 6,
+      "annee": 2026,
+      "id": 37
+    },
+    {
+      "fournisseur": "BRALIMA",
+      "produit": "pt LEGENDE",
+      "quantite": 5,
+      "prixUnitaire": 53000,
+      "total": 265000,
+      "statut": "actif",
+      "date": "2026-06-02T18:32:32.211Z",
+      "mois": 6,
+      "annee": 2026,
+      "id": 39
+    },
+    {
+      "fournisseur": "BRALIMA",
+      "produit": "LEGENDE",
+      "quantite": 5,
+      "prixUnitaire": 52500,
+      "total": 262500,
+      "statut": "actif",
+      "date": "2026-06-02T18:32:32.473Z",
+      "mois": 6,
+      "annee": 2026,
+      "id": 41
+    },
+    {
+      "fournisseur": "BRALIMA",
+      "produit": "VITALO",
+      "quantite": 45,
+      "prixUnitaire": 33500,
+      "total": 1507500,
+      "statut": "actif",
+      "date": "2026-06-02T18:32:32.869Z",
+      "mois": 6,
+      "annee": 2026,
+      "id": 42
+    },
+    {
+      "fournisseur": "BRALIMA",
+      "produit": "Maltina 33 cl",
+      "quantite": 15,
+      "prixUnitaire": 32000,
+      "total": 480000,
+      "statut": "actif",
+      "date": "2026-06-02T18:32:33.127Z",
+      "mois": 6,
+      "annee": 2026,
+      "id": 43
+    },
+    {
+      "fournisseur": "BRALIMA",
+      "produit": "Maltina 50cl cl",
+      "quantite": 32,
+      "prixUnitaire": 35000,
+      "total": 1120000,
+      "statut": "actif",
+      "date": "2026-06-02T18:32:33.454Z",
+      "mois": 6,
+      "annee": 2026,
+      "id": 44
+    },
+    {
+      "fournisseur": "BRALIMA",
+      "produit": "FANTA 50 cl",
+      "quantite": 30,
+      "prixUnitaire": 33500,
+      "total": 1005000,
+      "statut": "actif",
+      "date": "2026-06-03T08:55:26.000Z",
+      "mois": 6,
+      "annee": 2026,
+      "id": 47
+    },
+    {
+      "fournisseur": "BRALIMA",
+      "produit": "pt FANTA",
+      "quantite": 5,
+      "prixUnitaire": 30000,
+      "total": 150000,
+      "statut": "actif",
+      "date": "2026-06-03T08:55:26.298Z",
+      "mois": 6,
+      "annee": 2026,
+      "id": 48
+    },
+    {
+      "fournisseur": "BRALIMA",
+      "produit": "Énergie 33 cl",
+      "quantite": 20,
+      "prixUnitaire": 32000,
+      "total": 640000,
+      "statut": "actif",
+      "date": "2026-06-03T08:55:26.581Z",
+      "mois": 6,
+      "annee": 2026,
+      "id": 50
+    },
+    {
+      "fournisseur": "BRALIMA",
+      "produit": "TURBO",
+      "quantite": 50,
+      "prixUnitaire": 44000,
+      "total": 2200000,
+      "statut": "actif",
+      "date": "2026-06-03T08:55:27.425Z",
+      "mois": 6,
+      "annee": 2026,
+      "id": 53
+    },
+    {
+      "fournisseur": "BRALIMA",
+      "produit": "Heineken  33 cl",
+      "quantite": 5,
+      "prixUnitaire": 53000,
+      "total": 265000,
+      "statut": "actif",
+      "date": "2026-06-03T08:55:27.733Z",
+      "mois": 6,
+      "annee": 2026,
+      "id": 56
+    },
+    {
+      "fournisseur": "BRALIMA",
+      "produit": "COCA",
+      "quantite": 5,
+      "prixUnitaire": 30000,
+      "total": 150000,
+      "statut": "actif",
+      "date": "2026-06-03T08:55:28.951Z",
+      "mois": 6,
+      "annee": 2026,
+      "id": 64
+    },
+    {
+      "fournisseur": "BRALIMA",
+      "produit": "VITAL’O 33 cl",
+      "quantite": 5,
+      "prixUnitaire": 30000,
+      "total": 150000,
+      "statut": "actif",
+      "date": "2026-06-03T08:55:29.233Z",
+      "mois": 6,
+      "annee": 2026,
+      "id": 65
+    }
+  ],
   "echeanciers": []
 }

@@ -170,8 +170,9 @@ function afficherProduitsListe(prods) {
 }
 function formatId(id) {
   if (!id) return "";
-  if (id.length <= 12) return id;
-  return id.substring(0, 8) + "...";
+  const idStr = String(id);
+  if (idStr.length <= 12) return idStr;
+  return idStr.substring(0, 8) + "...";
 }
 
 // ============================================
@@ -1020,7 +1021,7 @@ function renderClientStats(ventesClient, filterYear) {
     const ventesListeHtml = mois.ventes
       .map(
         (v) =>
-          `<div class="sale-item"><div><div class="font-medium text-gray-800">Vente #${v.id.substring(0, 8)}</div><div class="text-xs text-gray-500">${formatDate(v.date)}</div><div class="text-xs text-gray-400 mt-1">${v.produits.map((p) => `${escapeHtml(p.nom)} (${p.quantite})`).join(", ")}</div></div><div class="text-right"><div class="font-bold text-emerald-600">${formatNumberFC(v.montant)} FC</div><button onclick="genererFactureVente('${v.id}', '${currentClientData.id}')" class="text-blue-600 text-xs hover:text-blue-800 mt-1">🧾 Facture</button></div></div>`,
+          `<div class="sale-item"><div><div class="font-medium text-gray-800">Vente #${String(v.id).substring(0, 8)}</div><div class="text-xs text-gray-500">${formatDate(v.date)}</div><div class="text-xs text-gray-400 mt-1">${v.produits.map((p) => `${escapeHtml(p.nom)} (${p.quantite})`).join(", ")}</div></div><div class="text-right"><div class="font-bold text-emerald-600">${formatNumberFC(v.montant)} FC</div><button onclick="genererFactureVente('${v.id}', '${currentClientData.id}')" class="text-blue-600 text-xs hover:text-blue-800 mt-1">🧾 Facture</button></div></div>`,
       )
       .join("");
     ventesHtml += `<div class="month-group"><div class="month-header" onclick="this.nextElementSibling.classList.toggle('show')"><span><i class="fas fa-calendar-alt mr-2"></i>${mois.nom}</span><span class="flex gap-4"><span class="text-white/80 text-sm">Total: ${formatNumberFC(mois.total)} FC</span><i class="fas fa-chevron-down"></i></span></div><div class="month-details"><div class="grid grid-cols-3 gap-3 mb-4 pb-3 border-b border-gray-200"><div class="text-center"><p class="text-xs text-gray-500">Ventes</p><p class="font-bold text-gray-700">${mois.ventes.length}</p></div><div class="text-center"><p class="text-xs text-gray-500">Remise 5%</p><p class="font-bold text-orange-600">${formatNumberFC(mois.remise)} FC</p></div><div class="text-center"><p class="text-xs text-gray-500">Net à payer</p><p class="font-bold text-emerald-600">${formatNumberFC(mois.net)} FC</p></div></div><div class="space-y-2 max-h-64 overflow-y-auto">${ventesListeHtml}</div></div></div>`;
@@ -1055,7 +1056,7 @@ async function exporterHistoriqueClientFiltre() {
         .map((p) => `${p.nom}(${p.quantite})`)
         .join(", ");
       return [
-        vente.id,
+        String(vente.id),
         formatDate(vente.date),
         vn.total,
         remise,
@@ -1140,9 +1141,9 @@ async function genererFactureClientParAnnee() {
     doc.text("Client :", m, 68);
     doc.setFont("helvetica", "normal");
     doc.setFontSize(10);
-    doc.text(client.nom, m + 30, 68);
-    doc.text(`Téléphone: ${client.telephone}`, m, 75);
-    doc.text(`Code Client: ${client.id}`, m, 82);
+    doc.text(client.nom, m + 22, 68);
+    doc.text(`Téléphone: ${client.telephone}`, m + 22, 75);
+    doc.text(`Code Client: ${client.id}`, m + 22, 82);
     doc.line(m, 90, rt, 90);
     doc.setFontSize(11);
     doc.setFont("helvetica", "bold");
@@ -1565,7 +1566,7 @@ function afficherListeEcheanciers() {
                   <th class="px-4 py-3 text-right text-xs font-medium text-gray-500">Net à payer</th>
                   <th class="px-4 py-3 text-center text-xs font-medium text-gray-500">Date limite</th>
                   <th class="px-4 py-3 text-center text-xs font-medium text-gray-500">Actions</th>
-                </tr>
+                <tr>
               </thead>
               <tbody>
                 ${echeanciersNonPayes
@@ -1576,16 +1577,16 @@ function afficherListeEcheanciers() {
                       <div class="font-medium">${escapeHtml(e.clientNom)}</div>
                       <div class="text-xs text-gray-400">${e.clientId}</div>
                     </td>
-                    <td class="px-4 py-3 text-center text-sm">${new Date(e.annee, e.mois - 1, 1).toLocaleDateString("fr-FR", { month: "short", year: "numeric" })}</td>
-                    <td class="px-4 py-3 text-right text-sm">${formatNumberFC(e.totalAchats)} FC</td>
-                    <td class="px-4 py-3 text-right text-sm text-green-600">- ${formatNumberFC(e.remise)} FC</td>
-                    <td class="px-4 py-3 text-right font-bold text-emerald-600">${formatNumberFC(e.netAPayer)} FC</td>
-                    <td class="px-4 py-3 text-center text-sm">${new Date(e.dateLimite).toLocaleDateString("fr-FR")}</td>
+                    <td class="px-4 py-3 text-center text-sm">${new Date(e.annee, e.mois - 1, 1).toLocaleDateString("fr-FR", { month: "short", year: "numeric" })}<\/td>
+                    <td class="px-4 py-3 text-right text-sm">${formatNumberFC(e.totalAchats)} FC<\/td>
+                    <td class="px-4 py-3 text-right text-sm text-green-600">- ${formatNumberFC(e.remise)} FC<\/td>
+                    <td class="px-4 py-3 text-right font-bold text-emerald-600">${formatNumberFC(e.netAPayer)} FC<\/td>
+                    <td class="px-4 py-3 text-center text-sm">${new Date(e.dateLimite).toLocaleDateString("fr-FR")}<\/td>
                     <td class="px-4 py-3 text-center">
                       <button onclick="marquerCommePaye('${e.id}')" class="bg-emerald-600 text-white px-2 py-1 rounded text-xs hover:bg-emerald-700">
                         <i class="fas fa-check mr-1"></i> Payé
                       </button>
-                    </td>
+                    <\/td>
                   </tr>
                 `,
                   )
@@ -1593,11 +1594,11 @@ function afficherListeEcheanciers() {
               </tbody>
               <tfoot class="bg-gray-50 font-bold">
                 <tr>
-                  <td colspan="2" class="px-4 py-3">TOTAL</td>
-                  <td class="px-4 py-3 text-right">${formatNumberFC(echeanciersNonPayes.reduce((s, e) => s + e.totalAchats, 0))} FC</td>
-                  <td class="px-4 py-3 text-right text-green-600">- ${formatNumberFC(echeanciersNonPayes.reduce((s, e) => s + e.remise, 0))} FC</td>
-                  <td class="px-4 py-3 text-right text-emerald-600">${formatNumberFC(totalGlobal)} FC</td>
-                  <td colspan="2"></td>
+                  <td colspan="2" class="px-4 py-3">TOTAL<\/td>
+                  <td class="px-4 py-3 text-right">${formatNumberFC(echeanciersNonPayes.reduce((s, e) => s + e.totalAchats, 0))} FC<\/td>
+                  <td class="px-4 py-3 text-right text-green-600">- ${formatNumberFC(echeanciersNonPayes.reduce((s, e) => s + e.remise, 0))} FC<\/td>
+                  <td class="px-4 py-3 text-right text-emerald-600">${formatNumberFC(totalGlobal)} FC<\/td>
+                  <td colspan="2"><\/td>
                 </tr>
               </tfoot>
             </table>
@@ -3297,30 +3298,32 @@ window.genererFactureClientRapport = async function (clientId, mois, annee) {
     doc.setFontSize(9);
     doc.setFont("helvetica", "normal");
     doc.text("VentesPro SARL", m, 35);
-    doc.text("Kinshasa, RDC", m, 45);
+    doc.text("Kinshasa, RDC", m, 43);
     doc.text(`Période: ${moisNom}`, rt - 40, 35, { align: "right" });
-    doc.text(`Date: ${dateF}`, rt - 40, 40, { align: "right" });
-    doc.line(m, 55, rt, 55);
+    doc.text(`Date: ${dateF}`, rt - 40, 43, { align: "right" });
+    doc.line(m, 52, rt, 52);
+
     doc.setFontSize(11);
     doc.setFont("helvetica", "bold");
-    doc.text("Client :", m, 68);
+    doc.text("Client :", m, 65);
     doc.setFont("helvetica", "normal");
     doc.setFontSize(10);
-    doc.text(client.nom, m + 30, 68);
-    doc.text(`Tél: ${client.telephone || "N/A"}`, m, 75);
-    doc.text(`Code: ${client.id}`, m, 82);
-    doc.line(m, 90, rt, 90);
+    doc.text(client.nom, m + 22, 65);
+    doc.text(`Tél: ${client.telephone || "N/A"}`, m + 22, 73);
+    doc.text(`Code: ${client.id}`, m + 22, 81);
+    doc.line(m, 88, rt, 88);
+
     doc.setFontSize(11);
     doc.setFont("helvetica", "bold");
-    doc.text("Détail des achats", m, 102);
+    doc.text("Détail des achats", m, 100);
     doc.setFontSize(9);
     doc.setFont("helvetica", "bold");
-    doc.text("Date", m, 112);
-    doc.text("Produits", 55, 112);
-    doc.text("Total", 160, 112);
-    doc.line(m, 114, rt, 114);
+    doc.text("Date", m, 110);
+    doc.text("Produits", 55, 110);
+    doc.text("Total", 160, 110);
+    doc.line(m, 112, rt, 112);
 
-    let y = 122;
+    let y = 120;
     doc.setFont("helvetica", "normal");
     doc.setFontSize(8);
     ventesClient.forEach((v, idx) => {
@@ -3513,43 +3516,43 @@ function genererFacturePanier(vente, client) {
   // SECTION CLIENT - VERSION CORRIGÉE AVEC ALIGNEMENT DYNAMIQUE
   doc.setFontSize(11);
   doc.setFont("helvetica", "bold");
-  doc.text("Client :", m, 68);
+  doc.text("Client :", m, 65);
 
   const largeurLabelClient = doc.getTextWidth("Client :");
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(10);
-  doc.text(client.nom, m + largeurLabelClient + 2, 68);
+  doc.text(client.nom, m + largeurLabelClient + 2, 65);
 
   // Téléphone avec alignement dynamique
   doc.setFont("helvetica", "bold");
-  doc.text("Tél :", m, 75);
+  doc.text("Tél :", m, 73);
   const largeurTel = doc.getTextWidth("Tél :");
   doc.setFont("helvetica", "normal");
-  doc.text(client.telephone || "N/A", m + largeurTel + 2, 75);
+  doc.text(client.telephone || "N/A", m + largeurTel + 2, 73);
 
   // Code avec alignement dynamique
   doc.setFont("helvetica", "bold");
-  doc.text("Code :", m, 82);
+  doc.text("Code :", m, 81);
   const largeurCode = doc.getTextWidth("Code :");
   doc.setFont("helvetica", "normal");
-  doc.text(String(client.id), m + largeurCode + 2, 82);
+  doc.text(String(client.id), m + largeurCode + 2, 81);
 
-  doc.line(m, 90, rt, 90);
+  doc.line(m, 88, rt, 88);
 
   doc.setFontSize(11);
   doc.setFont("helvetica", "bold");
-  doc.text("Détails", m, 102);
+  doc.text("Détails", m, 100);
 
   doc.setFontSize(9);
   doc.setFont("helvetica", "bold");
-  doc.text("Produit", m, 112);
-  doc.text("Qté", 100, 112);
-  doc.text("Prix unit.", 130, 112);
-  doc.text("Total", 165, 112);
-  doc.line(m, 114, rt, 114);
+  doc.text("Produit", m, 110);
+  doc.text("Qté", 100, 110);
+  doc.text("Prix unit.", 130, 110);
+  doc.text("Total", 165, 110);
+  doc.line(m, 112, rt, 112);
 
-  let y = 122;
+  let y = 120;
   doc.setFont("helvetica", "normal");
   doc.setFontSize(9);
 
@@ -3637,42 +3640,42 @@ function genererFactureMensuelleMulti(ventes, client) {
   // SECTION CLIENT - VERSION CORRIGÉE AVEC ALIGNEMENT DYNAMIQUE
   doc.setFontSize(11);
   doc.setFont("helvetica", "bold");
-  doc.text("Client :", m, 68);
+  doc.text("Client :", m, 65);
 
   const largeurLabelClient = doc.getTextWidth("Client :");
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(10);
-  doc.text(client.nom, m + largeurLabelClient + 2, 68);
+  doc.text(client.nom, m + largeurLabelClient + 2, 65);
 
   // Téléphone avec alignement dynamique
   doc.setFont("helvetica", "bold");
-  doc.text("Tél :", m, 75);
+  doc.text("Tél :", m, 73);
   const largeurTel = doc.getTextWidth("Tél :");
   doc.setFont("helvetica", "normal");
-  doc.text(client.telephone || "N/A", m + largeurTel + 2, 75);
+  doc.text(client.telephone || "N/A", m + largeurTel + 2, 73);
 
   // Code avec alignement dynamique
   doc.setFont("helvetica", "bold");
-  doc.text("Code :", m, 82);
+  doc.text("Code :", m, 81);
   const largeurCode = doc.getTextWidth("Code :");
   doc.setFont("helvetica", "normal");
-  doc.text(String(client.id), m + largeurCode + 2, 82);
+  doc.text(String(client.id), m + largeurCode + 2, 81);
 
-  doc.line(m, 90, rt, 90);
+  doc.line(m, 88, rt, 88);
 
   doc.setFontSize(11);
   doc.setFont("helvetica", "bold");
-  doc.text(`Achats - ${moisTexte}`, m, 102);
+  doc.text(`Achats - ${moisTexte}`, m, 100);
 
   doc.setFontSize(9);
   doc.setFont("helvetica", "bold");
-  doc.text("Date", m, 112);
-  doc.text("Produits", 55, 112);
-  doc.text("Total", 160, 112);
-  doc.line(m, 114, rt, 114);
+  doc.text("Date", m, 110);
+  doc.text("Produits", 55, 110);
+  doc.text("Total", 160, 110);
+  doc.line(m, 112, rt, 112);
 
-  let y = 122;
+  let y = 120;
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8);
 
@@ -3748,9 +3751,13 @@ function exportToCSV(ventes, client) {
       prods = vn.produits.map((p) => `${p.nom}(${p.quantite})`).join(", ");
       qt = vn.produits.reduce((s, p) => s + p.quantite, 0);
     }
-    return [v.id, prods, qt, formatNumberFC(vn.total), formatDate(v.date)].map(
-      fmt,
-    );
+    return [
+      String(v.id),
+      prods,
+      qt,
+      formatNumberFC(vn.total),
+      formatDate(v.date),
+    ].map(fmt);
   });
   const csv = [headers, ...rows].map((r) => r.join(sep)).join("\n");
   const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
@@ -3762,8 +3769,9 @@ function exportToCSV(ventes, client) {
   URL.revokeObjectURL(url);
   showTemporaryNotification("📥 Export CSV effectué");
 }
+
 // ============================================
-// MODULE ACHATS (CORRIGÉ)
+// MODULE ACHATS
 // ============================================
 async function chargerAchats() {
   try {
@@ -4362,7 +4370,7 @@ function initSelecteursProduitsAchats() {
 }
 
 // ============================================
-// INITIALISATION DES ONGLETS ACHATS (CORRIGÉE FINAL)
+// INITIALISATION DES ONGLETS ACHATS (CORRIGÉE)
 // ============================================
 
 function initAchatsTabs() {
@@ -4370,7 +4378,6 @@ function initAchatsTabs() {
   const bracongoContainer = document.getElementById("bracongoAchatsContainer");
   const bralimaContainer = document.getElementById("bralimaAchatsContainer");
 
-  // Fonction pour activer le bon onglet fournisseur
   function setActiveFournisseurTab(fournisseur) {
     console.log("setActiveFournisseurTab appelé avec:", fournisseur);
     const btns = document.querySelectorAll(".fournisseur-tab");
@@ -4385,12 +4392,9 @@ function initAchatsTabs() {
     });
   }
 
-  // Ajouter les écouteurs d'événements SANS clonage problématique
   fournisseurBtns.forEach((btn) => {
-    // Supprimer les anciens écouteurs
-    const oldBtn = btn;
     const newBtn = btn.cloneNode(true);
-    oldBtn.parentNode.replaceChild(newBtn, oldBtn);
+    btn.parentNode.replaceChild(newBtn, btn);
 
     newBtn.addEventListener("click", (e) => {
       e.preventDefault();
@@ -4431,7 +4435,6 @@ function initAchatsTabs() {
     });
   });
 
-  // Initialiser l'état actif basé sur le conteneur visible
   if (bralimaContainer && !bralimaContainer.classList.contains("hidden")) {
     setActiveFournisseurTab("BRALIMA");
   } else {
@@ -4456,8 +4459,6 @@ function initAchatsSecondaryTabs() {
         "border-blue-500",
       );
       bracongoListeTab.classList.add("text-gray-600");
-      bracongoListeTab.style.borderBottomColor = "transparent";
-      bracongoListeTab.style.color = "#6b7280";
     }
     if (bracongoAddTab) {
       bracongoAddTab.classList.remove(
@@ -4466,8 +4467,6 @@ function initAchatsSecondaryTabs() {
         "border-blue-500",
       );
       bracongoAddTab.classList.add("text-gray-600");
-      bracongoAddTab.style.borderBottomColor = "transparent";
-      bracongoAddTab.style.color = "#6b7280";
     }
   }
 
@@ -4478,9 +4477,6 @@ function initAchatsSecondaryTabs() {
       e.preventDefault();
       resetBracongoTabs();
       newListeTab.classList.add("active", "text-blue-600", "border-blue-500");
-      newListeTab.classList.remove("text-gray-600");
-      newListeTab.style.borderBottomColor = "#3b82f6";
-      newListeTab.style.color = "#3b82f6";
 
       if (bracongoListeContainer)
         bracongoListeContainer.classList.remove("hidden");
@@ -4503,9 +4499,6 @@ function initAchatsSecondaryTabs() {
       e.preventDefault();
       resetBracongoTabs();
       newAddTab.classList.add("active", "text-blue-600", "border-blue-500");
-      newAddTab.classList.remove("text-gray-600");
-      newAddTab.style.borderBottomColor = "#3b82f6";
-      newAddTab.style.color = "#3b82f6";
 
       if (bracongoListeContainer)
         bracongoListeContainer.classList.add("hidden");
@@ -4530,8 +4523,6 @@ function initAchatsSecondaryTabs() {
         "border-blue-500",
       );
       bralimaListeTab.classList.add("text-gray-600");
-      bralimaListeTab.style.borderBottomColor = "transparent";
-      bralimaListeTab.style.color = "#6b7280";
     }
     if (bralimaAddTab) {
       bralimaAddTab.classList.remove(
@@ -4540,8 +4531,6 @@ function initAchatsSecondaryTabs() {
         "border-blue-500",
       );
       bralimaAddTab.classList.add("text-gray-600");
-      bralimaAddTab.style.borderBottomColor = "transparent";
-      bralimaAddTab.style.color = "#6b7280";
     }
   }
 
@@ -4552,9 +4541,6 @@ function initAchatsSecondaryTabs() {
       e.preventDefault();
       resetBralimaTabs();
       newListeTab.classList.add("active", "text-blue-600", "border-blue-500");
-      newListeTab.classList.remove("text-gray-600");
-      newListeTab.style.borderBottomColor = "#3b82f6";
-      newListeTab.style.color = "#3b82f6";
 
       if (bralimaListeContainer)
         bralimaListeContainer.classList.remove("hidden");
@@ -4577,9 +4563,6 @@ function initAchatsSecondaryTabs() {
       e.preventDefault();
       resetBralimaTabs();
       newAddTab.classList.add("active", "text-blue-600", "border-blue-500");
-      newAddTab.classList.remove("text-gray-600");
-      newAddTab.style.borderBottomColor = "#3b82f6";
-      newAddTab.style.color = "#3b82f6";
 
       if (bralimaListeContainer) bralimaListeContainer.classList.add("hidden");
       if (bralimaAddContainer) bralimaAddContainer.classList.remove("hidden");
@@ -4593,7 +4576,6 @@ function handleNouvelAchat() {
     document
       .querySelector(".fournisseur-tab.active")
       ?.getAttribute("data-fournisseur") || "BRACONGO";
-  console.log("Nouvel achat pour fournisseur actif:", activeFournisseur);
 
   if (activeFournisseur === "BRACONGO") {
     const bracongoAddTab = document.getElementById("bracongoAddTab");
@@ -4612,8 +4594,6 @@ function handleNouvelAchat() {
         "border-blue-500",
       );
       bracongoListeTab.classList.add("text-gray-600");
-      bracongoListeTab.style.borderBottomColor = "transparent";
-      bracongoListeTab.style.color = "#6b7280";
 
       bracongoAddTab.classList.add(
         "active",
@@ -4621,8 +4601,6 @@ function handleNouvelAchat() {
         "border-blue-500",
       );
       bracongoAddTab.classList.remove("text-gray-600");
-      bracongoAddTab.style.borderBottomColor = "#3b82f6";
-      bracongoAddTab.style.color = "#3b82f6";
 
       if (bracongoListeContainer)
         bracongoListeContainer.classList.add("hidden");
@@ -4644,13 +4622,9 @@ function handleNouvelAchat() {
         "border-blue-500",
       );
       bralimaListeTab.classList.add("text-gray-600");
-      bralimaListeTab.style.borderBottomColor = "transparent";
-      bralimaListeTab.style.color = "#6b7280";
 
       bralimaAddTab.classList.add("active", "text-blue-600", "border-blue-500");
       bralimaAddTab.classList.remove("text-gray-600");
-      bralimaAddTab.style.borderBottomColor = "#3b82f6";
-      bralimaAddTab.style.color = "#3b82f6";
 
       if (bralimaListeContainer) bralimaListeContainer.classList.add("hidden");
       if (bralimaAddContainer) bralimaAddContainer.classList.remove("hidden");
@@ -4683,7 +4657,6 @@ async function initModuleAchats() {
   const bracongoContainer = document.getElementById("bracongoAchatsContainer");
   const bralimaContainer = document.getElementById("bralimaAchatsContainer");
 
-  // Par défaut, montrer BRACONGO si aucun n'est visible
   if (bracongoContainer && bralimaContainer) {
     const bracongoHidden = bracongoContainer.classList.contains("hidden");
     const bralimaHidden = bralimaContainer.classList.contains("hidden");
@@ -4855,7 +4828,7 @@ async function initModuleAchats() {
 }
 
 // ============================================
-// HISTORIQUE
+// HISTORIQUE DES VENTES CLIENTS
 // ============================================
 const showHistoriqueBtn = document.getElementById("showHistoriqueBtn");
 const historiqueClientIdElem = document.getElementById("historiqueClientId");
@@ -4915,7 +4888,20 @@ function displayVentesMulti(ventes, clientData) {
       if (isNaN(total)) return;
       const row = document.createElement("tr");
       row.className = idx % 2 === 0 ? "bg-gray-50" : "";
-      row.innerHTML = `<td class="px-4 py-3 text-sm font-mono">${v.id.substring(0, 8)}<\/td><td class="px-4 py-3 text-sm">${afficherProduitsListe(produitsListe)}<\/td><td class="px-4 py-3 text-center font-medium">${qt}<\/td><td class="px-4 py-3 text-right">${formatNumberFC(prixMoyen)} FC<\/td><td class="px-4 py-3 text-right font-bold text-emerald-600">${formatNumberFC(total)} FC<\/td><td class="px-4 py-3 text-sm">${formatDate(v.date)}<\/td><td class="px-4 py-3 text-center"><button onclick="showVenteDetail('${v.id}')" class="bg-blue-600 text-white px-2 py-1 rounded text-xs mr-1">📄 Détails<\/button><button onclick="genererFactureVente('${v.id}', '${clientData.id}')" class="bg-emerald-600 text-white px-2 py-1 rounded text-xs">🧾 Facture<\/button><\/td>`;
+
+      // CORRECTION : Convertir l'ID en string avant substring
+      const idStr = String(v.id);
+
+      row.innerHTML = `<td class="px-4 py-3 text-sm font-mono">${idStr.substring(0, 8)}<\/td>
+                       <td class="px-4 py-3 text-sm">${afficherProduitsListe(produitsListe)}<\/td>
+                       <td class="px-4 py-3 text-center font-medium">${qt}<\/td>
+                       <td class="px-4 py-3 text-right">${formatNumberFC(prixMoyen)} FC<\/td>
+                       <td class="px-4 py-3 text-right font-bold text-emerald-600">${formatNumberFC(total)} FC<\/td>
+                       <td class="px-4 py-3 text-sm">${formatDate(v.date)}<\/td>
+                       <td class="px-4 py-3 text-center">
+                         <button onclick="showVenteDetail('${v.id}')" class="bg-blue-600 text-white px-2 py-1 rounded text-xs mr-1">📄 Détails<\/button>
+                         <button onclick="genererFactureVente('${v.id}', '${clientData.id}')" class="bg-emerald-600 text-white px-2 py-1 rounded text-xs">🧾 Facture<\/button>
+                       <\/td>`;
       historiqueTableBody.appendChild(row);
       totalQuantite += qt;
       totalPrix += total;
