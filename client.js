@@ -15,6 +15,15 @@ const ACHATS_URL = `${API_BASE_URL}/achats`;
 const ECHANCIERS_URL = `${API_BASE_URL}/echeanciers`;
 
 // ============================================
+// CONFIGURATION DE SÉCURITÉ - MOT DE PASSE
+// ============================================
+const ADMIN_PASSWORD = "admin123";
+
+function verifyPassword(inputPassword) {
+  return inputPassword === ADMIN_PASSWORD;
+}
+
+// ============================================
 // VARIABLES GLOBALES
 // ============================================
 let produits = {
@@ -26,6 +35,7 @@ let currentFournisseur = "BRACONGO";
 let currentType = "bouteille";
 let produitEnEdition = null;
 let currentEditClientId = null;
+let currentEditClientOldCode = null;
 let currentClientsPage = 1;
 const clientsPerPage = 10;
 let allClients = [];
@@ -39,9 +49,9 @@ window.currentFilterType = "all";
 window.originalVentesData = [];
 window.originalClientData = null;
 
-// ============================================
-// VARIABLES POUR LES ACHATS
-// ============================================
+let venteEnCoursDeModification = null;
+let venteEnCoursDeModificationId = null;
+
 let achats = {
   BRACONGO: [],
   BRALIMA: [],
@@ -52,9 +62,6 @@ let panierAchats = {
 };
 let currentFournisseurAchat = "BRACONGO";
 
-// ============================================
-// VARIABLES POUR L'ÉCHÉANCIER
-// ============================================
 let echeanciers = [];
 let remisesMensuelles = {};
 
@@ -176,9 +183,8 @@ function formatId(id) {
 }
 
 // ============================================
-// SYNCHRONISATION DES ÉCHÉANCIERS AVEC JSON SERVER
+// SYNCHRONISATION DES ÉCHÉANCIERS
 // ============================================
-
 async function sauvegarderEcheanciersSurServeur() {
   try {
     const response = await fetch(ECHANCIERS_URL, {
@@ -192,7 +198,6 @@ async function sauvegarderEcheanciersSurServeur() {
     console.error("Erreur synchro serveur:", error);
   }
 }
-
 async function chargerEcheanciers() {
   try {
     const response = await fetch(ECHANCIERS_URL);
@@ -222,7 +227,6 @@ async function chargerEcheanciers() {
     }
   }
 }
-
 function sauvegarderEcheanciers() {
   localStorage.setItem("ventespro_echeanciers", JSON.stringify(echeanciers));
   sauvegarderEcheanciersSurServeur();
@@ -286,9 +290,6 @@ document.getElementById("currentDate").textContent =
     day: "numeric",
   });
 
-// ============================================
-// REDIRECTION VERS LA SECTION VENTES
-// ============================================
 function redirectToVente(clientId = null) {
   const navItems = document.querySelectorAll(".nav-item");
   let ventesNavItem = null;
@@ -514,7 +515,7 @@ window.genererFactureVenteSpecifique = async function (venteId) {
     const c = await (
       await fetch(`${CLIENTS_URL}/${String(v.clientId)}`)
     ).json();
-    genererFacturePanier(v, c);
+    printThermalTicket(v, c);
   } catch (e) {
     showTemporaryNotification("❌ Erreur", "error");
   }
@@ -1205,16 +1206,436 @@ window.genererFactureVente = async function (venteId, clientId) {
   try {
     const v = await (await fetch(`${VENTES_URL}/${venteId}`)).json();
     const c = await (await fetch(`${CLIENTS_URL}/${String(clientId)}`)).json();
-    genererFacturePanier(v, c);
+    printThermalTicket(v, c);
   } catch (e) {
     showTemporaryNotification("❌ Erreur", "error");
   }
 };
 
 // ============================================
+// DEMANDE DE MOT DE PASSE AVANT MODIFICATION
+// ============================================
+async function demandeMotDePassePourModification() {
+  return new Promise((resolve) => {
+    const modal = document.createElement("div");
+    modal.className =
+      "fixed inset-0 bg-black/50 z-[100] flex items-center justify-center";
+    modal.innerHTML = `
+            <div class="bg-white rounded-xl shadow-xl w-full max-w-sm mx-4 animate-fadeIn">
+                <div class="px-6 py-4 border-b bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-t-xl">
+                    <h3 class="text-lg font-semibold">
+                        <i class="fas fa-shield-alt mr-2"></i> Autorisation requise
+                    </h3>
+                </div>
+                <div class="p-6 space-y-4">
+                    <div class="text-center">
+                        <i class="fas fa-lock text-4xl text-orange-500 mb-3 block"></i>
+                        <p class="text-gray-700 text-sm mb-2">Cette action nécessite le mot de passe administrateur.</p>
+                        <p class="text-xs text-gray-500">Motif : Modification d'une vente existante</p>
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 text-sm font-medium mb-2">Mot de passe</label>
+                        <input type="password" id="adminPassword" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 outline-none" placeholder="Entrez le mot de passe" autofocus>
+                    </div>
+                    <div id="passwordError" class="text-red-600 text-sm hidden"></div>
+                    <div class="flex gap-3 pt-2">
+                        <button id="confirmPasswordBtn" class="flex-1 bg-orange-600 hover:bg-orange-700 text-white py-2 rounded-lg transition">
+                            <i class="fas fa-check mr-2"></i> Confirmer
+                        </button>
+                        <button id="cancelPasswordBtn" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 py-2 rounded-lg transition">
+                            Annuler
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+    document.body.appendChild(modal);
+
+    const passwordInput = modal.querySelector("#adminPassword");
+    const confirmBtn = modal.querySelector("#confirmPasswordBtn");
+    const cancelBtn = modal.querySelector("#cancelPasswordBtn");
+    const errorDiv = modal.querySelector("#passwordError");
+
+    const closeModal = () => modal.remove();
+
+    const verifyAndResolve = () => {
+      const enteredPassword = passwordInput.value;
+      if (verifyPassword(enteredPassword)) {
+        closeModal();
+        resolve(true);
+      } else {
+        errorDiv.textContent = "❌ Mot de passe incorrect !";
+        errorDiv.classList.remove("hidden");
+        passwordInput.value = "";
+        passwordInput.focus();
+        setTimeout(() => {
+          errorDiv.classList.add("hidden");
+        }, 3000);
+      }
+    };
+
+    confirmBtn.addEventListener("click", verifyAndResolve);
+    cancelBtn.addEventListener("click", () => {
+      closeModal();
+      resolve(false);
+    });
+
+    passwordInput.addEventListener("keypress", (e) => {
+      if (e.key === "Enter") verifyAndResolve();
+    });
+
+    modal.addEventListener("click", (e) => {
+      if (e.target === modal) {
+        closeModal();
+        resolve(false);
+      }
+    });
+
+    passwordInput.focus();
+  });
+}
+
+// ============================================
+// MODIFICATION DES VENTES AVEC MOT DE PASSE
+// ============================================
+async function modifierVente(venteId) {
+  const isAuthorized = await demandeMotDePassePourModification();
+
+  if (!isAuthorized) {
+    showTemporaryNotification(
+      "❌ Modification annulée - Accès non autorisé",
+      "error",
+    );
+    return;
+  }
+
+  try {
+    const response = await fetch(`${VENTES_URL}/${venteId}`);
+    if (!response.ok) throw new Error("Vente non trouvée");
+    const vente = await response.json();
+
+    const clientRes = await fetch(`${CLIENTS_URL}/${String(vente.clientId)}`);
+    const client = await clientRes.json();
+
+    venteEnCoursDeModification = vente;
+    venteEnCoursDeModificationId = venteId;
+
+    redirectToVente(vente.clientId);
+
+    panier = [];
+    if (vente.produits && Array.isArray(vente.produits)) {
+      panier = vente.produits.map((p) => ({
+        nom: p.nom,
+        quantite: p.quantite,
+        prix: p.prix,
+        type: p.prix > 50000 ? "cassier" : "bouteille",
+      }));
+    } else if (vente.panier && Array.isArray(vente.panier)) {
+      panier = vente.panier;
+    }
+
+    afficherPanier();
+    updateTotal();
+
+    const addVenteBtn = document.getElementById("addVenteBtn");
+    if (addVenteBtn) {
+      addVenteBtn.innerHTML =
+        '<i class="fas fa-save mr-2"></i> Enregistrer les modifications';
+      addVenteBtn.classList.remove("bg-emerald-600");
+      addVenteBtn.classList.add("bg-yellow-600");
+    }
+
+    const annulerModificationBtn = document.getElementById(
+      "annulerModificationBtn",
+    );
+    if (annulerModificationBtn)
+      annulerModificationBtn.classList.remove("hidden");
+
+    showTemporaryNotification(
+      `🔐 Autorisation accordée - Modification de la vente #${venteId.substring(0, 8)}`,
+    );
+  } catch (error) {
+    showTemporaryNotification(`❌ Erreur: ${error.message}`, "error");
+  }
+}
+function annulerModification() {
+  if (confirm("Annuler la modification ? Les modifications seront perdues.")) {
+    panier = [];
+    afficherPanier();
+    venteEnCoursDeModification = null;
+    venteEnCoursDeModificationId = null;
+
+    const annulerModificationBtn = document.getElementById(
+      "annulerModificationBtn",
+    );
+    if (annulerModificationBtn) annulerModificationBtn.classList.add("hidden");
+
+    const addVenteBtn = document.getElementById("addVenteBtn");
+    if (addVenteBtn) {
+      addVenteBtn.innerHTML =
+        '<i class="fas fa-check-circle mr-2"></i> Finaliser la vente';
+      addVenteBtn.classList.remove("bg-yellow-600");
+      addVenteBtn.classList.add("bg-emerald-600");
+    }
+
+    clientInput.value = "";
+    clientInfoDiv.innerHTML = "";
+    showTemporaryNotification("Modification annulée");
+  }
+}
+
+// ============================================
+// IMPRESSION THERMIQUE POUR POS 80mm
+// ============================================
+function printThermalTicket(vente, client) {
+  const vn = nettoyerVente(vente);
+  const produits = vn.produits;
+  const total = vn.total;
+  const date = new Date().toLocaleString("fr-FR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+  const ticketId = vente.id || Date.now();
+
+  let totalBouteilles = 0;
+  let totalCassiers = 0;
+
+  let produitsHtml = "";
+  if (produits && produits.length > 0) {
+    produits.forEach((p) => {
+      const st = p.prix * p.quantite;
+      const isCassier = p.prix > 50000 || p.quantite > 10;
+      if (isCassier) {
+        totalCassiers += p.quantite;
+      } else {
+        totalBouteilles += p.quantite;
+      }
+
+      produitsHtml += `
+                <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                    <div style="flex: 2;">
+                        <span style="font-weight: bold;">${escapeHtml(p.nom)}</span>
+                        <div style="font-size: 9px; color: #555;">${formatNumberFC(p.prix)} FC x ${p.quantite}</div>
+                    </div>
+                    <div style="text-align: right; font-weight: bold;">${formatNumberFC(st)} FC</div>
+                </div>
+            `;
+    });
+  } else {
+    produitsHtml = `
+            <div style="text-align: center; padding: 10px; color: #999;">
+                Aucun produit détaillé
+            </div>
+        `;
+  }
+
+  const estModifiee = vente.modifiee === true;
+
+  const ticketHtml = `
+        <div id="thermalPrintContent" style="width: 280px; margin: 0 auto; font-family: 'Courier New', monospace; font-size: 11px; padding: 8px;">
+            <div style="text-align: center; margin-bottom: 12px;">
+                <div style="font-size: 18px; font-weight: bold; letter-spacing: 2px;">VENTESPRO</div>
+                <div style="font-size: 9px;">Kinshasa, République Démocratique du Congo</div>
+                <div style="font-size: 8px;">Tel: +243 123 456 789 | Email: contact@ventespro.com</div>
+                <div style="border-top: 1px dashed #000; margin: 6px 0;"></div>
+                <div style="font-size: 11px; font-weight: bold;">${estModifiee ? "FACTURE MODIFIÉE" : "FACTURE DE VENTE"}</div>
+                <div style="font-size: 8px;">N°: ${String(ticketId).substring(0, 12)}</div>
+                <div style="font-size: 8px;">Date: ${date}</div>
+            </div>
+            
+            <div style="background: #f5f5f5; padding: 6px; margin-bottom: 10px;">
+                <div style="font-weight: bold; margin-bottom: 4px; font-size: 9px;">INFORMATIONS CLIENT</div>
+                <div style="font-size: 9px;"><strong>Nom:</strong> ${escapeHtml(client.nom)}</div>
+                <div style="font-size: 9px;"><strong>Code:</strong> ${client.id}</div>
+                <div style="font-size: 9px;"><strong>Téléphone:</strong> ${client.telephone || "Non renseigné"}</div>
+            </div>
+            
+            <div style="border-top: 1px dashed #000; margin: 6px 0;"></div>
+            
+            <div style="display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 6px; background: #e0e0e0; padding: 4px; font-size: 9px;">
+                <div style="flex: 2;">DESCRIPTION</div>
+                <div style="text-align: right;">TOTAL</div>
+            </div>
+            
+            ${produitsHtml}
+            
+            <div style="border-top: 1px solid #000; margin: 6px 0;"></div>
+            
+            <div style="margin: 6px 0; font-size: 9px;">
+                <div style="display: flex; justify-content: space-between;">
+                    <span>🍾 Bouteilles:</span>
+                    <span>${totalBouteilles} unité(s)</span>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <span>📦 Cassiers:</span>
+                    <span>${totalCassiers} lot(s)</span>
+                </div>
+            </div>
+            
+            <div style="border-top: 1px dashed #000; margin: 6px 0;"></div>
+            
+            <div style="margin: 6px 0;">
+                <div style="display: flex; justify-content: space-between; font-size: 14px; font-weight: bold;">
+                    <span>TOTAL À PAYER</span>
+                    <span style="color: #10b981;">${formatNumberFC(total)} FC</span>
+                </div>
+            </div>
+            
+            ${
+              estModifiee && vente.ancienTotal
+                ? `
+            <div style="border-top: 1px dotted #000; margin: 6px 0;"></div>
+            <div style="font-size: 7px; color: #ff6600;">
+                <div style="display: flex; justify-content: space-between;">
+                    <span>⚠️ Ancien total:</span>
+                    <span>${formatNumberFC(vente.ancienTotal)} FC</span>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <span>Modifiée le:</span>
+                    <span>${new Date(vente.dateModification).toLocaleDateString()}</span>
+                </div>
+            </div>
+            `
+                : ""
+            }
+            
+            <div style="border-top: 1px dashed #000; margin: 6px 0;"></div>
+            
+            <div style="text-align: center; margin-top: 10px;">
+                <div style="font-size: 9px; font-weight: bold;">MERCI DE VOTRE VISITE !</div>
+                <div style="font-size: 8px;">Avez-vous pensé à notre programme de fidélité ?</div>
+                <div style="font-size: 8px;">Suivez-nous sur Facebook et Instagram</div>
+                <div style="font-size: 12px; margin-top: 6px;">★ ★ ★ ★ ★</div>
+                <div style="font-size: 7px; margin-top: 6px;">www.ventespro.com</div>
+            </div>
+            
+            <div style="text-align: center; margin-top: 6px; font-size: 6px; color: #999;">
+                ${Array(36).fill("=").join("")}
+                <div>Facture générée via VentesPro - v1.0</div>
+                <div>ID: ${String(ticketId).substring(0, 8)}</div>
+            </div>
+        </div>
+    `;
+
+  const printWindow = window.open("", "_blank");
+  printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Impression Ticket VentesPro</title>
+            <meta charset="UTF-8">
+            <style>
+                * { margin: 0; padding: 0; box-sizing: border-box; }
+                body { 
+                    font-family: 'Courier New', 'Lucida Console', monospace; 
+                    background: #f0f0f0;
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    min-height: 100vh;
+                }
+                @media print {
+                    body { 
+                        background: white;
+                        margin: 0;
+                        padding: 0;
+                    }
+                    @page { 
+                        size: 80mm auto;
+                        margin: 0mm;
+                    }
+                }
+            </style>
+        </head>
+        <body>
+            ${ticketHtml}
+            <script>
+                window.onload = function() {
+                    setTimeout(function() {
+                        window.print();
+                        setTimeout(function() {
+                            window.close();
+                        }, 1000);
+                    }, 200);
+                };
+                const style = document.createElement('style');
+                style.textContent = '@page { size: 80mm auto; margin: 0mm; }';
+                document.head.appendChild(style);
+            <\/script>
+        </body>
+        </html>
+    `);
+  printWindow.document.close();
+}
+
+function genererFacturePanier(vente, client) {
+  printThermalTicket(vente, client);
+}
+
+function showBluetoothHelp() {
+  const modal = document.getElementById("bluetoothHelpModal");
+  if (modal) {
+    modal.classList.remove("hidden");
+    modal.classList.add("flex");
+  }
+}
+
+function closeBluetoothHelp() {
+  const modal = document.getElementById("bluetoothHelpModal");
+  if (modal) {
+    modal.classList.add("hidden");
+    modal.classList.remove("flex");
+  }
+}
+
+// ============================================
+// FONCTIONS POUR LES CASSIERS DANS LES ACHATS
+// ============================================
+function calculerCassiersJournaliers() {
+  const aujourdHui = new Date().toDateString();
+  let totalCassiersJour = 0;
+  let totalCassiersMois = 0;
+  const moisActuel = new Date().getMonth() + 1;
+  const anneeActuelle = new Date().getFullYear();
+
+  ["BRACONGO", "BRALIMA"].forEach((fournisseur) => {
+    achats[fournisseur].forEach((a) => {
+      if (a.statut === "actif") {
+        const dateAchat = new Date(a.date);
+        const estCassier =
+          a.type === "cassier" ||
+          a.prixUnitaire > 50000 ||
+          a.produit?.toLowerCase().includes("cassier") ||
+          a.produit?.toLowerCase().includes("carton");
+
+        if (estCassier) {
+          if (dateAchat.toDateString() === aujourdHui) {
+            totalCassiersJour += a.quantite;
+          }
+          if (
+            dateAchat.getMonth() + 1 === moisActuel &&
+            dateAchat.getFullYear() === anneeActuelle
+          ) {
+            totalCassiersMois += a.quantite;
+          }
+        }
+      }
+    });
+  });
+
+  const cassiersJour = document.getElementById("cassiersAujourdHui");
+  const cassiersMois = document.getElementById("cassiersCeMois");
+
+  if (cassiersJour) cassiersJour.textContent = totalCassiersJour;
+  if (cassiersMois) cassiersMois.textContent = totalCassiersMois;
+}
+
+// ============================================
 // ÉCHÉANCIER DE PAIEMENT
 // ============================================
-
 async function genererEcheancier(clientId, mois, annee) {
   try {
     const ventesRes = await fetch(VENTES_URL);
@@ -1272,7 +1693,6 @@ async function genererEcheancier(clientId, mois, annee) {
     return null;
   }
 }
-
 function afficherRecapitulatifEcheancier(echeancier) {
   const modal = document.createElement("div");
   modal.className =
@@ -1334,7 +1754,6 @@ function afficherRecapitulatifEcheancier(echeancier) {
   `;
   document.body.appendChild(modal);
 }
-
 async function marquerCommePaye(echeancierId) {
   const echeancier = echeanciers.find((e) => e.id == echeancierId);
   if (!echeancier) return;
@@ -1358,7 +1777,6 @@ async function marquerCommePaye(echeancierId) {
     }
   }
 }
-
 function imprimerEcheancier(echeancierId) {
   const echeancier = echeanciers.find((e) => e.id == echeancierId);
   if (!echeancier) return;
@@ -1417,7 +1835,6 @@ function imprimerEcheancier(echeancierId) {
   printWindow.document.close();
   printWindow.print();
 }
-
 async function genererTousEcheanciersMois(mois, annee) {
   showTemporaryNotification("⏳ Génération des échéanciers en cours...");
 
@@ -1483,14 +1900,12 @@ async function genererTousEcheanciersMois(mois, annee) {
     showTemporaryNotification(`❌ Erreur: ${error.message}`, "error");
   }
 }
-
 async function genererEcheancierMoisActuel() {
   const now = new Date();
   const mois = now.getMonth() + 1;
   const annee = now.getFullYear();
   await genererTousEcheanciersMois(mois, annee);
 }
-
 async function genererEcheancierClient() {
   const clientId = document.getElementById("echeancierClientSelect")?.value;
   const moisAnnee = document.getElementById("echeancierMois")?.value;
@@ -1506,7 +1921,6 @@ async function genererEcheancierClient() {
   const [annee, mois] = moisAnnee.split("-");
   await genererEcheancier(clientId, parseInt(mois), parseInt(annee));
 }
-
 function afficherListeEcheanciers() {
   const modal = document.createElement("div");
   modal.className =
@@ -1566,7 +1980,7 @@ function afficherListeEcheanciers() {
                   <th class="px-4 py-3 text-right text-xs font-medium text-gray-500">Net à payer</th>
                   <th class="px-4 py-3 text-center text-xs font-medium text-gray-500">Date limite</th>
                   <th class="px-4 py-3 text-center text-xs font-medium text-gray-500">Actions</th>
-                <tr>
+                </tr>
               </thead>
               <tbody>
                 ${echeanciersNonPayes
@@ -1577,16 +1991,16 @@ function afficherListeEcheanciers() {
                       <div class="font-medium">${escapeHtml(e.clientNom)}</div>
                       <div class="text-xs text-gray-400">${e.clientId}</div>
                     </td>
-                    <td class="px-4 py-3 text-center text-sm">${new Date(e.annee, e.mois - 1, 1).toLocaleDateString("fr-FR", { month: "short", year: "numeric" })}<\/td>
-                    <td class="px-4 py-3 text-right text-sm">${formatNumberFC(e.totalAchats)} FC<\/td>
-                    <td class="px-4 py-3 text-right text-sm text-green-600">- ${formatNumberFC(e.remise)} FC<\/td>
-                    <td class="px-4 py-3 text-right font-bold text-emerald-600">${formatNumberFC(e.netAPayer)} FC<\/td>
-                    <td class="px-4 py-3 text-center text-sm">${new Date(e.dateLimite).toLocaleDateString("fr-FR")}<\/td>
+                    <td class="px-4 py-3 text-center text-sm">${new Date(e.annee, e.mois - 1, 1).toLocaleDateString("fr-FR", { month: "short", year: "numeric" })}</td>
+                    <td class="px-4 py-3 text-right text-sm">${formatNumberFC(e.totalAchats)} FC</td>
+                    <td class="px-4 py-3 text-right text-sm text-green-600">- ${formatNumberFC(e.remise)} FC</td>
+                    <td class="px-4 py-3 text-right font-bold text-emerald-600">${formatNumberFC(e.netAPayer)} FC</td>
+                    <td class="px-4 py-3 text-center text-sm">${new Date(e.dateLimite).toLocaleDateString("fr-FR")}</td>
                     <td class="px-4 py-3 text-center">
                       <button onclick="marquerCommePaye('${e.id}')" class="bg-emerald-600 text-white px-2 py-1 rounded text-xs hover:bg-emerald-700">
                         <i class="fas fa-check mr-1"></i> Payé
                       </button>
-                    <\/td>
+                    </td>
                   </tr>
                 `,
                   )
@@ -1594,11 +2008,11 @@ function afficherListeEcheanciers() {
               </tbody>
               <tfoot class="bg-gray-50 font-bold">
                 <tr>
-                  <td colspan="2" class="px-4 py-3">TOTAL<\/td>
-                  <td class="px-4 py-3 text-right">${formatNumberFC(echeanciersNonPayes.reduce((s, e) => s + e.totalAchats, 0))} FC<\/td>
-                  <td class="px-4 py-3 text-right text-green-600">- ${formatNumberFC(echeanciersNonPayes.reduce((s, e) => s + e.remise, 0))} FC<\/td>
-                  <td class="px-4 py-3 text-right text-emerald-600">${formatNumberFC(totalGlobal)} FC<\/td>
-                  <td colspan="2"><\/td>
+                  <td colspan="2" class="px-4 py-3">TOTAL</td>
+                  <td class="px-4 py-3 text-right">${formatNumberFC(echeanciersNonPayes.reduce((s, e) => s + e.totalAchats, 0))} FC</td>
+                  <td class="px-4 py-3 text-right text-green-600">- ${formatNumberFC(echeanciersNonPayes.reduce((s, e) => s + e.remise, 0))} FC</td>
+                  <td class="px-4 py-3 text-right text-emerald-600">${formatNumberFC(totalGlobal)} FC</td>
+                  <td colspan="2"></td>
                 </tr>
               </tfoot>
             </table>
@@ -1621,7 +2035,6 @@ function afficherListeEcheanciers() {
   `;
   document.body.appendChild(modal);
 }
-
 async function forcerSynchronisation() {
   showTemporaryNotification("🔄 Synchronisation en cours...");
   await chargerEcheanciers();
@@ -1629,7 +2042,6 @@ async function forcerSynchronisation() {
   mettreAJourStatsEcheancier();
   showTemporaryNotification("✅ Synchronisation terminée");
 }
-
 function mettreAJourStatsEcheancier() {
   const enAttente = echeanciers.filter((e) => e.statut === "en_attente").length;
   const payes = echeanciers.filter((e) => e.statut === "paye").length;
@@ -1652,7 +2064,6 @@ function mettreAJourStatsEcheancier() {
   if (statRemiseTotale)
     statRemiseTotale.textContent = formatNumberFC(remiseTotale) + " FC";
 }
-
 async function chargerClientsPourEcheancier() {
   try {
     const response = await fetch(CLIENTS_URL);
@@ -1672,7 +2083,6 @@ async function chargerClientsPourEcheancier() {
     console.error("Erreur chargement clients:", error);
   }
 }
-
 function ajouterWidgetEcheancier() {
   const alertsSection = document.getElementById("alertsSection");
 
@@ -1705,7 +2115,6 @@ function ajouterWidgetEcheancier() {
     alertsSection.insertAdjacentElement("afterend", echeancierWidget);
   }
 }
-
 function mettreAJourWidgetEcheancier() {
   const container = document.getElementById("echeancierPreview");
   if (!container) return;
@@ -1759,7 +2168,6 @@ const button = document.getElementById("searchBtn");
 const clientIdInput = document.getElementById("clientId");
 const resultDiv = document.getElementById("result");
 if (button) button.addEventListener("click", searchClient);
-
 async function searchClient() {
   const searchValue = clientIdInput.value.trim();
   if (!searchValue) {
@@ -1769,14 +2177,11 @@ async function searchClient() {
     );
     return;
   }
-
   showLoading(resultDiv);
-
   try {
     let response = await fetch(
       `${CLIENTS_URL}/${encodeURIComponent(searchValue)}`,
     );
-
     if (!response.ok) {
       const allClientsRes = await fetch(CLIENTS_URL);
       const allClientsList = await allClientsRes.json();
@@ -1785,11 +2190,9 @@ async function searchClient() {
           c.nom?.toLowerCase().includes(searchValue.toLowerCase()) ||
           c.telephone?.includes(searchValue),
       );
-
       if (foundClients.length === 0) {
         throw new Error(`Aucun client trouvé avec "${searchValue}"`);
       }
-
       if (foundClients.length === 1) {
         displayClient(foundClients[0]);
       } else {
@@ -1824,7 +2227,6 @@ async function searchClient() {
     showError(error.message, resultDiv);
   }
 }
-
 function displayClient(client) {
   resultDiv.innerHTML = `<div class="border-2 border-emerald-500 rounded-lg p-4 mt-3 bg-emerald-50">
     <div class="flex justify-between items-center mb-3">
@@ -1842,7 +2244,6 @@ function displayClient(client) {
     </div>
   </div>`;
 }
-
 function showLoading(container) {
   container.innerHTML = `<div class="border border-blue-500 p-3 mt-3 rounded bg-blue-50 text-blue-600">⏳ Recherche en cours...</div>`;
 }
@@ -1873,7 +2274,6 @@ clearButton.addEventListener("click", () => {
   if (clientIdInput) clientIdInput.focus();
 });
 if (button) button.insertAdjacentElement("afterend", clearButton);
-
 const addBtn = document.getElementById("addClientBtn");
 const nomInput = document.getElementById("nom");
 const telephoneInput = document.getElementById("telephone");
@@ -1901,7 +2301,6 @@ if (clientCodeInput)
       addClient();
     }
   });
-
 async function addClient() {
   const code = clientCodeInput.value.trim().toUpperCase();
   const nom = nomInput.value.trim();
@@ -1992,7 +2391,6 @@ async function addClient() {
     showErrorMessage(`Erreur lors de l'ajout : ${error.message}`, messageDiv);
   }
 }
-
 function showErrorMessage(message, container) {
   container.innerHTML = `<div class="bg-red-50 border border-red-500 rounded-lg p-3 text-red-600">❌ ${message}<button onclick="this.parentElement.remove()" class="float-right text-red-400">✕</button></div>`;
   setTimeout(() => {
@@ -2028,7 +2426,6 @@ function showCopyNotification(message, type = "success") {
   document.body.appendChild(notification);
   setTimeout(() => notification.remove(), 2000);
 }
-
 function initClientsTabs() {
   const tabAjouter = document.getElementById("tabAjouterClient");
   const tabLister = document.getElementById("tabListerClients");
@@ -2067,7 +2464,6 @@ function initClientsTabs() {
     });
   }
 }
-
 async function loadClientsList() {
   const tbody = document.getElementById("clientsTableBody");
   if (tbody) {
@@ -2089,7 +2485,6 @@ async function loadClientsList() {
     }
   }
 }
-
 function displayClientsTable() {
   const tbody = document.getElementById("clientsTableBody");
   if (!tbody) return;
@@ -2127,7 +2522,7 @@ function displayClientsTable() {
         <td class="px-4 py-3 text-sm">${escapeHtml(client.telephone || "—")}<\/td>
         <td class="px-4 py-3 text-sm text-center">
           <button onclick="fillVenteForm('${client.id}')" class="bg-emerald-600 text-white px-3 py-1 rounded text-xs hover:bg-emerald-700 mr-2 transition">🛒 Vendre<\/button>
-          <button class="edit-client-btn text-blue-600 hover:text-blue-800 mr-2 transition" data-id="${client.id}" data-nom="${escapeHtml(client.nom)}" data-telephone="${escapeHtml(client.telephone)}">
+          <button class="edit-client-btn text-blue-600 hover:text-blue-800 mr-2 transition" data-id="${client.id}" data-nom="${escapeHtml(client.nom)}" data-telephone="${escapeHtml(client.telephone || "—")}">
             <i class="fas fa-edit"><\/i>
           <\/button>
           <button class="delete-client-btn text-red-600 hover:text-red-800 transition" data-id="${client.id}" data-nom="${escapeHtml(client.nom)}">
@@ -2148,7 +2543,6 @@ function displayClientsTable() {
     btn.addEventListener("click", handleDeleteClient);
   });
 }
-
 function updateClientsPagination(totalPages) {
   const paginationDiv = document.getElementById("clientsPagination");
   if (!paginationDiv) return;
@@ -2169,43 +2563,147 @@ function updateClientsPagination(totalPages) {
     });
   });
 }
-
 function handleEditClient(e) {
   const btn = e.currentTarget;
   currentEditClientId = btn.getAttribute("data-id");
+  currentEditClientOldCode = btn.getAttribute("data-id");
   const nom = btn.getAttribute("data-nom");
   const telephone = btn.getAttribute("data-telephone");
+
+  document.getElementById("editClientCode").value = currentEditClientId;
   document.getElementById("editClientNom").value = nom;
   document.getElementById("editClientTelephone").value = telephone;
+
   document.getElementById("editClientModal").classList.remove("hidden");
   document.getElementById("editClientModal").classList.add("flex");
 }
 async function saveEditClient() {
+  const newCode = document
+    .getElementById("editClientCode")
+    .value.trim()
+    .toUpperCase();
   const newNom = document.getElementById("editClientNom").value.trim();
   const newTelephone = document
     .getElementById("editClientTelephone")
     .value.trim();
-  if (!newNom || !newTelephone) {
-    showTemporaryNotification("❌ Veuillez remplir tous les champs", "error");
+
+  if (!newCode) {
+    showTemporaryNotification("❌ Le code client est obligatoire", "error");
     return;
   }
+  if (newCode.length < 3) {
+    showTemporaryNotification(
+      "❌ Le code doit contenir au moins 3 caractères",
+      "error",
+    );
+    return;
+  }
+  if (newCode.length > 20) {
+    showTemporaryNotification(
+      "❌ Le code est trop long (max 20 caractères)",
+      "error",
+    );
+    return;
+  }
+  if (!newNom) {
+    showTemporaryNotification("❌ Le nom est obligatoire", "error");
+    return;
+  }
+  if (!newTelephone) {
+    showTemporaryNotification("❌ Le téléphone est obligatoire", "error");
+    return;
+  }
+
+  if (newCode !== currentEditClientOldCode) {
+    try {
+      const checkResponse = await fetch(
+        `${CLIENTS_URL}/${encodeURIComponent(newCode)}`,
+      );
+      if (checkResponse.ok) {
+        showTemporaryNotification(
+          `❌ Le code "${newCode}" est déjà utilisé par un autre client`,
+          "error",
+        );
+        return;
+      }
+    } catch (e) {}
+  }
+
+  showTemporaryNotification("⏳ Mise à jour en cours...");
+
   try {
-    const response = await fetch(`${CLIENTS_URL}/${currentEditClientId}`, {
-      method: "PUT",
+    const newClientResponse = await fetch(CLIENTS_URL, {
+      method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
+        id: newCode,
         nom: newNom,
         telephone: newTelephone,
-        id: currentEditClientId,
       }),
     });
-    if (!response.ok) throw new Error("Erreur modification");
-    showTemporaryNotification("✅ Client modifié avec succès !");
+
+    if (!newClientResponse.ok)
+      throw new Error("Erreur création nouveau client");
+
+    const ventesResponse = await fetch(VENTES_URL);
+    const toutesVentes = await ventesResponse.json();
+    const ventesAncienClient = toutesVentes.filter(
+      (v) => String(v.clientId) === String(currentEditClientOldCode),
+    );
+
+    let ventesModifiees = 0;
+    for (const vente of ventesAncienClient) {
+      const updateResponse = await fetch(`${VENTES_URL}/${vente.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...vente,
+          clientId: newCode,
+          ancienCodeClient: currentEditClientOldCode,
+          dateModificationCode: new Date().toISOString(),
+        }),
+      });
+      if (updateResponse.ok) ventesModifiees++;
+    }
+
+    const echeanciersResponse = await fetch(ECHANCIERS_URL);
+    let tousEcheanciers = [];
+    if (echeanciersResponse.ok) {
+      tousEcheanciers = await echeanciersResponse.json();
+      for (const echeancier of tousEcheanciers) {
+        if (String(echeancier.clientId) === String(currentEditClientOldCode)) {
+          await fetch(`${ECHANCIERS_URL}/${echeancier.id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              ...echeancier,
+              clientId: newCode,
+              clientNom: newNom,
+            }),
+          });
+        }
+      }
+    }
+
+    await fetch(
+      `${CLIENTS_URL}/${encodeURIComponent(currentEditClientOldCode)}`,
+      {
+        method: "DELETE",
+      },
+    );
+
     document.getElementById("editClientModal").classList.add("hidden");
     document.getElementById("editClientModal").classList.remove("flex");
-    loadClientsList();
-    loadDashboardStats();
+
+    showTemporaryNotification(
+      `✅ Client modifié !\nAncien code: ${currentEditClientOldCode}\nNouveau code: ${newCode}\nVentes mises à jour: ${ventesModifiees}`,
+      "success",
+    );
+
+    await loadClientsList();
+    await loadDashboardStats();
   } catch (error) {
+    console.error("Erreur modification client:", error);
     showTemporaryNotification(`❌ Erreur: ${error.message}`, "error");
   }
 }
@@ -2240,9 +2738,7 @@ async function handleDeleteClient(e) {
         return;
       }
 
-      if (!response.ok) {
-        throw new Error(`Erreur ${response.status}`);
-      }
+      if (!response.ok) throw new Error(`Erreur ${response.status}`);
 
       showTemporaryNotification(`✅ Client "${clientNom}" supprimé !`);
       await loadClientsList();
@@ -2267,16 +2763,29 @@ function initClientSearch() {
 function initEditClientModal() {
   const modal = document.getElementById("editClientModal");
   const closeBtn = document.getElementById("closeEditModalBtn");
+  const closeHeaderBtn = document.getElementById("closeModalHeaderBtn");
   const saveBtn = document.getElementById("saveEditClientBtn");
+
   if (closeBtn) {
     closeBtn.addEventListener("click", () => {
       modal.classList.add("hidden");
       modal.classList.remove("flex");
     });
   }
-  if (saveBtn) {
-    saveBtn.addEventListener("click", saveEditClient);
+
+  if (closeHeaderBtn) {
+    closeHeaderBtn.addEventListener("click", () => {
+      modal.classList.add("hidden");
+      modal.classList.remove("flex");
+    });
   }
+
+  if (saveBtn) {
+    const newSaveBtn = saveBtn.cloneNode(true);
+    saveBtn.parentNode.replaceChild(newSaveBtn, saveBtn);
+    newSaveBtn.addEventListener("click", saveEditClient);
+  }
+
   if (modal) {
     modal.addEventListener("click", (e) => {
       if (e.target === modal) {
@@ -2306,6 +2815,14 @@ const messageVente = document.getElementById("venteMessage");
 const quantiteInput = document.getElementById("quantite");
 const prixInputVente = document.getElementById("prix");
 const ajouterPanierBtn = document.getElementById("ajouterPanierBtn");
+const annulerModificationBtn = document.getElementById(
+  "annulerModificationBtn",
+);
+
+if (annulerModificationBtn) {
+  annulerModificationBtn.addEventListener("click", annulerModification);
+}
+
 if (quantiteInput) quantiteInput.addEventListener("input", updateTotal);
 if (prixInputVente) prixInputVente.addEventListener("input", updateTotal);
 
@@ -2389,7 +2906,6 @@ async function afficherClient() {
     clientInfoDiv.innerHTML = `<span class="text-red-600 text-sm">❌ Erreur: ${error.message}</span>`;
   }
 }
-
 function ajouterAuPanier() {
   const produitValue = produitSelect.value;
   const quantite = Number(quantiteInput.value);
@@ -2435,6 +2951,11 @@ function supprimerDuPanier(index) {
   showTemporaryNotification(`❌ Produit retiré du panier`);
 }
 async function addVente() {
+  if (venteEnCoursDeModificationId) {
+    await sauvegarderModificationVente();
+    return;
+  }
+
   const clientId = clientInput.value.trim();
   if (!clientId) {
     showTemporaryNotification("❌ Veuillez sélectionner un client");
@@ -2469,7 +2990,7 @@ async function addVente() {
       }),
     });
     const data = await response.json();
-    genererFacturePanier(data, clientData);
+    printThermalTicket(data, clientData);
     panier = [];
     afficherPanier();
     messageVente.innerHTML = `<div class="bg-emerald-50 text-emerald-700 p-4 rounded-lg">✅ Vente enregistrée ! ID: ${data.id}<br>💰 Total: ${formatNumberFC(total)} FC</div>`;
@@ -2480,6 +3001,107 @@ async function addVente() {
     mettreAJourWidgetEcheancier();
     setTimeout(() => {
       if (messageVente.innerHTML.includes("Vente enregistrée"))
+        messageVente.innerHTML = "";
+    }, 5000);
+  } catch (error) {
+    messageVente.innerHTML = `<div class="bg-red-50 text-red-600 p-3 rounded-lg">❌ Erreur: ${error.message}</div>`;
+  }
+}
+async function sauvegarderModificationVente() {
+  const clientId = clientInput.value.trim();
+  if (!clientId) {
+    showTemporaryNotification("❌ Veuillez sélectionner un client");
+    return;
+  }
+
+  if (panier.length === 0) {
+    showTemporaryNotification("❌ Ajoutez des produits au panier");
+    return;
+  }
+
+  if (!venteEnCoursDeModificationId) {
+    showTemporaryNotification("❌ Aucune vente en cours de modification");
+    return;
+  }
+
+  messageVente.innerHTML =
+    '<div class="bg-blue-50 text-blue-600 p-3 rounded-lg">⏳ Mise à jour...</div>';
+
+  try {
+    const clientResponse = await fetch(`${CLIENTS_URL}/${String(clientId)}`);
+    if (!clientResponse.ok) {
+      messageVente.innerHTML =
+        '<div class="bg-red-50 text-red-600 p-3 rounded-lg">❌ Client introuvable</div>';
+      return;
+    }
+    const clientData = await clientResponse.json();
+
+    const nouveauTotal = panier.reduce(
+      (sum, item) => sum + item.prix * item.quantite,
+      0,
+    );
+    const ancienTotal = venteEnCoursDeModification?.total || 0;
+
+    const response = await fetch(
+      `${VENTES_URL}/${venteEnCoursDeModificationId}`,
+      {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          clientId: String(clientId),
+          produits: panier,
+          total: nouveauTotal,
+          date: venteEnCoursDeModification?.date || new Date().toISOString(),
+          modifiee: true,
+          dateModification: new Date().toISOString(),
+          ancienTotal: ancienTotal,
+        }),
+      },
+    );
+
+    if (!response.ok) throw new Error("Erreur modification");
+
+    const data = await response.json();
+    printThermalTicket(data, clientData);
+
+    panier = [];
+    afficherPanier();
+    venteEnCoursDeModification = null;
+    venteEnCoursDeModificationId = null;
+
+    const addVenteBtn = document.getElementById("addVenteBtn");
+    if (addVenteBtn) {
+      addVenteBtn.innerHTML =
+        '<i class="fas fa-check-circle mr-2"></i> Finaliser la vente';
+      addVenteBtn.classList.remove("bg-yellow-600");
+      addVenteBtn.classList.add("bg-emerald-600");
+    }
+
+    const annulerModificationBtn = document.getElementById(
+      "annulerModificationBtn",
+    );
+    if (annulerModificationBtn) annulerModificationBtn.classList.add("hidden");
+
+    const variation = nouveauTotal - ancienTotal;
+    const variationTexte =
+      variation >= 0
+        ? `+${formatNumberFC(variation)} FC`
+        : `${formatNumberFC(variation)} FC`;
+
+    messageVente.innerHTML = `<div class="bg-emerald-50 text-emerald-700 p-4 rounded-lg">
+      ✅ Vente modifiée avec succès !<br>
+      📝 Ancien total: ${formatNumberFC(ancienTotal)} FC<br>
+      📝 Nouveau total: ${formatNumberFC(nouveauTotal)} FC<br>
+      📊 Variation: ${variationTexte}
+    </div>`;
+
+    loadDashboardStats();
+    getDailyStats();
+    getWeeklyTrend();
+    mettreAJourWidgetEcheancier();
+
+    setTimeout(() => {
+      if (messageVente.innerHTML.includes("Vente modifiée"))
         messageVente.innerHTML = "";
     }, 5000);
   } catch (error) {
@@ -2623,7 +3245,6 @@ function setActiveFournisseur(fournisseur) {
   }
   setActiveType(currentType, fournisseur);
 }
-
 function setActiveType(type, fournisseur) {
   currentType = type;
   if (
@@ -2657,7 +3278,6 @@ function setActiveType(type, fournisseur) {
     }
   }
 }
-
 function initTypeTabs() {
   if (bracongoBouteilleTab)
     bracongoBouteilleTab.addEventListener("click", () =>
@@ -2676,7 +3296,6 @@ function initTypeTabs() {
       setActiveType("cassier", "BRALIMA"),
     );
 }
-
 function initFournisseurTabs() {
   if (tabBracongo)
     tabBracongo.addEventListener("click", () =>
@@ -2685,7 +3304,6 @@ function initFournisseurTabs() {
   if (tabBralima)
     tabBralima.addEventListener("click", () => setActiveFournisseur("BRALIMA"));
 }
-
 function initTypeChangeListener() {
   if (produitTypeSelect) {
     produitTypeSelect.addEventListener("change", () => {
@@ -2699,7 +3317,6 @@ function initTypeChangeListener() {
     });
   }
 }
-
 function mettreAJourSelecteurProduits() {
   if (!produitSelect) return;
   const selectedValue = produitSelect.value;
@@ -2753,7 +3370,6 @@ function mettreAJourSelecteurProduits() {
   produitSelect.appendChild(bralimaCassierGroup);
   updatePrix();
 }
-
 function updatePrix() {
   if (!produitSelect || !document.getElementById("prix")) return;
   const value = produitSelect.value;
@@ -2782,7 +3398,6 @@ function updatePrix() {
   } else document.getElementById("prix").value = "";
   if (typeof updateTotal === "function") updateTotal();
 }
-
 function updateTotal() {
   const quantite = parseFloat(document.getElementById("quantite")?.value) || 0;
   const prix = parseFloat(document.getElementById("prix")?.value) || 0;
@@ -2812,7 +3427,6 @@ function updateTotal() {
     }
   }
 }
-
 function afficherListeProduits() {
   if (bracongoBouteilleBody) {
     bracongoBouteilleBody.innerHTML = "";
@@ -2861,7 +3475,6 @@ function afficherListeProduits() {
     btn.addEventListener("click", handleDeleteClick);
   });
 }
-
 async function handleEditClick(e) {
   const btn = e.currentTarget;
   const id = btn.getAttribute("data-id");
@@ -2883,7 +3496,6 @@ async function handleEditClick(e) {
     nbBouteilles,
   );
 }
-
 async function handleDeleteClick(e) {
   const btn = e.currentTarget;
   const id = btn.getAttribute("data-id");
@@ -2913,9 +3525,7 @@ async function handleDeleteClick(e) {
         return;
       }
 
-      if (!response.ok) {
-        throw new Error(`Erreur ${response.status}`);
-      }
+      if (!response.ok) throw new Error(`Erreur ${response.status}`);
 
       await chargerProduits();
       mettreAJourSelecteurProduits();
@@ -2937,7 +3547,6 @@ async function handleDeleteClick(e) {
     }
   }
 }
-
 function ouvrirModalAjout() {
   produitEnEdition = null;
   modalTitle.textContent = "Ajouter un produit";
@@ -2954,7 +3563,6 @@ function ouvrirModalAjout() {
   produitModal.classList.remove("hidden");
   produitModal.classList.add("flex");
 }
-
 function ouvrirModalEdition(
   id,
   fournisseur,
@@ -2987,13 +3595,11 @@ function ouvrirModalEdition(
   produitModal.classList.remove("hidden");
   produitModal.classList.add("flex");
 }
-
 function fermerModal() {
   produitModal.classList.add("hidden");
   produitModal.classList.remove("flex");
   produitEnEdition = null;
 }
-
 async function sauvegarderProduit() {
   const nom = produitNomInput.value.trim();
   const format = produitFormatInput.value.trim();
@@ -3067,7 +3673,6 @@ async function sauvegarderProduit() {
     showTemporaryNotification(`❌ Erreur: ${error.message}`, "error");
   }
 }
-
 function initProduitsTabs() {
   const bracongoTab = document.getElementById("tabBracongo");
   const bralimaTab = document.getElementById("tabBralima");
@@ -3091,7 +3696,6 @@ function initProduitsTabs() {
     bracongoCassierTab.classList.remove("active");
   }
 }
-
 function initAllTabs() {
   const activeCategorie = document.querySelector(".categorie-tab.active");
   if (!activeCategorie && tabBracongo) {
@@ -3125,7 +3729,6 @@ function initAllTabs() {
     document.getElementById("bracongoListeTab").classList.add("active");
   }
 }
-
 function initGestionProduits() {
   chargerProduits().then(() => {
     initFournisseurTabs();
@@ -3166,7 +3769,6 @@ async function chargerClientsPourRapport() {
     }
   } catch (e) {}
 }
-
 async function genererRapportMensuel() {
   const clientId = document.getElementById("rapportClientSelect")?.value;
   const mois = parseInt(document.getElementById("rapportMoisSelect")?.value);
@@ -3244,7 +3846,6 @@ async function genererRapportMensuel() {
     showTemporaryNotification("❌ Erreur", "error");
   }
 }
-
 window.genererFactureClientRapport = async function (clientId, mois, annee) {
   try {
     const clientRes = await fetch(`${CLIENTS_URL}/${String(clientId)}`);
@@ -3371,7 +3972,6 @@ window.genererFactureClientRapport = async function (clientId, mois, annee) {
     showTemporaryNotification(`❌ Erreur: ${error.message}`, "error");
   }
 };
-
 function initRapports() {
   document
     .getElementById("genererRapportBtn")
@@ -3403,7 +4003,6 @@ function initRapports() {
 
   chargerClientsPourRapport();
 }
-
 async function exporterRapportCSV(clientId, mois, annee) {
   try {
     const vr = await fetch(VENTES_URL);
@@ -3483,295 +4082,7 @@ async function exporterRapportCSV(clientId, mois, annee) {
 }
 
 // ============================================
-// FACTURES
-// ============================================
-function genererFacturePanier(vente, client) {
-  if (typeof window.jspdf === "undefined") {
-    showTemporaryNotification("❌ Erreur PDF", "error");
-    return;
-  }
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF();
-  const w = doc.internal.pageSize.getWidth();
-  const m = 20;
-  const rt = w - m;
-  const vn = nettoyerVente(vente);
-  const total = vn.total,
-    produits = vn.produits;
-  const dateF = new Date().toLocaleString("fr-FR");
-
-  doc.setFontSize(22);
-  doc.setFont("helvetica", "bold");
-  doc.text("FACTURE", w / 2, 20, { align: "center" });
-
-  doc.setFontSize(9);
-  doc.setFont("helvetica", "normal");
-  doc.text("VentesPro SARL", m, 35);
-  doc.text("Kinshasa, RDC", m, 43);
-  doc.text(`Facture N°: ${vente.id || "N/A"}`, rt - 40, 35, { align: "right" });
-  doc.text(`Date: ${dateF}`, rt - 40, 43, { align: "right" });
-
-  doc.line(m, 52, rt, 52);
-
-  // SECTION CLIENT - VERSION CORRIGÉE AVEC ALIGNEMENT DYNAMIQUE
-  doc.setFontSize(11);
-  doc.setFont("helvetica", "bold");
-  doc.text("Client :", m, 65);
-
-  const largeurLabelClient = doc.getTextWidth("Client :");
-
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(10);
-  doc.text(client.nom, m + largeurLabelClient + 2, 65);
-
-  // Téléphone avec alignement dynamique
-  doc.setFont("helvetica", "bold");
-  doc.text("Tél :", m, 73);
-  const largeurTel = doc.getTextWidth("Tél :");
-  doc.setFont("helvetica", "normal");
-  doc.text(client.telephone || "N/A", m + largeurTel + 2, 73);
-
-  // Code avec alignement dynamique
-  doc.setFont("helvetica", "bold");
-  doc.text("Code :", m, 81);
-  const largeurCode = doc.getTextWidth("Code :");
-  doc.setFont("helvetica", "normal");
-  doc.text(String(client.id), m + largeurCode + 2, 81);
-
-  doc.line(m, 88, rt, 88);
-
-  doc.setFontSize(11);
-  doc.setFont("helvetica", "bold");
-  doc.text("Détails", m, 100);
-
-  doc.setFontSize(9);
-  doc.setFont("helvetica", "bold");
-  doc.text("Produit", m, 110);
-  doc.text("Qté", 100, 110);
-  doc.text("Prix unit.", 130, 110);
-  doc.text("Total", 165, 110);
-  doc.line(m, 112, rt, 112);
-
-  let y = 120;
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(9);
-
-  produits.forEach((p) => {
-    const st = p.prix * p.quantite;
-    doc.text(p.nom.substring(0, 30), m, y);
-    doc.text(p.quantite.toString(), 100, y);
-    doc.text(`${formatNumberFC(p.prix)} FC`, 130, y);
-    doc.text(`${formatNumberFC(st)} FC`, 165, y);
-    y += 7;
-  });
-
-  y += 5;
-  doc.line(m, y, rt, y);
-  y += 8;
-
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(11);
-  doc.text("TOTAL À PAYER :", 130, y);
-  doc.setFontSize(14);
-  doc.setTextColor(76, 175, 80);
-  doc.text(`${formatNumberFC(total)} FC`, rt, y, { align: "right" });
-
-  doc.setFontSize(8);
-  doc.setTextColor(100, 100, 100);
-  doc.text("Merci de votre confiance !", w / 2, 280, { align: "center" });
-
-  doc.save(
-    `facture_${client.nom.replace(/\s/g, "_")}_${vente.id || Date.now()}.pdf`,
-  );
-  showTemporaryNotification("✅ Facture générée");
-}
-
-function genererFactureMensuelleMulti(ventes, client) {
-  if (typeof window.jspdf === "undefined") {
-    showTemporaryNotification("❌ Erreur PDF", "error");
-    return;
-  }
-  const now = new Date();
-  const moisActuel = now.getMonth(),
-    anneeActuelle = now.getFullYear();
-  const ventesDuMois = ventes.filter((v) => {
-    const d = parseDate(v.date);
-    return (
-      !isNaN(d.getTime()) &&
-      d.getMonth() === moisActuel &&
-      d.getFullYear() === anneeActuelle
-    );
-  });
-  if (ventesDuMois.length === 0) {
-    showTemporaryNotification("📭 Aucune vente ce mois", "error");
-    return;
-  }
-  let total = 0;
-  ventesDuMois.forEach((v) => {
-    const vn = nettoyerVente(v);
-    total += vn.total;
-  });
-  const remise = total * 0.05,
-    totalFinal = total - remise;
-  const dateF = new Date().toLocaleString("fr-FR");
-  const moisTexte = now.toLocaleString("fr-FR", {
-    month: "long",
-    year: "numeric",
-  });
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF();
-  const w = doc.internal.pageSize.getWidth();
-  const m = 20,
-    rt = w - m;
-
-  doc.setFontSize(20);
-  doc.setFont("helvetica", "bold");
-  doc.text("FACTURE MENSUELLE", w / 2, 20, { align: "center" });
-
-  doc.setFontSize(9);
-  doc.setFont("helvetica", "normal");
-  doc.text("VentesPro SARL", m, 35);
-  doc.text("Kinshasa, RDC", m, 43);
-  doc.text(`Période: ${moisTexte}`, rt - 40, 35, { align: "right" });
-  doc.text(`Date: ${dateF}`, rt - 40, 43, { align: "right" });
-
-  doc.line(m, 52, rt, 52);
-
-  // SECTION CLIENT - VERSION CORRIGÉE AVEC ALIGNEMENT DYNAMIQUE
-  doc.setFontSize(11);
-  doc.setFont("helvetica", "bold");
-  doc.text("Client :", m, 65);
-
-  const largeurLabelClient = doc.getTextWidth("Client :");
-
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(10);
-  doc.text(client.nom, m + largeurLabelClient + 2, 65);
-
-  // Téléphone avec alignement dynamique
-  doc.setFont("helvetica", "bold");
-  doc.text("Tél :", m, 73);
-  const largeurTel = doc.getTextWidth("Tél :");
-  doc.setFont("helvetica", "normal");
-  doc.text(client.telephone || "N/A", m + largeurTel + 2, 73);
-
-  // Code avec alignement dynamique
-  doc.setFont("helvetica", "bold");
-  doc.text("Code :", m, 81);
-  const largeurCode = doc.getTextWidth("Code :");
-  doc.setFont("helvetica", "normal");
-  doc.text(String(client.id), m + largeurCode + 2, 81);
-
-  doc.line(m, 88, rt, 88);
-
-  doc.setFontSize(11);
-  doc.setFont("helvetica", "bold");
-  doc.text(`Achats - ${moisTexte}`, m, 100);
-
-  doc.setFontSize(9);
-  doc.setFont("helvetica", "bold");
-  doc.text("Date", m, 110);
-  doc.text("Produits", 55, 110);
-  doc.text("Total", 160, 110);
-  doc.line(m, 112, rt, 112);
-
-  let y = 120;
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(8);
-
-  ventesDuMois.forEach((v, idx) => {
-    const vn = nettoyerVente(v);
-    const prods = vn.produits.map((p) => `${p.nom}(${p.quantite})`).join(", ");
-    const dateStr = formatDate(v.date);
-    doc.text(dateStr.substring(0, 10), m, y);
-    doc.text(prods.substring(0, 45), 55, y);
-    doc.text(`${formatNumberFC(vn.total)} FC`, 160, y);
-    y += 6;
-    if (y > 250 && idx < ventesDuMois.length - 1) {
-      doc.addPage();
-      y = 20;
-    }
-  });
-
-  y += 5;
-  doc.line(m, y, rt, y);
-  y += 8;
-
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(10);
-  doc.text("Sous-total:", 130, y);
-  doc.text(`${formatNumberFC(total)} FC`, rt, y, { align: "right" });
-  y += 7;
-  doc.text("Remise (5%):", 130, y);
-  doc.text(`-${formatNumberFC(remise)} FC`, rt, y, { align: "right" });
-  y += 10;
-
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(12);
-  doc.text("TOTAL À PAYER :", 130, y);
-  doc.setFontSize(14);
-  doc.setTextColor(76, 175, 80);
-  doc.text(`${formatNumberFC(totalFinal)} FC`, rt, y, { align: "right" });
-
-  doc.setFontSize(8);
-  doc.setTextColor(100, 100, 100);
-  doc.text("Merci de votre confiance !", w / 2, 280, { align: "center" });
-
-  doc.save(
-    `facture_mensuelle_${client.nom.replace(/\s/g, "_")}_${moisTexte.replace(/\s/g, "_")}.pdf`,
-  );
-  showTemporaryNotification("✅ Facture mensuelle générée");
-}
-
-function exportToCSV(ventes, client) {
-  if (!ventes || ventes.length === 0) {
-    showTemporaryNotification("📭 Aucune donnée", "error");
-    return;
-  }
-  const sep = ";";
-  const fmt = (f) => {
-    if (f === undefined || f === null) return "";
-    const s = String(f);
-    if (s.includes(sep) || s.includes('"') || s.includes("\n"))
-      return `"${s.replace(/"/g, '""')}"`;
-    return s;
-  };
-  const headers = [
-    "ID Vente",
-    "Produits",
-    "Qté totale",
-    "Total (FC)",
-    "Date",
-  ].map(fmt);
-  const rows = ventes.map((v) => {
-    const vn = nettoyerVente(v);
-    let prods = "",
-      qt = 0;
-    if (vn.produits.length > 0) {
-      prods = vn.produits.map((p) => `${p.nom}(${p.quantite})`).join(", ");
-      qt = vn.produits.reduce((s, p) => s + p.quantite, 0);
-    }
-    return [
-      String(v.id),
-      prods,
-      qt,
-      formatNumberFC(vn.total),
-      formatDate(v.date),
-    ].map(fmt);
-  });
-  const csv = [headers, ...rows].map((r) => r.join(sep)).join("\n");
-  const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
-  const link = document.createElement("a");
-  const url = URL.createObjectURL(blob);
-  link.href = url;
-  link.download = `ventes_${client.nom.replace(/\s/g, "_")}_${new Date().toISOString().slice(0, 10)}.csv`;
-  link.click();
-  URL.revokeObjectURL(url);
-  showTemporaryNotification("📥 Export CSV effectué");
-}
-
-// ============================================
-// MODULE ACHATS
+// MODULE ACHATS AVEC GESTION DES CASSIERS
 // ============================================
 async function chargerAchats() {
   try {
@@ -3791,6 +4102,13 @@ async function chargerAchats() {
 }
 
 async function ajouterAchat(fournisseur, item) {
+  // Déterminer si c'est un cassier en fonction du type stocké dans l'item
+  const estCassier =
+    item.type === "cassier" ||
+    item.prix > 50000 ||
+    item.nom?.toLowerCase().includes("cassier") ||
+    item.nom?.toLowerCase().includes("carton");
+
   const nouvelAchat = {
     fournisseur: fournisseur,
     produit: item.nom,
@@ -3801,6 +4119,7 @@ async function ajouterAchat(fournisseur, item) {
     date: new Date().toISOString(),
     mois: new Date().getMonth() + 1,
     annee: new Date().getFullYear(),
+    type: estCassier ? "cassier" : "bouteille",
   };
   try {
     const response = await fetch(ACHATS_URL, {
@@ -4129,13 +4448,18 @@ function mettreAJourStatsAchats() {
   const now = new Date();
   const moisActuel = now.getMonth() + 1;
   const anneeActuelle = now.getFullYear();
+  const aujourdHui = now.toDateString();
+
   let totalGlobal = 0,
     totalRemise = 0,
-    totalNbAchats = 0;
+    totalNbAchats = 0,
+    totalCassiers = 0;
+
   const statsFournisseur = {
-    BRACONGO: { total: 0, remise: 0, net: 0, nb: 0 },
-    BRALIMA: { total: 0, remise: 0, net: 0, nb: 0 },
+    BRACONGO: { total: 0, remise: 0, net: 0, nb: 0, cassiers: 0 },
+    BRALIMA: { total: 0, remise: 0, net: 0, nb: 0, cassiers: 0 },
   };
+
   ["BRACONGO", "BRALIMA"].forEach((fournisseur) => {
     const achatsMois = achats[fournisseur].filter(
       (a) =>
@@ -4143,19 +4467,45 @@ function mettreAJourStatsAchats() {
         new Date(a.date).getMonth() + 1 === moisActuel &&
         new Date(a.date).getFullYear() === anneeActuelle,
     );
+
+    let cassiersMois = 0;
+    achatsMois.forEach((a) => {
+      const estCassier =
+        a.type === "cassier" ||
+        a.prixUnitaire > 50000 ||
+        a.produit?.toLowerCase().includes("cassier") ||
+        a.produit?.toLowerCase().includes("carton");
+      if (estCassier) {
+        cassiersMois += a.quantite;
+      }
+    });
+
     const total = achatsMois.reduce((sum, a) => sum + a.total, 0);
     const remise = total * 0.05;
     const net = total - remise;
     const nb = achatsMois.length;
-    statsFournisseur[fournisseur] = { total, remise, net, nb };
+
+    statsFournisseur[fournisseur] = {
+      total,
+      remise,
+      net,
+      nb,
+      cassiers: cassiersMois,
+    };
     totalGlobal += total;
     totalRemise += remise;
     totalNbAchats += nb;
+    totalCassiers += cassiersMois;
   });
+
   const statTotalAchats = document.getElementById("statTotalAchats");
   const statMontantAchats = document.getElementById("statMontantAchats");
   const statRemiseMois = document.getElementById("statRemiseMois");
   const statNetAPayer = document.getElementById("statNetAPayer");
+  const statTotalCassiersAchats = document.getElementById(
+    "statTotalCassiersAchats",
+  );
+
   if (statTotalAchats) statTotalAchats.textContent = totalNbAchats;
   if (statMontantAchats)
     statMontantAchats.textContent = formatNumberFC(totalGlobal) + " FC";
@@ -4164,10 +4514,15 @@ function mettreAJourStatsAchats() {
   if (statNetAPayer)
     statNetAPayer.textContent =
       formatNumberFC(totalGlobal - totalRemise) + " FC";
+  if (statTotalCassiersAchats)
+    statTotalCassiersAchats.textContent = totalCassiers;
+
   const bracongoNb = document.getElementById("statBracongoNb");
   const bracongoMontant = document.getElementById("statBracongoMontant");
   const bracongoRemise = document.getElementById("statBracongoRemise");
   const bracongoNet = document.getElementById("statBracongoNet");
+  const bracongoCassiers = document.getElementById("statBracongoCassiers");
+
   if (bracongoNb) bracongoNb.textContent = statsFournisseur.BRACONGO.nb;
   if (bracongoMontant)
     bracongoMontant.textContent =
@@ -4178,10 +4533,15 @@ function mettreAJourStatsAchats() {
   if (bracongoNet)
     bracongoNet.textContent =
       formatNumberFC(statsFournisseur.BRACONGO.net) + " FC";
+  if (bracongoCassiers)
+    bracongoCassiers.textContent = statsFournisseur.BRACONGO.cassiers;
+
   const bralimaNb = document.getElementById("statBralimaNb");
   const bralimaMontant = document.getElementById("statBralimaMontant");
   const bralimaRemise = document.getElementById("statBralimaRemise");
   const bralimaNet = document.getElementById("statBralimaNet");
+  const bralimaCassiers = document.getElementById("statBralimaCassiers");
+
   if (bralimaNb) bralimaNb.textContent = statsFournisseur.BRALIMA.nb;
   if (bralimaMontant)
     bralimaMontant.textContent =
@@ -4192,6 +4552,10 @@ function mettreAJourStatsAchats() {
   if (bralimaNet)
     bralimaNet.textContent =
       formatNumberFC(statsFournisseur.BRALIMA.net) + " FC";
+  if (bralimaCassiers)
+    bralimaCassiers.textContent = statsFournisseur.BRALIMA.cassiers;
+
+  calculerCassiersJournaliers();
 }
 
 function initPanierAchat(fournisseur) {
@@ -4254,7 +4618,7 @@ function ajouterAuPanierAchat(fournisseur) {
     showTemporaryNotification("❌ Prix non trouvé", "error");
     return;
   }
-  panierAchats[fournisseur].push({ nom, quantite, prix, type });
+  panierAchats[fournisseur].push({ nom, quantite, prix, type: type });
   initPanierAchat(fournisseur);
   showTemporaryNotification(`✅ ${nom} ajouté au panier`);
   if (produitSelect) produitSelect.value = "";
@@ -4369,17 +4733,12 @@ function initSelecteursProduitsAchats() {
   });
 }
 
-// ============================================
-// INITIALISATION DES ONGLETS ACHATS (CORRIGÉE)
-// ============================================
-
 function initAchatsTabs() {
   const fournisseurBtns = document.querySelectorAll(".fournisseur-tab");
   const bracongoContainer = document.getElementById("bracongoAchatsContainer");
   const bralimaContainer = document.getElementById("bralimaAchatsContainer");
 
   function setActiveFournisseurTab(fournisseur) {
-    console.log("setActiveFournisseurTab appelé avec:", fournisseur);
     const btns = document.querySelectorAll(".fournisseur-tab");
     btns.forEach((btn) => {
       if (btn.getAttribute("data-fournisseur") === fournisseur) {
@@ -4399,7 +4758,6 @@ function initAchatsTabs() {
     newBtn.addEventListener("click", (e) => {
       e.preventDefault();
       const fournisseur = newBtn.getAttribute("data-fournisseur");
-      console.log("Clic sur l'onglet:", fournisseur);
 
       setActiveFournisseurTab(fournisseur);
 
@@ -4410,10 +4768,8 @@ function initAchatsTabs() {
         const moisInput = document.getElementById("bracongoFiltreMois");
         if (moisInput && moisInput.value) {
           const [annee, mois] = moisInput.value.split("-");
-          if (typeof afficherListeAchats === "function") {
-            afficherListeAchats("BRACONGO", parseInt(mois), parseInt(annee));
-          }
-        } else if (typeof afficherListeAchats === "function") {
+          afficherListeAchats("BRACONGO", parseInt(mois), parseInt(annee));
+        } else {
           afficherListeAchats("BRACONGO");
         }
       } else {
@@ -4423,10 +4779,8 @@ function initAchatsTabs() {
         const moisInput = document.getElementById("bralimaFiltreMois");
         if (moisInput && moisInput.value) {
           const [annee, mois] = moisInput.value.split("-");
-          if (typeof afficherListeAchats === "function") {
-            afficherListeAchats("BRALIMA", parseInt(mois), parseInt(annee));
-          }
-        } else if (typeof afficherListeAchats === "function") {
+          afficherListeAchats("BRALIMA", parseInt(mois), parseInt(annee));
+        } else {
           afficherListeAchats("BRALIMA");
         }
       }
@@ -4443,7 +4797,6 @@ function initAchatsTabs() {
 }
 
 function initAchatsSecondaryTabs() {
-  // BRACONGO
   const bracongoListeTab = document.getElementById("bracongoListeTab");
   const bracongoAddTab = document.getElementById("bracongoAddTab");
   const bracongoListeContainer = document.getElementById(
@@ -4507,7 +4860,6 @@ function initAchatsSecondaryTabs() {
     });
   }
 
-  // BRALIMA
   const bralimaListeTab = document.getElementById("bralimaListeTab");
   const bralimaAddTab = document.getElementById("bralimaAddTab");
   const bralimaListeContainer = document.getElementById(
@@ -4825,6 +5177,8 @@ async function initModuleAchats() {
       }
     });
   }
+
+  calculerCassiersJournaliers();
 }
 
 // ============================================
@@ -4837,7 +5191,6 @@ const historiqueTableElem = document.getElementById("historiqueTable");
 const historiqueTableBody = document.getElementById("historiqueTableBody");
 if (showHistoriqueBtn)
   showHistoriqueBtn.addEventListener("click", afficherHistorique);
-
 async function afficherHistorique() {
   const clientId = historiqueClientIdElem.value.trim();
   if (!clientId) {
@@ -4871,7 +5224,6 @@ async function afficherHistorique() {
     historiqueMessageDiv.innerHTML = `<span class="text-red-600">❌ Erreur: ${e.message}</span>`;
   }
 }
-
 function displayVentesMulti(ventes, clientData) {
   if (!historiqueTableBody) return;
   historiqueTableBody.innerHTML = "";
@@ -4888,20 +5240,18 @@ function displayVentesMulti(ventes, clientData) {
       if (isNaN(total)) return;
       const row = document.createElement("tr");
       row.className = idx % 2 === 0 ? "bg-gray-50" : "";
-
-      // CORRECTION : Convertir l'ID en string avant substring
       const idStr = String(v.id);
-
       row.innerHTML = `<td class="px-4 py-3 text-sm font-mono">${idStr.substring(0, 8)}<\/td>
-                       <td class="px-4 py-3 text-sm">${afficherProduitsListe(produitsListe)}<\/td>
-                       <td class="px-4 py-3 text-center font-medium">${qt}<\/td>
-                       <td class="px-4 py-3 text-right">${formatNumberFC(prixMoyen)} FC<\/td>
-                       <td class="px-4 py-3 text-right font-bold text-emerald-600">${formatNumberFC(total)} FC<\/td>
-                       <td class="px-4 py-3 text-sm">${formatDate(v.date)}<\/td>
-                       <td class="px-4 py-3 text-center">
-                         <button onclick="showVenteDetail('${v.id}')" class="bg-blue-600 text-white px-2 py-1 rounded text-xs mr-1">📄 Détails<\/button>
-                         <button onclick="genererFactureVente('${v.id}', '${clientData.id}')" class="bg-emerald-600 text-white px-2 py-1 rounded text-xs">🧾 Facture<\/button>
-                       <\/td>`;
+                     <td class="px-4 py-3 text-sm">${afficherProduitsListe(produitsListe)}<\/td>
+                     <td class="px-4 py-3 text-center font-medium">${qt}<\/td>
+                     <td class="px-4 py-3 text-right">${formatNumberFC(prixMoyen)} FC<\/td>
+                     <td class="px-4 py-3 text-right font-bold text-emerald-600">${formatNumberFC(total)} FC<\/td>
+                     <td class="px-4 py-3 text-sm">${formatDate(v.date)}<\/td>
+                     <td class="px-4 py-3 text-center">
+                       <button onclick="modifierVente('${v.id}')" class="bg-yellow-600 text-white px-2 py-1 rounded text-xs mr-1">🔒 ✏️ Modifier</button>
+                       <button onclick="showVenteDetail('${v.id}')" class="bg-blue-600 text-white px-2 py-1 rounded text-xs mr-1">📄 Détails</button>
+                       <button onclick="genererFactureVente('${v.id}', '${clientData.id}')" class="bg-emerald-600 text-white px-2 py-1 rounded text-xs">🧾 Facture</button>
+                     <\/td>`;
       historiqueTableBody.appendChild(row);
       totalQuantite += qt;
       totalPrix += total;
@@ -4958,7 +5308,6 @@ function displayVentesMulti(ventes, clientData) {
   if (applyBtn) {
     const newApplyBtn = applyBtn.cloneNode(true);
     applyBtn.parentNode.replaceChild(newApplyBtn, applyBtn);
-
     newApplyBtn.addEventListener("click", () => {
       const selectedRadio = document.querySelector(
         'input[name="filterTypeHisto"]:checked',
@@ -4979,17 +5328,26 @@ function displayVentesMulti(ventes, clientData) {
   if (resetBtn) {
     const newResetBtn = resetBtn.cloneNode(true);
     resetBtn.parentNode.replaceChild(newResetBtn, resetBtn);
-
     newResetBtn.addEventListener("click", () => {
+      window.currentFilterType = "all";
       const allRadio = document.querySelector(
         'input[name="filterTypeHisto"][value="all"]',
       );
-      if (allRadio) {
-        allRadio.checked = true;
-        window.currentFilterType = "all";
+      if (allRadio) allRadio.checked = true;
+      if (window.originalVentesData && window.originalClientData) {
+        displayVentesMulti(
+          window.originalVentesData,
+          window.originalClientData,
+        );
+        if (historiqueMessageDiv) {
+          historiqueMessageDiv.innerHTML = `<span class="text-emerald-600">✅ ${window.originalVentesData.length} vente(s) pour ${escapeHtml(window.originalClientData.nom)} (Code: ${window.originalClientData.id})</span>`;
+        }
+        showTemporaryNotification(
+          "📋 Filtre réinitialisé - Toutes les ventes affichées",
+        );
+      } else {
+        afficherHistorique();
       }
-      displayVentesMulti(window.originalVentesData, window.originalClientData);
-      showTemporaryNotification("📋 Filtre réinitialisé");
     });
   }
 
@@ -5029,7 +5387,6 @@ function displayVentesMulti(ventes, clientData) {
     );
   }
 }
-
 function appliquerFiltreHisto(filterType, ventesOriginales, clientData) {
   const now = new Date();
   let filtrees = [];
@@ -5072,7 +5429,6 @@ function appliquerFiltreHisto(filterType, ventesOriginales, clientData) {
       if (allRadio) allRadio.checked = true;
       break;
   }
-
   if (filtrees.length === 0) {
     historiqueMessageDiv.innerHTML = `<span class="text-blue-600">📭 Aucune vente pour ${msg}</span>`;
     historiqueTableBody.innerHTML = "";
@@ -5083,7 +5439,6 @@ function appliquerFiltreHisto(filterType, ventesOriginales, clientData) {
     historiqueMessageDiv.innerHTML = `<span class="text-emerald-600">✅ ${filtrees.length} vente(s) pour ${msg}</span>`;
   }
 }
-
 window.showVenteDetail = async function (venteId) {
   try {
     const response = await fetch(`${VENTES_URL}/${venteId}`);
@@ -5107,12 +5462,194 @@ window.showVenteDetail = async function (venteId) {
     const modal = document.createElement("div");
     modal.className =
       "fixed inset-0 bg-black/50 z-50 flex items-center justify-center";
-    modal.innerHTML = `<div class="bg-white rounded-xl shadow-xl max-w-md w-full mx-4 animate-fadeIn"><div class="px-6 py-4 border-b bg-gradient-to-r from-blue-50 to-white"><h3 class="text-lg font-semibold text-blue-800"><i class="fas fa-receipt text-blue-600 mr-2"></i> Détails de la vente</h3></div><div class="p-6 space-y-3"><div class="grid grid-cols-2 gap-2 text-sm"><p class="text-gray-500">🆔 ID Vente :</p><p class="font-mono font-medium">${vente.id}</p><p class="text-gray-500">👤 Client :</p><p class="font-medium">${escapeHtml(clientNom)}</p><p class="text-gray-500">🆔 Code Client :</p><p class="font-mono">${vente.clientId}</p></div><div class="border-t border-gray-100 pt-3"><p class="text-gray-500 text-sm mb-2">📦 Produits :</p><ul class="space-y-1 max-h-48 overflow-y-auto">${produitsHtml || '<li class="text-gray-400 text-center py-2">Aucun produit</li>'}</ul></div><div class="border-t border-gray-100 pt-3"><div class="flex justify-between items-center"><span class="text-gray-500">📊 Total articles :</span><span class="font-semibold">${totalArticles}</span></div><div class="flex justify-between items-center mt-2"><span class="text-gray-500">💰 Montant total :</span><span class="text-xl font-bold text-emerald-600">${formatNumberFC(total)} FC</span></div><div class="flex justify-between items-center mt-2"><span class="text-gray-500">📅 Date :</span><span class="text-sm">${formatDate(vente.date)}</span></div></div></div><div class="px-6 py-4 border-t flex justify-end gap-3"><button onclick="genererFactureVente('${vente.id}', '${vente.clientId}')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg transition text-sm"><i class="fas fa-print mr-1"></i> Imprimer facture</button><button onclick="this.closest('.fixed').remove()" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg transition text-sm">Fermer</button></div></div>`;
+    modal.innerHTML = `<div class="bg-white rounded-xl shadow-xl max-w-md w-full mx-4 animate-fadeIn"><div class="px-6 py-4 border-b bg-gradient-to-r from-blue-50 to-white"><h3 class="text-lg font-semibold text-blue-800"><i class="fas fa-receipt text-blue-600 mr-2"></i> Détails de la vente</h3></div><div class="p-6 space-y-3"><div class="grid grid-cols-2 gap-2 text-sm"><p class="text-gray-500">🆔 ID Vente :</p><p class="font-mono font-medium">${vente.id}</p><p class="text-gray-500">👤 Client :</p><p class="font-medium">${escapeHtml(clientNom)}</p><p class="text-gray-500">🆔 Code Client :</p><p class="font-mono">${vente.clientId}</p></div><div class="border-t border-gray-100 pt-3"><p class="text-gray-500 text-sm mb-2">📦 Produits :</p><ul class="space-y-1 max-h-48 overflow-y-auto">${produitsHtml || '<li class="text-gray-400 text-center py-2">Aucun produit</li>'}</ul></div><div class="border-t border-gray-100 pt-3"><div class="flex justify-between items-center"><span class="text-gray-500">📊 Total articles :</span><span class="font-semibold">${totalArticles}</span></div><div class="flex justify-between items-center mt-2"><span class="text-gray-500">💰 Montant total :</span><span class="text-xl font-bold text-emerald-600">${formatNumberFC(total)} FC</span></div><div class="flex justify-between items-center mt-2"><span class="text-gray-500">📅 Date :</span><span class="text-sm">${formatDate(vente.date)}</span></div></div></div><div class="px-6 py-4 border-t flex justify-end gap-3"><button onclick="printThermalTicketFromIds('${vente.id}', '${vente.clientId}')" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition text-sm"><i class="fas fa-print mr-1"></i> Imprimer ticket</button><button onclick="genererFactureVente('${vente.id}', '${vente.clientId}')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg transition text-sm"><i class="fas fa-file-pdf mr-1"></i> PDF</button><button onclick="this.closest('.fixed').remove()" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg transition text-sm">Fermer</button></div></div>`;
     document.body.appendChild(modal);
   } catch (e) {
     showTemporaryNotification("❌ Erreur", "error");
   }
 };
+async function printThermalTicketFromIds(venteId, clientId) {
+  try {
+    const v = await (await fetch(`${VENTES_URL}/${venteId}`)).json();
+    const c = await (await fetch(`${CLIENTS_URL}/${String(clientId)}`)).json();
+    printThermalTicket(v, c);
+  } catch (e) {
+    showTemporaryNotification("❌ Erreur d'impression", "error");
+  }
+}
+function genererFactureMensuelleMulti(ventes, client) {
+  if (typeof window.jspdf === "undefined") {
+    showTemporaryNotification("❌ Erreur PDF", "error");
+    return;
+  }
+  const now = new Date();
+  const moisActuel = now.getMonth(),
+    anneeActuelle = now.getFullYear();
+  const ventesDuMois = ventes.filter((v) => {
+    const d = parseDate(v.date);
+    return (
+      !isNaN(d.getTime()) &&
+      d.getMonth() === moisActuel &&
+      d.getFullYear() === anneeActuelle
+    );
+  });
+  if (ventesDuMois.length === 0) {
+    showTemporaryNotification("📭 Aucune vente ce mois", "error");
+    return;
+  }
+  let total = 0;
+  ventesDuMois.forEach((v) => {
+    const vn = nettoyerVente(v);
+    total += vn.total;
+  });
+  const remise = total * 0.05,
+    totalFinal = total - remise;
+  const dateF = new Date().toLocaleString("fr-FR");
+  const moisTexte = now.toLocaleString("fr-FR", {
+    month: "long",
+    year: "numeric",
+  });
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  const w = doc.internal.pageSize.getWidth();
+  const m = 20,
+    rt = w - m;
+
+  doc.setFontSize(20);
+  doc.setFont("helvetica", "bold");
+  doc.text("FACTURE MENSUELLE", w / 2, 20, { align: "center" });
+
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "normal");
+  doc.text("VentesPro SARL", m, 35);
+  doc.text("Kinshasa, RDC", m, 43);
+  doc.text(`Période: ${moisTexte}`, rt - 40, 35, { align: "right" });
+  doc.text(`Date: ${dateF}`, rt - 40, 43, { align: "right" });
+
+  doc.line(m, 52, rt, 52);
+
+  doc.setFontSize(11);
+  doc.setFont("helvetica", "bold");
+  doc.text("Client :", m, 65);
+  const largeurLabelClient = doc.getTextWidth("Client :");
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10);
+  doc.text(client.nom, m + largeurLabelClient + 2, 65);
+  doc.setFont("helvetica", "bold");
+  doc.text("Tél :", m, 73);
+  const largeurTel = doc.getTextWidth("Tél :");
+  doc.setFont("helvetica", "normal");
+  doc.text(client.telephone || "N/A", m + largeurTel + 2, 73);
+  doc.setFont("helvetica", "bold");
+  doc.text("Code :", m, 81);
+  const largeurCode = doc.getTextWidth("Code :");
+  doc.setFont("helvetica", "normal");
+  doc.text(String(client.id), m + largeurCode + 2, 81);
+  doc.line(m, 88, rt, 88);
+
+  doc.setFontSize(11);
+  doc.setFont("helvetica", "bold");
+  doc.text(`Achats - ${moisTexte}`, m, 100);
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "bold");
+  doc.text("Date", m, 110);
+  doc.text("Produits", 55, 110);
+  doc.text("Total", 160, 110);
+  doc.line(m, 112, rt, 112);
+
+  let y = 120;
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8);
+
+  ventesDuMois.forEach((v, idx) => {
+    const vn = nettoyerVente(v);
+    const prods = vn.produits.map((p) => `${p.nom}(${p.quantite})`).join(", ");
+    const dateStr = formatDate(v.date);
+    doc.text(dateStr.substring(0, 10), m, y);
+    doc.text(prods.substring(0, 45), 55, y);
+    doc.text(`${formatNumberFC(vn.total)} FC`, 160, y);
+    y += 6;
+    if (y > 250 && idx < ventesDuMois.length - 1) {
+      doc.addPage();
+      y = 20;
+    }
+  });
+
+  y += 5;
+  doc.line(m, y, rt, y);
+  y += 8;
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10);
+  doc.text("Sous-total:", 130, y);
+  doc.text(`${formatNumberFC(total)} FC`, rt, y, { align: "right" });
+  y += 7;
+  doc.text("Remise (5%):", 130, y);
+  doc.text(`-${formatNumberFC(remise)} FC`, rt, y, { align: "right" });
+  y += 10;
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(12);
+  doc.text("TOTAL À PAYER :", 130, y);
+  doc.setFontSize(14);
+  doc.setTextColor(76, 175, 80);
+  doc.text(`${formatNumberFC(totalFinal)} FC`, rt, y, { align: "right" });
+
+  doc.setFontSize(8);
+  doc.setTextColor(100, 100, 100);
+  doc.text("Merci de votre confiance !", w / 2, 280, { align: "center" });
+
+  doc.save(
+    `facture_mensuelle_${client.nom.replace(/\s/g, "_")}_${moisTexte.replace(/\s/g, "_")}.pdf`,
+  );
+  showTemporaryNotification("✅ Facture mensuelle générée");
+}
+function exportToCSV(ventes, client) {
+  if (!ventes || ventes.length === 0) {
+    showTemporaryNotification("📭 Aucune donnée", "error");
+    return;
+  }
+  const sep = ";";
+  const fmt = (f) => {
+    if (f === undefined || f === null) return "";
+    const s = String(f);
+    if (s.includes(sep) || s.includes('"') || s.includes("\n"))
+      return `"${s.replace(/"/g, '""')}"`;
+    return s;
+  };
+  const headers = [
+    "ID Vente",
+    "Produits",
+    "Qté totale",
+    "Total (FC)",
+    "Date",
+  ].map(fmt);
+  const rows = ventes.map((v) => {
+    const vn = nettoyerVente(v);
+    let prods = "",
+      qt = 0;
+    if (vn.produits.length > 0) {
+      prods = vn.produits.map((p) => `${p.nom}(${p.quantite})`).join(", ");
+      qt = vn.produits.reduce((s, p) => s + p.quantite, 0);
+    }
+    return [
+      String(v.id),
+      prods,
+      qt,
+      formatNumberFC(vn.total),
+      formatDate(v.date),
+    ].map(fmt);
+  });
+  const csv = [headers, ...rows].map((r) => r.join(sep)).join("\n");
+  const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+  const link = document.createElement("a");
+  const url = URL.createObjectURL(blob);
+  link.href = url;
+  link.download = `ventes_${client.nom.replace(/\s/g, "_")}_${new Date().toISOString().slice(0, 10)}.csv`;
+  link.click();
+  URL.revokeObjectURL(url);
+  showTemporaryNotification("📥 Export CSV effectué");
+}
 
 // ============================================
 // INITIALISATION
@@ -5146,3 +5683,7 @@ window.afficherListeEcheanciers = afficherListeEcheanciers;
 window.genererEcheancierMoisActuel = genererEcheancierMoisActuel;
 window.genererEcheancierClient = genererEcheancierClient;
 window.forcerSynchronisation = forcerSynchronisation;
+window.modifierVente = modifierVente;
+window.showBluetoothHelp = showBluetoothHelp;
+window.closeBluetoothHelp = closeBluetoothHelp;
+window.printThermalTicketFromIds = printThermalTicketFromIds;

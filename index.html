@@ -272,6 +272,31 @@
         align-items: center;
         justify-content: center;
       }
+
+      /* Style pour impression ticket thermique 80mm */
+      @media print {
+        body * {
+          visibility: hidden;
+        }
+        #thermalPrintContent,
+        #thermalPrintContent * {
+          visibility: visible;
+        }
+        #thermalPrintContent {
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          margin: 0;
+          padding: 8px;
+          font-family: "Courier New", monospace;
+          font-size: 11px;
+        }
+        @page {
+          size: 80mm auto;
+          margin: 0mm;
+        }
+      }
     </style>
   </head>
   <body
@@ -1158,6 +1183,12 @@
               >
                 <i class="fas fa-check-circle mr-2"></i> Finaliser la vente
               </button>
+              <button
+                id="annulerModificationBtn"
+                class="w-full bg-gray-500 hover:bg-gray-600 text-white font-medium py-3 px-4 rounded-lg transition btn-hover hidden mt-3"
+              >
+                <i class="fas fa-times-circle mr-2"></i> Annuler la modification
+              </button>
               <div id="venteMessage" class="mt-4"></div>
             </div>
           </div>
@@ -1567,8 +1598,9 @@
               </div>
             </div>
 
+            <!-- Statistiques globales avec compteur de cassiers -->
             <div
-              class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 p-6 border-b border-gray-100 bg-gray-50"
+              class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 p-6 border-b border-gray-100 bg-gray-50"
             >
               <div
                 class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-4 text-center"
@@ -1622,8 +1654,60 @@
                   0 FC
                 </p>
               </div>
+              <!-- Compteur de cassiers global -->
+              <div
+                class="bg-gradient-to-br from-amber-50 to-amber-100 rounded-xl p-4 text-center border-2 border-amber-300"
+              >
+                <p class="text-gray-500 text-xs uppercase tracking-wider">
+                  📦 Cassiers achetés
+                </p>
+                <p
+                  id="statTotalCassiersAchats"
+                  class="text-2xl font-bold text-amber-700"
+                >
+                  0
+                </p>
+                <p class="text-xs text-gray-400 mt-1">Ce mois</p>
+              </div>
             </div>
 
+            <!-- Widgets cassiers du jour et du mois -->
+            <div
+              class="grid grid-cols-1 sm:grid-cols-2 gap-4 px-6 py-3 border-b border-gray-100 bg-white"
+            >
+              <div
+                class="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-xl p-3 border border-blue-200"
+              >
+                <div class="flex justify-between items-center">
+                  <span class="text-sm font-medium text-gray-700">
+                    <i class="fas fa-calendar-day text-blue-600 mr-2"></i>
+                    Cassiers aujourd'hui
+                  </span>
+                  <span
+                    id="cassiersAujourdHui"
+                    class="text-2xl font-bold text-blue-700"
+                    >0</span
+                  >
+                </div>
+              </div>
+              <div
+                class="bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl p-3 border border-amber-200"
+              >
+                <div class="flex justify-between items-center">
+                  <span class="text-sm font-medium text-gray-700">
+                    <i class="fas fa-calendar-alt text-amber-600 mr-2"></i>
+                    Cassiers ce mois
+                  </span>
+                  <span
+                    id="cassiersCeMois"
+                    class="text-2xl font-bold text-amber-700"
+                    >0</span
+                  >
+                </div>
+              </div>
+            </div>
+
+            <!-- BRACONGO et BRALIMA avec compteurs de cassiers -->
             <div
               class="grid grid-cols-1 md:grid-cols-2 gap-4 p-6 border-b border-gray-100"
             >
@@ -1670,8 +1754,21 @@
                       0 FC
                     </p>
                   </div>
+                  <!-- Cassiers BRACONGO -->
+                  <div
+                    class="bg-white rounded-lg p-2 text-center col-span-2 border-t border-green-100 pt-2 mt-1"
+                  >
+                    <p class="text-xs text-gray-500">📦 Cassiers achetés</p>
+                    <p
+                      id="statBracongoCassiers"
+                      class="text-xl font-bold text-amber-700"
+                    >
+                      0
+                    </p>
+                  </div>
                 </div>
               </div>
+
               <div
                 class="bg-gradient-to-r from-yellow-50 to-amber-50 rounded-xl p-4 border border-yellow-200"
               >
@@ -1713,6 +1810,18 @@
                       class="text-xl font-bold text-purple-700"
                     >
                       0 FC
+                    </p>
+                  </div>
+                  <!-- Cassiers BRALIMA -->
+                  <div
+                    class="bg-white rounded-lg p-2 text-center col-span-2 border-t border-yellow-100 pt-2 mt-1"
+                  >
+                    <p class="text-xs text-gray-500">📦 Cassiers achetés</p>
+                    <p
+                      id="statBralimaCassiers"
+                      class="text-xl font-bold text-amber-700"
+                    >
+                      0
                     </p>
                   </div>
                 </div>
@@ -2168,23 +2277,57 @@
       class="fixed inset-0 bg-black/50 z-50 hidden items-center justify-center"
     >
       <div class="bg-white rounded-xl shadow-xl w-full max-w-md mx-4">
-        <div class="px-6 py-4 border-b">
-          <h3 class="text-lg font-semibold">Modifier le client</h3>
+        <div
+          class="px-6 py-4 border-b bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-t-xl"
+        >
+          <h3 class="text-lg font-semibold">
+            <i class="fas fa-user-edit mr-2"></i> Modifier le client
+          </h3>
+          <button
+            id="closeModalHeaderBtn"
+            class="absolute right-4 top-4 text-white hover:bg-white/20 rounded-full w-8 h-8"
+          >
+            <i class="fas fa-times"></i>
+          </button>
         </div>
         <div class="p-6 space-y-4">
+          <div
+            class="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-sm text-yellow-800"
+          >
+            <i class="fas fa-exclamation-triangle mr-2"></i>
+            <strong>Attention :</strong> La modification du code client
+            affectera l'historique des ventes. Assurez-vous de bien comprendre
+            les conséquences.
+          </div>
           <div>
-            <label class="block text-gray-700 text-sm font-medium mb-2"
-              >Nom complet</label
-            ><input
+            <label class="block text-gray-700 text-sm font-medium mb-2">
+              Code client <span class="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              id="editClientCode"
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none uppercase font-mono"
+              placeholder="Ex: JEAN001, DUPONT01"
+            />
+            <p class="text-xs text-gray-400 mt-1">
+              Le code doit être unique (3-20 caractères)
+            </p>
+          </div>
+          <div>
+            <label class="block text-gray-700 text-sm font-medium mb-2">
+              Nom complet
+            </label>
+            <input
               type="text"
               id="editClientNom"
               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
             />
           </div>
           <div>
-            <label class="block text-gray-700 text-sm font-medium mb-2"
-              >Téléphone</label
-            ><input
+            <label class="block text-gray-700 text-sm font-medium mb-2">
+              Téléphone
+            </label>
+            <input
               type="tel"
               id="editClientTelephone"
               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
@@ -2196,8 +2339,9 @@
             id="closeEditModalBtn"
             class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
           >
-            Annuler</button
-          ><button
+            Annuler
+          </button>
+          <button
             id="saveEditClientBtn"
             class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg"
           >
@@ -2206,6 +2350,123 @@
         </div>
       </div>
     </div>
+
+    <!-- Modal d'aide Bluetooth -->
+    <div
+      id="bluetoothHelpModal"
+      class="fixed inset-0 bg-black/50 z-[100] hidden items-center justify-center"
+    >
+      <div
+        class="bg-white rounded-xl shadow-xl w-full max-w-lg mx-4 animate-fadeIn max-h-[80vh] overflow-y-auto"
+      >
+        <div
+          class="sticky top-0 px-6 py-4 border-b bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded-t-xl"
+        >
+          <h3 class="text-lg font-semibold">
+            <i class="fas fa-bluetooth text-xl mr-2"></i> Connexion de
+            l'imprimante POS
+          </h3>
+          <button
+            onclick="closeBluetoothHelp()"
+            class="absolute right-4 top-4 text-white hover:bg-white/20 rounded-full w-8 h-8"
+          >
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="p-6 space-y-4">
+          <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <h4 class="font-bold text-blue-800 mb-2">
+              📱 Connexion Bluetooth (Mobile/Tablette)
+            </h4>
+            <ol
+              class="list-decimal list-inside text-sm text-gray-700 space-y-2"
+            >
+              <li>Allumez l'imprimante POS</li>
+              <li>
+                Allez dans <strong>Paramètres > Bluetooth</strong> de votre
+                appareil
+              </li>
+              <li>Activez le Bluetooth et recherchez les appareils</li>
+              <li>
+                Sélectionnez l'imprimante (nom:
+                <strong>80mm POS Printer</strong> ou similaire)
+              </li>
+              <li>Confirmez l'appairage</li>
+              <li>L'imprimante est maintenant prête !</li>
+            </ol>
+          </div>
+
+          <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+            <h4 class="font-bold text-green-800 mb-2">
+              💻 Connexion USB (Ordinateur)
+            </h4>
+            <ol
+              class="list-decimal list-inside text-sm text-gray-700 space-y-2"
+            >
+              <li>Connectez l'imprimante via le câble Micro-USB</li>
+              <li>
+                Installez les pilotes si nécessaire (généralement automatique)
+              </li>
+              <li>L'imprimante apparaîtra comme une imprimante standard</li>
+              <li>
+                Dans Chrome, allez dans
+                <strong>Paramètres > Imprimantes</strong>
+              </li>
+              <li>Sélectionnez-la comme imprimante par défaut</li>
+            </ol>
+          </div>
+
+          <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+            <h4 class="font-bold text-yellow-800 mb-2">
+              ⚙️ Configuration recommandée
+            </h4>
+            <ul class="list-disc list-inside text-sm text-gray-700 space-y-1">
+              <li>Format papier: <strong>80mm</strong></li>
+              <li>Qualité d'impression: <strong>Normale</strong></li>
+              <li>Marge: <strong>0mm</strong></li>
+              <li>Orientation: <strong>Portrait</strong></li>
+            </ul>
+          </div>
+
+          <div class="bg-gray-50 rounded-lg p-4">
+            <h4 class="font-bold text-gray-800 mb-2">🔧 Dépannage rapide</h4>
+            <ul class="text-sm text-gray-600 space-y-2">
+              <li>
+                <strong>❌ Impression blanche/lignes:</strong> Nettoyez la tête
+                d'impression avec un chiffon doux et alcool
+              </li>
+              <li>
+                <strong>❌ Connexion impossible:</strong> Redémarrez
+                l'imprimante et votre appareil
+              </li>
+              <li>
+                <strong>❌ Papier bloqué:</strong> Vérifiez que le papier est
+                bien positionné
+              </li>
+              <li>
+                <strong>❌ Impression lente:</strong> Vérifiez la charge de la
+                batterie
+              </li>
+            </ul>
+          </div>
+
+          <button
+            onclick="closeBluetoothHelp()"
+            class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2 rounded-lg transition"
+          >
+            <i class="fas fa-check-circle mr-2"></i> J'ai compris
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bouton Bluetooth flottant -->
+    <button
+      onclick="showBluetoothHelp()"
+      class="fixed bottom-5 right-5 bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-full shadow-lg z-40"
+    >
+      <i class="fas fa-bluetooth text-xl"></i>
+    </button>
 
     <script src="client.js"></script>
   </body>
