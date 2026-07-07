@@ -24,6 +24,397 @@ function verifyPassword(inputPassword) {
 }
 
 // ============================================
+// GÉNÉRATION DE FACTURE PDF POUR UNE VENTE
+// ============================================
+
+async function genererFactureVentePDF(venteId, clientId) {
+  try {
+    const [venteRes, clientRes] = await Promise.all([
+      fetch(`${VENTES_URL}/${venteId}`),
+      fetch(`${CLIENTS_URL}/${String(clientId)}`),
+    ]);
+
+    if (!venteRes.ok) throw new Error("Vente non trouvée");
+    if (!clientRes.ok) throw new Error("Client non trouvé");
+
+    const vente = await venteRes.json();
+    const client = await clientRes.json();
+
+    if (typeof window.jspdf === "undefined") {
+      showTemporaryNotification(
+        "❌ Erreur PDF - Librairie non chargée",
+        "error",
+      );
+      return;
+    }
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    const w = doc.internal.pageSize.getWidth();
+    const m = 20;
+    const rt = w - m;
+    const dateF = new Date().toLocaleString("fr-FR");
+
+    const vn = nettoyerVente(vente);
+    const produits = vn.produits;
+    const total = vn.total;
+
+    doc.setFontSize(20);
+    doc.setFont("helvetica", "bold");
+    doc.text("FACTURE DE VENTE", w / 2, 20, { align: "center" });
+
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    doc.text("VentesPro SARL", m, 35);
+    doc.text("Kinshasa, République Démocratique du Congo", m, 43);
+    doc.text(`Date: ${dateF}`, rt - 40, 35, { align: "right" });
+    doc.text(`Facture N°: ${vente.id || "N/A"}`, rt - 40, 43, {
+      align: "right",
+    });
+    doc.line(m, 52, rt, 52);
+
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "bold");
+    doc.text("Client :", m, 65);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.text(client.nom || "Client inconnu", m + 22, 65);
+    doc.text(`Téléphone: ${client.telephone || "N/A"}`, m + 22, 73);
+    doc.text(`Code Client: ${client.id}`, m + 22, 81);
+    doc.line(m, 88, rt, 88);
+
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "bold");
+    doc.text("Détail des produits", m, 100);
+
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "bold");
+    doc.text("Produit", m, 110);
+    doc.text("Qté", 90, 110);
+    doc.text("Prix unitaire", 120, 110);
+    doc.text("Total", 160, 110);
+    doc.line(m, 112, rt, 112);
+
+    let y = 120;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+
+    if (produits && produits.length > 0) {
+      produits.forEach((p) => {
+        const sousTotal = p.prix * p.quantite;
+        doc.text(p.nom || "Produit", m, y);
+        doc.text(p.quantite.toString(), 90, y);
+        doc.text(`${formatNumberFC(p.prix)} FC`, 120, y);
+        doc.text(`${formatNumberFC(sousTotal)} FC`, 160, y);
+        y += 7;
+
+        if (y > 250) {
+          doc.addPage();
+          y = 20;
+        }
+      });
+    } else {
+      doc.text("Aucun produit", m, y);
+      y += 7;
+    }
+
+    y += 5;
+    doc.line(m, y, rt, y);
+    y += 8;
+
+    // SOUS-TOTAL
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11);
+    doc.text("Sous-total:", 130, y);
+    doc.text(`${formatNumberFC(total)} FC`, rt, y, { align: "right" });
+    y += 7;
+
+    if (vente.modifiee) {
+      doc.setTextColor(255, 0, 0);
+      doc.text("⚠️ FACTURE MODIFIÉE", m, y);
+      doc.setTextColor(0, 0, 0);
+      y += 7;
+    }
+
+    // ✅ ESPACE SUFFISANT AVANT LE TOTAL
+    y += 10;
+
+    // ✅ TOTAL À PAYER - CORRIGÉ AVEC MEILLEUR ESPACEMENT
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(14);
+    doc.setTextColor(76, 175, 80);
+    doc.text("TOTAL À PAYER :", 120, y);
+    doc.text(`${formatNumberFC(total)} FC`, rt, y, { align: "right" });
+
+    doc.setFontSize(8);
+    doc.setTextColor(100, 100, 100);
+    doc.setFont("helvetica", "normal");
+    doc.text("Merci de votre confiance !", w / 2, 280, { align: "center" });
+    doc.text("www.ventespro.com", w / 2, 285, { align: "center" });
+
+    const nomFichier = `facture_${client.nom.replace(/\s/g, "_")}_${vente.id || Date.now()}.pdf`;
+    doc.save(nomFichier);
+
+    showTemporaryNotification("✅ Facture PDF générée avec succès !");
+    return doc;
+  } catch (error) {
+    console.error("Erreur génération PDF:", error);
+    showTemporaryNotification(`❌ Erreur: ${error.message}`, "error");
+    return null;
+  }
+}
+
+// ============================================
+// GÉNÉRATION DE TICKET PDF (80mm)
+// ============================================
+function genererTicketPDF(vente, client) {
+  if (typeof window.jspdf === "undefined") {
+    showTemporaryNotification("❌ Erreur PDF - Librairie non chargée", "error");
+    return;
+  }
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({
+    unit: "mm",
+    format: [80, 297],
+    orientation: "portrait",
+  });
+
+  const vn = nettoyerVente(vente);
+  const produits = vn.produits;
+  const total = vn.total;
+  const date = new Date().toLocaleString("fr-FR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+  const ticketId = vente.id || Date.now();
+
+  let totalBouteilles = 0;
+  let totalCassiers = 0;
+
+  produits.forEach((p) => {
+    const isCassier = p.prix > 50000 || p.quantite > 10;
+    if (isCassier) {
+      totalCassiers += p.quantite;
+    } else {
+      totalBouteilles += p.quantite;
+    }
+  });
+
+  const pageWidth = 80;
+  const margin = 4;
+  let y = margin + 2;
+
+  doc.setFont("courier", "bold");
+  doc.setFontSize(14);
+  doc.text("VENTESPRO", pageWidth / 2, y, { align: "center" });
+  y += 6;
+  doc.setFont("courier", "normal");
+  doc.setFontSize(8);
+  doc.text("Kinshasa, République Démocratique du Congo", pageWidth / 2, y, {
+    align: "center",
+  });
+  y += 4;
+  doc.text("Tel: +243 123 456 789", pageWidth / 2, y, { align: "center" });
+  y += 4;
+
+  doc.setDrawColor(0);
+  doc.setLineDashPattern([2, 2], 0);
+  doc.line(margin, y, pageWidth - margin, y);
+  doc.setLineDashPattern([], 0);
+  y += 4;
+
+  doc.setFont("courier", "bold");
+  doc.setFontSize(11);
+  const estModifiee = vente.modifiee === true;
+  doc.text(
+    estModifiee ? "FACTURE MODIFIEE" : "FACTURE DE VENTE",
+    pageWidth / 2,
+    y,
+    {
+      align: "center",
+    },
+  );
+  y += 5;
+  doc.setFont("courier", "normal");
+  doc.setFontSize(7);
+  doc.text(`N°: ${String(ticketId).substring(0, 12)}`, margin, y);
+  doc.text(`Date: ${date}`, pageWidth - margin, y, { align: "right" });
+  y += 4;
+
+  doc.setDrawColor(0);
+  doc.setLineDashPattern([2, 2], 0);
+  doc.line(margin, y, pageWidth - margin, y);
+  doc.setLineDashPattern([], 0);
+  y += 5;
+
+  doc.setFont("courier", "bold");
+  doc.setFontSize(8);
+  doc.text("CLIENT", margin, y);
+  y += 4;
+  doc.setFont("courier", "normal");
+  doc.setFontSize(7);
+  doc.text(`Nom: ${escapeHtml(client.nom)}`, margin, y);
+  y += 3.5;
+  doc.text(`Code: ${client.id}`, margin, y);
+  y += 3.5;
+  doc.text(`Tel: ${client.telephone || "Non renseigne"}`, margin, y);
+  y += 4;
+
+  doc.setDrawColor(0);
+  doc.setLineDashPattern([2, 2], 0);
+  doc.line(margin, y, pageWidth - margin, y);
+  doc.setLineDashPattern([], 0);
+  y += 5;
+
+  doc.setFont("courier", "bold");
+  doc.setFontSize(8);
+  doc.text("PRODUIT", margin, y);
+  doc.text("TOTAL", pageWidth - margin, y, { align: "right" });
+  y += 4;
+  doc.setFont("courier", "normal");
+  doc.setFontSize(7);
+
+  produits.forEach((p) => {
+    const st = p.prix * p.quantite;
+    const nomTronque =
+      p.nom.length > 15 ? p.nom.substring(0, 15) + "..." : p.nom;
+
+    doc.text(nomTronque, margin, y);
+    doc.text(`${formatNumberFC(st)} FC`, pageWidth - margin, y, {
+      align: "right",
+    });
+    y += 3.5;
+    doc.setFontSize(6);
+    doc.text(`${formatNumberFC(p.prix)} FC x ${p.quantite}`, margin + 2, y);
+    y += 4;
+    doc.setFontSize(7);
+  });
+
+  doc.setDrawColor(0);
+  doc.setLineDashPattern([2, 2], 0);
+  doc.line(margin, y, pageWidth - margin, y);
+  doc.setLineDashPattern([], 0);
+  y += 4;
+
+  doc.setFont("courier", "normal");
+  doc.setFontSize(7);
+  doc.text(`🍾 Bouteilles: ${totalBouteilles} unite(s)`, margin, y);
+  y += 3.5;
+  doc.text(`📦 Cassiers: ${totalCassiers} lot(s)`, margin, y);
+  y += 4;
+
+  doc.setDrawColor(0);
+  doc.setLineDashPattern([2, 2], 0);
+  doc.line(margin, y, pageWidth - margin, y);
+  doc.setLineDashPattern([], 0);
+  y += 5;
+
+  doc.setFont("courier", "bold");
+  doc.setFontSize(12);
+  doc.text("TOTAL A PAYER", margin, y);
+  doc.text(`${formatNumberFC(total)} FC`, pageWidth - margin, y, {
+    align: "right",
+  });
+  y += 6;
+
+  if (estModifiee && vente.ancienTotal) {
+    doc.setFont("courier", "normal");
+    doc.setFontSize(6);
+    doc.setTextColor(255, 100, 0);
+    doc.text(
+      `⚠️ Ancien total: ${formatNumberFC(vente.ancienTotal)} FC`,
+      margin,
+      y,
+    );
+    y += 3.5;
+    doc.text(
+      `Modifiee le: ${new Date(vente.dateModification).toLocaleDateString()}`,
+      margin,
+      y,
+    );
+    y += 4;
+    doc.setTextColor(0, 0, 0);
+  }
+
+  doc.setDrawColor(0);
+  doc.setLineDashPattern([2, 2], 0);
+  doc.line(margin, y, pageWidth - margin, y);
+  doc.setLineDashPattern([], 0);
+  y += 4;
+
+  doc.setFont("courier", "bold");
+  doc.setFontSize(9);
+  doc.text("MERCI DE VOTRE VISITE !", pageWidth / 2, y, { align: "center" });
+  y += 4;
+  doc.setFont("courier", "normal");
+  doc.setFontSize(6);
+  doc.text(
+    "Avez-vous pense a notre programme de fidelite ?",
+    pageWidth / 2,
+    y,
+    {
+      align: "center",
+    },
+  );
+  y += 3.5;
+  doc.text("Suivez-nous sur Facebook et Instagram", pageWidth / 2, y, {
+    align: "center",
+  });
+  y += 4;
+  doc.setFontSize(10);
+  doc.text("★ ★ ★ ★ ★", pageWidth / 2, y, { align: "center" });
+  y += 4;
+  doc.setFontSize(6);
+  doc.text("www.ventespro.com", pageWidth / 2, y, { align: "center" });
+  y += 4;
+
+  doc.setFontSize(5);
+  doc.setTextColor(150, 150, 150);
+  doc.text(`ID: ${String(ticketId).substring(0, 8)}`, pageWidth / 2, y, {
+    align: "center",
+  });
+  y += 3;
+  doc.text("Facture generee via VentesPro v1.0", pageWidth / 2, y, {
+    align: "center",
+  });
+
+  const nomFichier = `ticket_${client.nom.replace(/\s/g, "_")}_${String(ticketId).substring(0, 8)}.pdf`;
+  doc.save(nomFichier);
+
+  showTemporaryNotification("✅ Ticket PDF généré avec succès !");
+}
+
+// ============================================
+// IMPRESSION TICKET DEPUIS L'HISTORIQUE
+// ============================================
+async function imprimerTicketVente(venteId, clientId) {
+  try {
+    const [venteRes, clientRes] = await Promise.all([
+      fetch(`${VENTES_URL}/${venteId}`),
+      fetch(`${CLIENTS_URL}/${String(clientId)}`),
+    ]);
+
+    if (!venteRes.ok) throw new Error("Vente non trouvée");
+    if (!clientRes.ok) throw new Error("Client non trouvé");
+
+    const vente = await venteRes.json();
+    const client = await clientRes.json();
+
+    genererTicketPDF(vente, client);
+  } catch (e) {
+    console.error("Erreur:", e);
+    showTemporaryNotification(
+      "❌ Erreur lors de la génération du ticket",
+      "error",
+    );
+  }
+}
+
+// ============================================
 // VARIABLES GLOBALES
 // ============================================
 let produits = {
@@ -66,7 +457,7 @@ let echeanciers = [];
 let remisesMensuelles = {};
 
 // ============================================
-// FONCTIONS UTILITAIRES
+// FONCTIONS UTILITAIRES - FORMATAGE CORRIGÉ
 // ============================================
 function showNotification(message, type = "success") {
   const toast = document.createElement("div");
@@ -84,14 +475,15 @@ function escapeHtml(text) {
   div.textContent = text;
   return div.innerHTML;
 }
+
 function formatNumberFC(number) {
   if (number === undefined || number === null) return "0";
   const num = Number(number);
-  if (isNaN(num)) return "0";
-  return Math.floor(num)
-    .toString()
-    .replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+  if (isNaN(num) || !isFinite(num)) return "0";
+  const rounded = Math.floor(num);
+  return rounded.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
 }
+
 function formatDate(dateString) {
   if (!dateString) return "Date non disponible";
   let date = new Date(dateString);
@@ -180,6 +572,89 @@ function formatId(id) {
   const idStr = String(id);
   if (idStr.length <= 12) return idStr;
   return idStr.substring(0, 8) + "...";
+}
+
+// ============================================
+// DEMANDE DE MOT DE PASSE AVANT MODIFICATION
+// ============================================
+async function demandeMotDePassePourModification() {
+  return new Promise((resolve) => {
+    const modal = document.createElement("div");
+    modal.className =
+      "fixed inset-0 bg-black/50 z-[100] flex items-center justify-center";
+    modal.innerHTML = `
+            <div class="bg-white rounded-xl shadow-xl w-full max-w-sm mx-4 animate-fadeIn">
+                <div class="px-6 py-4 border-b bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-t-xl">
+                    <h3 class="text-lg font-semibold">
+                        <i class="fas fa-shield-alt mr-2"></i> Autorisation requise
+                    </h3>
+                </div>
+                <div class="p-6 space-y-4">
+                    <div class="text-center">
+                        <i class="fas fa-lock text-4xl text-orange-500 mb-3 block"></i>
+                        <p class="text-gray-700 text-sm mb-2">Cette action nécessite le mot de passe administrateur.</p>
+                        <p class="text-xs text-gray-500">Motif : Modification d'une vente existante</p>
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 text-sm font-medium mb-2">Mot de passe</label>
+                        <input type="password" id="adminPassword" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 outline-none" placeholder="Entrez le mot de passe" autofocus>
+                    </div>
+                    <div id="passwordError" class="text-red-600 text-sm hidden"></div>
+                    <div class="flex gap-3 pt-2">
+                        <button id="confirmPasswordBtn" class="flex-1 bg-orange-600 hover:bg-orange-700 text-white py-2 rounded-lg transition">
+                            <i class="fas fa-check mr-2"></i> Confirmer
+                        </button>
+                        <button id="cancelPasswordBtn" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 py-2 rounded-lg transition">
+                            Annuler
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+    document.body.appendChild(modal);
+
+    const passwordInput = modal.querySelector("#adminPassword");
+    const confirmBtn = modal.querySelector("#confirmPasswordBtn");
+    const cancelBtn = modal.querySelector("#cancelPasswordBtn");
+    const errorDiv = modal.querySelector("#passwordError");
+
+    const closeModal = () => modal.remove();
+
+    const verifyAndResolve = () => {
+      const enteredPassword = passwordInput.value;
+      if (verifyPassword(enteredPassword)) {
+        closeModal();
+        resolve(true);
+      } else {
+        errorDiv.textContent = "❌ Mot de passe incorrect !";
+        errorDiv.classList.remove("hidden");
+        passwordInput.value = "";
+        passwordInput.focus();
+        setTimeout(() => {
+          errorDiv.classList.add("hidden");
+        }, 3000);
+      }
+    };
+
+    confirmBtn.addEventListener("click", verifyAndResolve);
+    cancelBtn.addEventListener("click", () => {
+      closeModal();
+      resolve(false);
+    });
+
+    passwordInput.addEventListener("keypress", (e) => {
+      if (e.key === "Enter") verifyAndResolve();
+    });
+
+    modal.addEventListener("click", (e) => {
+      if (e.target === modal) {
+        closeModal();
+        resolve(false);
+      }
+    });
+
+    passwordInput.focus();
+  });
 }
 
 // ============================================
@@ -514,7 +989,7 @@ window.genererFactureVenteSpecifique = async function (venteId) {
     const c = await (
       await fetch(`${CLIENTS_URL}/${String(v.clientId)}`)
     ).json();
-    printThermalTicket(v, c);
+    genererTicketPDF(v, c);
   } catch (e) {
     showTemporaryNotification("❌ Erreur", "error");
   }
@@ -1117,16 +1592,19 @@ async function genererFactureClientParAnnee() {
         y = 20;
       }
     }
-    y += 10;
+    y += 15;
     doc.line(m, y, rt, y);
-    y += 8;
+    y += 12;
     doc.setFont("helvetica", "bold");
     doc.text("TOTAL GÉNÉRAL :", m, y);
     doc.text(`${formatNumberFC(totalGeneral)} FC`, 130, y);
-    y += 7;
+    y += 10;
     doc.text("Remise globale (5%) :", m, y);
     doc.text(`-${formatNumberFC(remiseTotale)} FC`, 130, y);
-    y += 10;
+
+    // ✅ ESPACE SUFFISANT AVANT NET À PAYER
+    y += 15;
+
     doc.setFontSize(14);
     doc.setTextColor(76, 175, 80);
     doc.text("NET À PAYER :", m, y);
@@ -1173,10 +1651,10 @@ window.genererFactureVente = async function (venteId, clientId) {
           </h3>
           <div class="space-y-3">
             <button id="pdfBtn" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-lg transition flex items-center justify-center gap-2">
-              <i class="fas fa-file-pdf"></i> PDF (Télécharger)
+              <i class="fas fa-file-pdf"></i> Facture PDF
             </button>
             <button id="thermalBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg transition flex items-center justify-center gap-2">
-              <i class="fas fa-print"></i> Ticket thermique (Imprimer)
+              <i class="fas fa-receipt"></i> Ticket PDF
             </button>
             <button id="cancelBtn" class="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 py-2 rounded-lg transition">
               Annuler
@@ -1218,246 +1696,13 @@ window.genererFactureVente = async function (venteId, clientId) {
     if (choix === "pdf") {
       await genererFactureVentePDF(venteId, clientId);
     } else {
-      printThermalTicket(vente, client);
+      genererTicketPDF(vente, client);
     }
   } catch (e) {
     console.error("Erreur:", e);
     showTemporaryNotification("❌ Erreur lors de la génération", "error");
   }
 };
-
-// ============================================
-// GÉNÉRATION DE FACTURE PDF POUR UNE VENTE
-// ============================================
-
-async function genererFactureVentePDF(venteId, clientId) {
-  try {
-    const [venteRes, clientRes] = await Promise.all([
-      fetch(`${VENTES_URL}/${venteId}`),
-      fetch(`${CLIENTS_URL}/${String(clientId)}`),
-    ]);
-
-    if (!venteRes.ok) throw new Error("Vente non trouvée");
-    if (!clientRes.ok) throw new Error("Client non trouvé");
-
-    const vente = await venteRes.json();
-    const client = await clientRes.json();
-
-    if (typeof window.jspdf === "undefined") {
-      showTemporaryNotification(
-        "❌ Erreur PDF - Librairie non chargée",
-        "error",
-      );
-      return;
-    }
-
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-    const w = doc.internal.pageSize.getWidth();
-    const m = 20;
-    const rt = w - m;
-    const dateF = new Date().toLocaleString("fr-FR");
-
-    const vn = nettoyerVente(vente);
-    const produits = vn.produits;
-    const total = vn.total;
-
-    doc.setFontSize(20);
-    doc.setFont("helvetica", "bold");
-    doc.text("FACTURE DE VENTE", w / 2, 20, { align: "center" });
-
-    doc.setFontSize(9);
-    doc.setFont("helvetica", "normal");
-    doc.text("VentesPro SARL", m, 35);
-    doc.text("Kinshasa, République Démocratique du Congo", m, 43);
-    doc.text(`Date: ${dateF}`, rt - 40, 35, { align: "right" });
-    doc.text(`Facture N°: ${vente.id || "N/A"}`, rt - 40, 43, {
-      align: "right",
-    });
-    doc.line(m, 52, rt, 52);
-
-    doc.setFontSize(11);
-    doc.setFont("helvetica", "bold");
-    doc.text("Client :", m, 65);
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(10);
-    doc.text(client.nom || "Client inconnu", m + 22, 65);
-    doc.text(`Téléphone: ${client.telephone || "N/A"}`, m + 22, 73);
-    doc.text(`Code Client: ${client.id}`, m + 22, 81);
-    doc.line(m, 88, rt, 88);
-
-    doc.setFontSize(11);
-    doc.setFont("helvetica", "bold");
-    doc.text("Détail des produits", m, 100);
-
-    doc.setFontSize(9);
-    doc.setFont("helvetica", "bold");
-    doc.text("Produit", m, 110);
-    doc.text("Qté", 90, 110);
-    doc.text("Prix unitaire", 120, 110);
-    doc.text("Total", 160, 110);
-    doc.line(m, 112, rt, 112);
-
-    let y = 120;
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(9);
-
-    if (produits && produits.length > 0) {
-      produits.forEach((p) => {
-        const sousTotal = p.prix * p.quantite;
-        doc.text(p.nom || "Produit", m, y);
-        doc.text(p.quantite.toString(), 90, y);
-        doc.text(`${formatNumberFC(p.prix)} FC`, 120, y);
-        doc.text(`${formatNumberFC(sousTotal)} FC`, 160, y);
-        y += 7;
-
-        if (y > 250) {
-          doc.addPage();
-          y = 20;
-        }
-      });
-    } else {
-      doc.text("Aucun produit", m, y);
-      y += 7;
-    }
-
-    y += 5;
-    doc.line(m, y, rt, y);
-    y += 8;
-
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(10);
-    doc.text("Sous-total:", 130, y);
-    doc.text(`${formatNumberFC(total)} FC`, rt, y, { align: "right" });
-    y += 7;
-
-    if (vente.modifiee) {
-      doc.setTextColor(255, 0, 0);
-      doc.text("⚠️ FACTURE MODIFIÉE", m, y);
-      doc.setTextColor(0, 0, 0);
-      y += 7;
-    }
-
-    y += 5;
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(14);
-    doc.setTextColor(76, 175, 80);
-    doc.text("TOTAL À PAYER :", 130, y);
-    doc.text(`${formatNumberFC(total)} FC`, rt, y, { align: "right" });
-
-    doc.setFontSize(8);
-    doc.setTextColor(100, 100, 100);
-    doc.setFont("helvetica", "normal");
-    doc.text("Merci de votre confiance !", w / 2, 280, { align: "center" });
-    doc.text("www.ventespro.com", w / 2, 285, { align: "center" });
-
-    const nomFichier = `facture_${client.nom.replace(/\s/g, "_")}_${vente.id || Date.now()}.pdf`;
-    doc.save(nomFichier);
-
-    showTemporaryNotification("✅ Facture PDF générée avec succès !");
-    return doc;
-  } catch (error) {
-    console.error("Erreur génération PDF:", error);
-    showTemporaryNotification(`❌ Erreur: ${error.message}`, "error");
-    return null;
-  }
-}
-// ============================================
-// IMPRESSION DIRECTE DU TICKET
-// ============================================
-
-window.imprimerTicketVente = async function (venteId, clientId) {
-  try {
-    const v = await (await fetch(`${VENTES_URL}/${venteId}`)).json();
-    const c = await (await fetch(`${CLIENTS_URL}/${String(clientId)}`)).json();
-    printThermalTicket(v, c);
-  } catch (e) {
-    showTemporaryNotification("❌ Erreur d'impression", "error");
-  }
-};
-
-// ============================================
-// DEMANDE DE MOT DE PASSE AVANT MODIFICATION
-// ============================================
-async function demandeMotDePassePourModification() {
-  return new Promise((resolve) => {
-    const modal = document.createElement("div");
-    modal.className =
-      "fixed inset-0 bg-black/50 z-[100] flex items-center justify-center";
-    modal.innerHTML = `
-            <div class="bg-white rounded-xl shadow-xl w-full max-w-sm mx-4 animate-fadeIn">
-                <div class="px-6 py-4 border-b bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-t-xl">
-                    <h3 class="text-lg font-semibold">
-                        <i class="fas fa-shield-alt mr-2"></i> Autorisation requise
-                    </h3>
-                </div>
-                <div class="p-6 space-y-4">
-                    <div class="text-center">
-                        <i class="fas fa-lock text-4xl text-orange-500 mb-3 block"></i>
-                        <p class="text-gray-700 text-sm mb-2">Cette action nécessite le mot de passe administrateur.</p>
-                        <p class="text-xs text-gray-500">Motif : Modification d'une vente existante</p>
-                    </div>
-                    <div>
-                        <label class="block text-gray-700 text-sm font-medium mb-2">Mot de passe</label>
-                        <input type="password" id="adminPassword" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 outline-none" placeholder="Entrez le mot de passe" autofocus>
-                    </div>
-                    <div id="passwordError" class="text-red-600 text-sm hidden"></div>
-                    <div class="flex gap-3 pt-2">
-                        <button id="confirmPasswordBtn" class="flex-1 bg-orange-600 hover:bg-orange-700 text-white py-2 rounded-lg transition">
-                            <i class="fas fa-check mr-2"></i> Confirmer
-                        </button>
-                        <button id="cancelPasswordBtn" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 py-2 rounded-lg transition">
-                            Annuler
-                        </button>
-                    </div>
-                </div>
-            </div>
-        `;
-    document.body.appendChild(modal);
-
-    const passwordInput = modal.querySelector("#adminPassword");
-    const confirmBtn = modal.querySelector("#confirmPasswordBtn");
-    const cancelBtn = modal.querySelector("#cancelPasswordBtn");
-    const errorDiv = modal.querySelector("#passwordError");
-
-    const closeModal = () => modal.remove();
-
-    const verifyAndResolve = () => {
-      const enteredPassword = passwordInput.value;
-      if (verifyPassword(enteredPassword)) {
-        closeModal();
-        resolve(true);
-      } else {
-        errorDiv.textContent = "❌ Mot de passe incorrect !";
-        errorDiv.classList.remove("hidden");
-        passwordInput.value = "";
-        passwordInput.focus();
-        setTimeout(() => {
-          errorDiv.classList.add("hidden");
-        }, 3000);
-      }
-    };
-
-    confirmBtn.addEventListener("click", verifyAndResolve);
-    cancelBtn.addEventListener("click", () => {
-      closeModal();
-      resolve(false);
-    });
-
-    passwordInput.addEventListener("keypress", (e) => {
-      if (e.key === "Enter") verifyAndResolve();
-    });
-
-    modal.addEventListener("click", (e) => {
-      if (e.target === modal) {
-        closeModal();
-        resolve(false);
-      }
-    });
-
-    passwordInput.focus();
-  });
-}
 
 // ============================================
 // MODIFICATION DES VENTES AVEC MOT DE PASSE
@@ -1545,213 +1790,6 @@ function annulerModification() {
     clientInput.value = "";
     clientInfoDiv.innerHTML = "";
     showTemporaryNotification("Modification annulée");
-  }
-}
-
-// ============================================
-// IMPRESSION THERMIQUE POUR POS 80mm
-// ============================================
-function printThermalTicket(vente, client) {
-  const vn = nettoyerVente(vente);
-  const produits = vn.produits;
-  const total = vn.total;
-  const date = new Date().toLocaleString("fr-FR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-  const ticketId = vente.id || Date.now();
-
-  let totalBouteilles = 0;
-  let totalCassiers = 0;
-
-  let produitsHtml = "";
-  if (produits && produits.length > 0) {
-    produits.forEach((p) => {
-      const st = p.prix * p.quantite;
-      const isCassier = p.prix > 50000 || p.quantite > 10;
-      if (isCassier) {
-        totalCassiers += p.quantite;
-      } else {
-        totalBouteilles += p.quantite;
-      }
-
-      produitsHtml += `
-                <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-                    <div style="flex: 2;">
-                        <span style="font-weight: bold;">${escapeHtml(p.nom)}</span>
-                        <div style="font-size: 9px; color: #555;">${formatNumberFC(p.prix)} FC x ${p.quantite}</div>
-                    </div>
-                    <div style="text-align: right; font-weight: bold;">${formatNumberFC(st)} FC</div>
-                </div>
-            `;
-    });
-  } else {
-    produitsHtml = `
-            <div style="text-align: center; padding: 10px; color: #999;">
-                Aucun produit détaillé
-            </div>
-        `;
-  }
-
-  const estModifiee = vente.modifiee === true;
-
-  const ticketHtml = `
-        <div id="thermalPrintContent" style="width: 280px; margin: 0 auto; font-family: 'Courier New', monospace; font-size: 11px; padding: 8px;">
-            <div style="text-align: center; margin-bottom: 12px;">
-                <div style="font-size: 18px; font-weight: bold; letter-spacing: 2px;">VENTESPRO</div>
-                <div style="font-size: 9px;">Kinshasa, République Démocratique du Congo</div>
-                <div style="font-size: 8px;">Tel: +243 123 456 789 | Email: contact@ventespro.com</div>
-                <div style="border-top: 1px dashed #000; margin: 6px 0;"></div>
-                <div style="font-size: 11px; font-weight: bold;">${estModifiee ? "FACTURE MODIFIÉE" : "FACTURE DE VENTE"}</div>
-                <div style="font-size: 8px;">N°: ${String(ticketId).substring(0, 12)}</div>
-                <div style="font-size: 8px;">Date: ${date}</div>
-            </div>
-            
-            <div style="background: #f5f5f5; padding: 6px; margin-bottom: 10px;">
-                <div style="font-weight: bold; margin-bottom: 4px; font-size: 9px;">INFORMATIONS CLIENT</div>
-                <div style="font-size: 9px;"><strong>Nom:</strong> ${escapeHtml(client.nom)}</div>
-                <div style="font-size: 9px;"><strong>Code:</strong> ${client.id}</div>
-                <div style="font-size: 9px;"><strong>Téléphone:</strong> ${client.telephone || "Non renseigné"}</div>
-            </div>
-            
-            <div style="border-top: 1px dashed #000; margin: 6px 0;"></div>
-            
-            <div style="display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 6px; background: #e0e0e0; padding: 4px; font-size: 9px;">
-                <div style="flex: 2;">DESCRIPTION</div>
-                <div style="text-align: right;">TOTAL</div>
-            </div>
-            
-            ${produitsHtml}
-            
-            <div style="border-top: 1px solid #000; margin: 6px 0;"></div>
-            
-            <div style="margin: 6px 0; font-size: 9px;">
-                <div style="display: flex; justify-content: space-between;">
-                    <span>🍾 Bouteilles:</span>
-                    <span>${totalBouteilles} unité(s)</span>
-                </div>
-                <div style="display: flex; justify-content: space-between;">
-                    <span>📦 Cassiers:</span>
-                    <span>${totalCassiers} lot(s)</span>
-                </div>
-            </div>
-            
-            <div style="border-top: 1px dashed #000; margin: 6px 0;"></div>
-            
-            <div style="margin: 6px 0;">
-                <div style="display: flex; justify-content: space-between; font-size: 14px; font-weight: bold;">
-                    <span>TOTAL À PAYER</span>
-                    <span style="color: #10b981;">${formatNumberFC(total)} FC</span>
-                </div>
-            </div>
-            
-            ${
-              estModifiee && vente.ancienTotal
-                ? `
-            <div style="border-top: 1px dotted #000; margin: 6px 0;"></div>
-            <div style="font-size: 7px; color: #ff6600;">
-                <div style="display: flex; justify-content: space-between;">
-                    <span>⚠️ Ancien total:</span>
-                    <span>${formatNumberFC(vente.ancienTotal)} FC</span>
-                </div>
-                <div style="display: flex; justify-content: space-between;">
-                    <span>Modifiée le:</span>
-                    <span>${new Date(vente.dateModification).toLocaleDateString()}</span>
-                </div>
-            </div>
-            `
-                : ""
-            }
-            
-            <div style="border-top: 1px dashed #000; margin: 6px 0;"></div>
-            
-            <div style="text-align: center; margin-top: 10px;">
-                <div style="font-size: 9px; font-weight: bold;">MERCI DE VOTRE VISITE !</div>
-                <div style="font-size: 8px;">Avez-vous pensé à notre programme de fidélité ?</div>
-                <div style="font-size: 8px;">Suivez-nous sur Facebook et Instagram</div>
-                <div style="font-size: 12px; margin-top: 6px;">★ ★ ★ ★ ★</div>
-                <div style="font-size: 7px; margin-top: 6px;">www.ventespro.com</div>
-            </div>
-            
-            <div style="text-align: center; margin-top: 6px; font-size: 6px; color: #999;">
-                ${Array(36).fill("=").join("")}
-                <div>Facture générée via VentesPro - v1.0</div>
-                <div>ID: ${String(ticketId).substring(0, 8)}</div>
-            </div>
-        </div>
-    `;
-
-  const printWindow = window.open("", "_blank");
-  printWindow.document.write(`
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>Impression Ticket VentesPro</title>
-            <meta charset="UTF-8">
-            <style>
-                * { margin: 0; padding: 0; box-sizing: border-box; }
-                body { 
-                    font-family: 'Courier New', 'Lucida Console', monospace; 
-                    background: #f0f0f0;
-                    display: flex;
-                    justify-content: center;
-                    align-items: center;
-                    min-height: 100vh;
-                }
-                @media print {
-                    body { 
-                        background: white;
-                        margin: 0;
-                        padding: 0;
-                    }
-                    @page { 
-                        size: 80mm auto;
-                        margin: 0mm;
-                    }
-                }
-            </style>
-        </head>
-        <body>
-            ${ticketHtml}
-            <script>
-                window.onload = function() {
-                    setTimeout(function() {
-                        window.print();
-                        setTimeout(function() {
-                            window.close();
-                        }, 1000);
-                    }, 200);
-                };
-                const style = document.createElement('style');
-                style.textContent = '@page { size: 80mm auto; margin: 0mm; }';
-                document.head.appendChild(style);
-            <\/script>
-        </body>
-        </html>
-    `);
-  printWindow.document.close();
-}
-
-function genererFacturePanier(vente, client) {
-  printThermalTicket(vente, client);
-}
-
-function showBluetoothHelp() {
-  const modal = document.getElementById("bluetoothHelpModal");
-  if (modal) {
-    modal.classList.remove("hidden");
-    modal.classList.add("flex");
-  }
-}
-
-function closeBluetoothHelp() {
-  const modal = document.getElementById("bluetoothHelpModal");
-  if (modal) {
-    modal.classList.add("hidden");
-    modal.classList.remove("flex");
   }
 }
 
@@ -2244,9 +2282,6 @@ async function chargerClientsPourEcheancier() {
   }
 }
 function mettreAJourWidgetEcheancier() {
-  // Cette fonction est conservée car elle pourrait être utilisée ailleurs
-  // Mais elle ne s'affiche plus dans la rubrique Achats
-  // Elle est utilisée uniquement pour la section Échéanciers
   console.log("Widget échéancier mis à jour");
 }
 
@@ -3166,7 +3201,7 @@ async function addVente() {
               <i class="fas fa-file-pdf"></i> Télécharger la facture PDF
             </button>
             <button id="thermalBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg transition flex items-center justify-center gap-2">
-              <i class="fas fa-print"></i> Imprimer le ticket
+              <i class="fas fa-receipt"></i> Télécharger le ticket PDF
             </button>
             <button id="skipBtn" class="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 py-2 rounded-lg transition">
               Plus tard
@@ -3206,7 +3241,7 @@ async function addVente() {
     if (choix === "pdf") {
       await genererFactureVentePDF(data.id, clientId);
     } else if (choix === "thermal") {
-      printThermalTicket(data, clientData);
+      genererTicketPDF(data, clientData);
     }
 
     panier = [];
@@ -3298,7 +3333,7 @@ async function sauvegarderModificationVente() {
               <i class="fas fa-file-pdf"></i> Télécharger la facture PDF
             </button>
             <button id="thermalBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg transition flex items-center justify-center gap-2">
-              <i class="fas fa-print"></i> Imprimer le ticket
+              <i class="fas fa-receipt"></i> Télécharger le ticket PDF
             </button>
             <button id="skipBtn" class="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 py-2 rounded-lg transition">
               Plus tard
@@ -3338,7 +3373,7 @@ async function sauvegarderModificationVente() {
     if (choix === "pdf") {
       await genererFactureVentePDF(data.id, clientId);
     } else if (choix === "thermal") {
-      printThermalTicket(data, clientData);
+      genererTicketPDF(data, clientData);
     }
 
     panier = [];
@@ -5472,9 +5507,7 @@ const historiqueMessageDiv = document.getElementById("historiqueMessage");
 const historiqueTableElem = document.getElementById("historiqueTable");
 const historiqueTableBody = document.getElementById("historiqueTableBody");
 
-// Correction : Attacher l'événement correctement avec clonage
 if (showHistoriqueBtn) {
-  // Supprimer les anciens écouteurs en clonant
   const newBtn = showHistoriqueBtn.cloneNode(true);
   showHistoriqueBtn.parentNode.replaceChild(newBtn, showHistoriqueBtn);
 
@@ -5547,7 +5580,7 @@ function displayVentesMulti(ventes, clientData) {
                            <i class="fas fa-file-pdf mr-1"></i> PDF
                          </button>
                          <button onclick="imprimerTicketVente('${v.id}', '${clientData.id}')" class="bg-blue-600 text-white px-2 py-1 rounded text-xs hover:bg-blue-700 transition">
-                           <i class="fas fa-print mr-1"></i> Ticket
+                           <i class="fas fa-receipt mr-1"></i> Ticket
                          </button>
                          <button onclick="modifierVente('${v.id}')" class="bg-yellow-600 text-white px-2 py-1 rounded text-xs hover:bg-yellow-700 transition">
                            <i class="fas fa-edit mr-1"></i> Modifier
@@ -5769,22 +5802,12 @@ window.showVenteDetail = async function (venteId) {
     const modal = document.createElement("div");
     modal.className =
       "fixed inset-0 bg-black/50 z-50 flex items-center justify-center";
-    modal.innerHTML = `<div class="bg-white rounded-xl shadow-xl max-w-md w-full mx-4 animate-fadeIn"><div class="px-6 py-4 border-b bg-gradient-to-r from-blue-50 to-white"><h3 class="text-lg font-semibold text-blue-800"><i class="fas fa-receipt text-blue-600 mr-2"></i> Détails de la vente</h3></div><div class="p-6 space-y-3"><div class="grid grid-cols-2 gap-2 text-sm"><p class="text-gray-500">🆔 ID Vente :</p><p class="font-mono font-medium">${vente.id}</p><p class="text-gray-500">👤 Client :</p><p class="font-medium">${escapeHtml(clientNom)}</p><p class="text-gray-500">🆔 Code Client :</p><p class="font-mono">${vente.clientId}</p></div><div class="border-t border-gray-100 pt-3"><p class="text-gray-500 text-sm mb-2">📦 Produits :</p><ul class="space-y-1 max-h-48 overflow-y-auto">${produitsHtml || '<li class="text-gray-400 text-center py-2">Aucun produit</li>'}</ul></div><div class="border-t border-gray-100 pt-3"><div class="flex justify-between items-center"><span class="text-gray-500">📊 Total articles :</span><span class="font-semibold">${totalArticles}</span></div><div class="flex justify-between items-center mt-2"><span class="text-gray-500">💰 Montant total :</span><span class="text-xl font-bold text-emerald-600">${formatNumberFC(total)} FC</span></div><div class="flex justify-between items-center mt-2"><span class="text-gray-500">📅 Date :</span><span class="text-sm">${formatDate(vente.date)}</span></div></div></div><div class="px-6 py-4 border-t flex justify-end gap-3"><button onclick="imprimerTicketVente('${vente.id}', '${vente.clientId}')" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition text-sm"><i class="fas fa-print mr-1"></i> Ticket</button><button onclick="genererFactureVente('${vente.id}', '${vente.clientId}')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg transition text-sm"><i class="fas fa-file-pdf mr-1"></i> PDF</button><button onclick="this.closest('.fixed').remove()" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg transition text-sm">Fermer</button></div></div>`;
+    modal.innerHTML = `<div class="bg-white rounded-xl shadow-xl max-w-md w-full mx-4 animate-fadeIn"><div class="px-6 py-4 border-b bg-gradient-to-r from-blue-50 to-white"><h3 class="text-lg font-semibold text-blue-800"><i class="fas fa-receipt text-blue-600 mr-2"></i> Détails de la vente</h3></div><div class="p-6 space-y-3"><div class="grid grid-cols-2 gap-2 text-sm"><p class="text-gray-500">🆔 ID Vente :</p><p class="font-mono font-medium">${vente.id}</p><p class="text-gray-500">👤 Client :</p><p class="font-medium">${escapeHtml(clientNom)}</p><p class="text-gray-500">🆔 Code Client :</p><p class="font-mono">${vente.clientId}</p></div><div class="border-t border-gray-100 pt-3"><p class="text-gray-500 text-sm mb-2">📦 Produits :</p><ul class="space-y-1 max-h-48 overflow-y-auto">${produitsHtml || '<li class="text-gray-400 text-center py-2">Aucun produit</li>'}</ul></div><div class="border-t border-gray-100 pt-3"><div class="flex justify-between items-center"><span class="text-gray-500">📊 Total articles :</span><span class="font-semibold">${totalArticles}</span></div><div class="flex justify-between items-center mt-2"><span class="text-gray-500">💰 Montant total :</span><span class="text-xl font-bold text-emerald-600">${formatNumberFC(total)} FC</span></div><div class="flex justify-between items-center mt-2"><span class="text-gray-500">📅 Date :</span><span class="text-sm">${formatDate(vente.date)}</span></div></div></div><div class="px-6 py-4 border-t flex justify-end gap-3"><button onclick="imprimerTicketVente('${vente.id}', '${vente.clientId}')" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition text-sm"><i class="fas fa-receipt mr-1"></i> Ticket</button><button onclick="genererFactureVente('${vente.id}', '${vente.clientId}')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg transition text-sm"><i class="fas fa-file-pdf mr-1"></i> PDF</button><button onclick="this.closest('.fixed').remove()" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg transition text-sm">Fermer</button></div></div>`;
     document.body.appendChild(modal);
   } catch (e) {
     showTemporaryNotification("❌ Erreur", "error");
   }
 };
-
-async function printThermalTicketFromIds(venteId, clientId) {
-  try {
-    const v = await (await fetch(`${VENTES_URL}/${venteId}`)).json();
-    const c = await (await fetch(`${CLIENTS_URL}/${String(clientId)}`)).json();
-    printThermalTicket(v, c);
-  } catch (e) {
-    showTemporaryNotification("❌ Erreur d'impression", "error");
-  }
-}
 
 function genererFactureMensuelleMulti(ventes, client) {
   if (typeof window.jspdf === "undefined") {
@@ -5888,20 +5911,25 @@ function genererFactureMensuelleMulti(ventes, client) {
   doc.line(m, y, rt, y);
   y += 8;
 
+  // Sous-total
   doc.setFont("helvetica", "normal");
   doc.setFontSize(10);
   doc.text("Sous-total:", 130, y);
   doc.text(`${formatNumberFC(total)} FC`, rt, y, { align: "right" });
   y += 7;
+
+  // Remise
   doc.text("Remise (5%):", 130, y);
   doc.text(`-${formatNumberFC(remise)} FC`, rt, y, { align: "right" });
-  y += 10;
 
+  // ✅ ESPACE SUFFISANT AVANT LE TOTAL
+  y += 15;
+
+  // ✅ TOTAL À PAYER CORRIGÉ AVEC ESPACE
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(12);
-  doc.text("TOTAL À PAYER :", 130, y);
   doc.setFontSize(14);
   doc.setTextColor(76, 175, 80);
+  doc.text("TOTAL À PAYER :", 110, y);
   doc.text(`${formatNumberFC(totalFinal)} FC`, rt, y, { align: "right" });
 
   doc.setFontSize(8);
@@ -5961,6 +5989,22 @@ function exportToCSV(ventes, client) {
   showTemporaryNotification("📥 Export CSV effectué");
 }
 
+function showBluetoothHelp() {
+  const modal = document.getElementById("bluetoothHelpModal");
+  if (modal) {
+    modal.classList.remove("hidden");
+    modal.classList.add("flex");
+  }
+}
+
+function closeBluetoothHelp() {
+  const modal = document.getElementById("bluetoothHelpModal");
+  if (modal) {
+    modal.classList.add("hidden");
+    modal.classList.remove("flex");
+  }
+}
+
 // ============================================
 // INITIALISATION
 // ============================================
@@ -5994,4 +6038,4 @@ window.forcerSynchronisation = forcerSynchronisation;
 window.modifierVente = modifierVente;
 window.showBluetoothHelp = showBluetoothHelp;
 window.closeBluetoothHelp = closeBluetoothHelp;
-window.printThermalTicketFromIds = printThermalTicketFromIds;
+window.imprimerTicketVente = imprimerTicketVente;
