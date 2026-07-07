@@ -17,7 +17,7 @@ const ECHANCIERS_URL = `${API_BASE_URL}/echeanciers`;
 // ============================================
 // CONFIGURATION DE SÉCURITÉ - MOT DE PASSE
 // ============================================
-const ADMIN_PASSWORD = "admin123";
+const ADMIN_PASSWORD = "70191";
 
 function verifyPassword(inputPassword) {
   return inputPassword === ADMIN_PASSWORD;
@@ -464,7 +464,6 @@ async function getDailyStats(date = null) {
     document.getElementById("dailyEquivalentBouteilles").textContent =
       totalEquivalent;
     displayDailySalesDetail(ventesDetail, dateStr);
-    await checkInconsistencies(ventesDuJour, allVentes);
     return {
       totalVentes,
       totalMontant,
@@ -498,7 +497,7 @@ function displayDailySalesDetail(ventesDetail, dateStr) {
       tb += v.bouteilles;
       tc += v.cassiers;
       tm += v.total;
-      return `<tr class="${i % 2 === 0 ? "bg-white" : "bg-gray-50"} hover:bg-gray-100 transition"><td class="px-4 py-3 text-sm font-mono">${v.heure}<\/td><td class="px-4 py-3"><div class="font-medium">${escapeHtml(v.clientNom)}<\/div><div class="text-xs text-gray-400">Code: ${v.clientId}<\/div><\/td><td class="px-4 py-3 text-sm">${v.produits.map((p) => `<div class="text-xs">${escapeHtml(p.nom)} (${p.quantite})<\/div>`).join("")}<\/td><td class="px-4 py-3 text-center text-orange-600">${v.bouteilles}<\/td><td class="px-4 py-3 text-center text-purple-600">${v.cassiers}<\/td><td class="px-4 py-3 text-right font-bold text-emerald-600">${formatNumberFC(v.total)} FC<\/td><td class="px-4 py-3 text-center"><button onclick="genererFactureVenteSpecifique('${v.id}')" class="bg-blue-600 text-white px-2 py-1 rounded text-xs">🧾 Facture<\/button><\/td><\/tr>`;
+      return `<tr class="${i % 2 === 0 ? "bg-white" : "bg-gray-50"} hover:bg-gray-100 transition"><td class="px-4 py-3 text-sm font-mono">${v.heure}<\/td><td class="px-4 py-3"><div class="font-medium">${escapeHtml(v.clientNom)}<\/div><div class="text-xs text-gray-400">Code: ${v.clientId}<\/div><\/td><td class="px-4 py-3 text-sm">${v.produits.map((p) => `<div class="text-xs">${escapeHtml(p.nom)} (${p.quantite})<\/div>`).join("")}<\/td><td class="px-4 py-3 text-center text-orange-600">${v.bouteilles}<\/td><td class="px-4 py-3 text-center text-purple-600">${v.cassiers}<\/td><td class="px-4 py-3 text-right font-bold text-emerald-600">${formatNumberFC(v.total)} FC<\/td><td class="px-4 py-3 text-center"><button onclick="genererFactureVente('${v.id}', '${v.clientId}')" class="bg-emerald-600 text-white px-2 py-1 rounded text-xs">🧾 Facture<\/button><\/td><\/tr>`;
     })
     .join("");
   if (footer) {
@@ -520,59 +519,6 @@ window.genererFactureVenteSpecifique = async function (venteId) {
     showTemporaryNotification("❌ Erreur", "error");
   }
 };
-async function checkInconsistencies(ventesDuJour, allVentes) {
-  const alerts = [];
-  for (const v of ventesDuJour) {
-    const vn = nettoyerVente(v);
-    for (const p of vn.produits) {
-      if (p.prix < 1000 && p.prix > 0)
-        alerts.push({
-          level: "warning",
-          message: `⚠️ Prix suspect (${formatNumberFC(p.prix)} FC) - Vente #${v.id}`,
-          venteId: v.id,
-        });
-    }
-  }
-  for (const v of ventesDuJour) {
-    const vn = nettoyerVente(v);
-    const qt = vn.produits.reduce((s, p) => s + p.quantite, 0);
-    if (qt > 100)
-      alerts.push({
-        level: "warning",
-        message: `⚠️ Quantité anormale (${qt} unités) - Vente #${v.id}`,
-        venteId: v.id,
-      });
-  }
-  const ventesParClient = {};
-  for (const v of allVentes) {
-    const cid = String(v.clientId);
-    if (!ventesParClient[cid]) ventesParClient[cid] = [];
-    ventesParClient[cid].push(v);
-  }
-  for (const [cid, ventes] of Object.entries(ventesParClient)) {
-    for (let i = 0; i < ventes.length - 1; i++) {
-      const v1 = ventes[i],
-        v2 = ventes[i + 1];
-      const diff =
-        Math.abs(parseDate(v2.date) - parseDate(v1.date)) / 1000 / 60;
-      if (diff < 2 && Math.abs(v1.total - v2.total) < 100) {
-        alerts.push({
-          level: "critical",
-          message: `🚨 Ventes rapides (${Math.round(diff)} min) - Client #${cid}`,
-          venteId: v1.id,
-        });
-        break;
-      }
-    }
-  }
-  const container = document.getElementById("alertsContainer");
-  if (!container) return;
-  if (alerts.length === 0) {
-    container.innerHTML = `<div class="text-center text-gray-400 py-4"><i class="fas fa-check-circle text-2xl mb-2 block text-emerald-500"></i><p>✅ Aucune anomalie détectée</p><p class="text-xs">${new Date().toLocaleTimeString()}</p></div>`;
-    return;
-  }
-  container.innerHTML = `<div class="space-y-2">${alerts.map((a) => `<div class="flex items-start gap-3 p-3 rounded-lg ${a.level === "critical" ? "bg-red-50 border-l-4 border-red-500" : "bg-yellow-50 border-l-4 border-yellow-500"}"><i class="fas ${a.level === "critical" ? "fa-skull-crosswalk text-red-500" : "fa-exclamation-triangle text-yellow-500"} mt-0.5"></i><div class="flex-1"><p class="text-sm ${a.level === "critical" ? "text-red-700" : "text-yellow-700"}">${a.message}</p>${a.venteId ? `<p class="text-xs text-gray-500">ID: ${a.venteId}</p>` : ""}</div>${a.venteId ? `<button onclick="genererFactureVenteSpecifique('${a.venteId}')" class="text-xs bg-gray-200 px-2 py-1 rounded">🔍</button>` : ""}</div>`).join("")}</div>`;
-}
 async function getWeeklyTrend() {
   try {
     const response = await fetch(VENTES_URL);
@@ -1204,11 +1150,229 @@ window.exporterHistoriqueClientFiltre = exporterHistoriqueClientFiltre;
 window.genererFactureClientParAnnee = genererFactureClientParAnnee;
 window.genererFactureVente = async function (venteId, clientId) {
   try {
+    const [venteRes, clientRes] = await Promise.all([
+      fetch(`${VENTES_URL}/${venteId}`),
+      fetch(`${CLIENTS_URL}/${String(clientId)}`),
+    ]);
+
+    if (!venteRes.ok) throw new Error("Vente non trouvée");
+    if (!clientRes.ok) throw new Error("Client non trouvé");
+
+    const vente = await venteRes.json();
+    const client = await clientRes.json();
+
+    const choix = await new Promise((resolve) => {
+      const modal = document.createElement("div");
+      modal.className =
+        "fixed inset-0 bg-black/50 z-[100] flex items-center justify-center";
+      modal.innerHTML = `
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-sm mx-4 animate-fadeIn p-6">
+          <h3 class="text-lg font-semibold text-gray-800 mb-4 text-center">
+            <i class="fas fa-print text-blue-600 mr-2"></i>
+            Choisissez le format
+          </h3>
+          <div class="space-y-3">
+            <button id="pdfBtn" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-lg transition flex items-center justify-center gap-2">
+              <i class="fas fa-file-pdf"></i> PDF (Télécharger)
+            </button>
+            <button id="thermalBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg transition flex items-center justify-center gap-2">
+              <i class="fas fa-print"></i> Ticket thermique (Imprimer)
+            </button>
+            <button id="cancelBtn" class="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 py-2 rounded-lg transition">
+              Annuler
+            </button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(modal);
+
+      const pdfBtn = modal.querySelector("#pdfBtn");
+      const thermalBtn = modal.querySelector("#thermalBtn");
+      const cancelBtn = modal.querySelector("#cancelBtn");
+
+      pdfBtn.addEventListener("click", () => {
+        modal.remove();
+        resolve("pdf");
+      });
+
+      thermalBtn.addEventListener("click", () => {
+        modal.remove();
+        resolve("thermal");
+      });
+
+      cancelBtn.addEventListener("click", () => {
+        modal.remove();
+        resolve(null);
+      });
+
+      modal.addEventListener("click", (e) => {
+        if (e.target === modal) {
+          modal.remove();
+          resolve(null);
+        }
+      });
+    });
+
+    if (!choix) return;
+
+    if (choix === "pdf") {
+      await genererFactureVentePDF(venteId, clientId);
+    } else {
+      printThermalTicket(vente, client);
+    }
+  } catch (e) {
+    console.error("Erreur:", e);
+    showTemporaryNotification("❌ Erreur lors de la génération", "error");
+  }
+};
+
+// ============================================
+// GÉNÉRATION DE FACTURE PDF POUR UNE VENTE
+// ============================================
+
+async function genererFactureVentePDF(venteId, clientId) {
+  try {
+    const [venteRes, clientRes] = await Promise.all([
+      fetch(`${VENTES_URL}/${venteId}`),
+      fetch(`${CLIENTS_URL}/${String(clientId)}`),
+    ]);
+
+    if (!venteRes.ok) throw new Error("Vente non trouvée");
+    if (!clientRes.ok) throw new Error("Client non trouvé");
+
+    const vente = await venteRes.json();
+    const client = await clientRes.json();
+
+    if (typeof window.jspdf === "undefined") {
+      showTemporaryNotification(
+        "❌ Erreur PDF - Librairie non chargée",
+        "error",
+      );
+      return;
+    }
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    const w = doc.internal.pageSize.getWidth();
+    const m = 20;
+    const rt = w - m;
+    const dateF = new Date().toLocaleString("fr-FR");
+
+    const vn = nettoyerVente(vente);
+    const produits = vn.produits;
+    const total = vn.total;
+
+    doc.setFontSize(20);
+    doc.setFont("helvetica", "bold");
+    doc.text("FACTURE DE VENTE", w / 2, 20, { align: "center" });
+
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    doc.text("VentesPro SARL", m, 35);
+    doc.text("Kinshasa, République Démocratique du Congo", m, 43);
+    doc.text(`Date: ${dateF}`, rt - 40, 35, { align: "right" });
+    doc.text(`Facture N°: ${vente.id || "N/A"}`, rt - 40, 43, {
+      align: "right",
+    });
+    doc.line(m, 52, rt, 52);
+
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "bold");
+    doc.text("Client :", m, 65);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.text(client.nom || "Client inconnu", m + 22, 65);
+    doc.text(`Téléphone: ${client.telephone || "N/A"}`, m + 22, 73);
+    doc.text(`Code Client: ${client.id}`, m + 22, 81);
+    doc.line(m, 88, rt, 88);
+
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "bold");
+    doc.text("Détail des produits", m, 100);
+
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "bold");
+    doc.text("Produit", m, 110);
+    doc.text("Qté", 90, 110);
+    doc.text("Prix unitaire", 120, 110);
+    doc.text("Total", 160, 110);
+    doc.line(m, 112, rt, 112);
+
+    let y = 120;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+
+    if (produits && produits.length > 0) {
+      produits.forEach((p) => {
+        const sousTotal = p.prix * p.quantite;
+        doc.text(p.nom || "Produit", m, y);
+        doc.text(p.quantite.toString(), 90, y);
+        doc.text(`${formatNumberFC(p.prix)} FC`, 120, y);
+        doc.text(`${formatNumberFC(sousTotal)} FC`, 160, y);
+        y += 7;
+
+        if (y > 250) {
+          doc.addPage();
+          y = 20;
+        }
+      });
+    } else {
+      doc.text("Aucun produit", m, y);
+      y += 7;
+    }
+
+    y += 5;
+    doc.line(m, y, rt, y);
+    y += 8;
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.text("Sous-total:", 130, y);
+    doc.text(`${formatNumberFC(total)} FC`, rt, y, { align: "right" });
+    y += 7;
+
+    if (vente.modifiee) {
+      doc.setTextColor(255, 0, 0);
+      doc.text("⚠️ FACTURE MODIFIÉE", m, y);
+      doc.setTextColor(0, 0, 0);
+      y += 7;
+    }
+
+    y += 5;
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(14);
+    doc.setTextColor(76, 175, 80);
+    doc.text("TOTAL À PAYER :", 130, y);
+    doc.text(`${formatNumberFC(total)} FC`, rt, y, { align: "right" });
+
+    doc.setFontSize(8);
+    doc.setTextColor(100, 100, 100);
+    doc.setFont("helvetica", "normal");
+    doc.text("Merci de votre confiance !", w / 2, 280, { align: "center" });
+    doc.text("www.ventespro.com", w / 2, 285, { align: "center" });
+
+    const nomFichier = `facture_${client.nom.replace(/\s/g, "_")}_${vente.id || Date.now()}.pdf`;
+    doc.save(nomFichier);
+
+    showTemporaryNotification("✅ Facture PDF générée avec succès !");
+    return doc;
+  } catch (error) {
+    console.error("Erreur génération PDF:", error);
+    showTemporaryNotification(`❌ Erreur: ${error.message}`, "error");
+    return null;
+  }
+}
+// ============================================
+// IMPRESSION DIRECTE DU TICKET
+// ============================================
+
+window.imprimerTicketVente = async function (venteId, clientId) {
+  try {
     const v = await (await fetch(`${VENTES_URL}/${venteId}`)).json();
     const c = await (await fetch(`${CLIENTS_URL}/${String(clientId)}`)).json();
     printThermalTicket(v, c);
   } catch (e) {
-    showTemporaryNotification("❌ Erreur", "error");
+    showTemporaryNotification("❌ Erreur d'impression", "error");
   }
 };
 
@@ -1684,7 +1848,6 @@ async function genererEcheancier(clientId, mois, annee) {
     echeanciers.push(echeancier);
     sauvegarderEcheanciers();
     afficherRecapitulatifEcheancier(echeancier);
-    mettreAJourWidgetEcheancier();
     mettreAJourStatsEcheancier();
 
     return echeancier;
@@ -1770,7 +1933,6 @@ async function marquerCommePaye(echeancierId) {
       `✅ Paiement enregistré pour ${echeancier.clientNom}`,
     );
     document.querySelector(".fixed.bg-black\\/50")?.remove();
-    mettreAJourWidgetEcheancier();
     mettreAJourStatsEcheancier();
     if (typeof afficherListeEcheanciers === "function") {
       afficherListeEcheanciers();
@@ -1891,7 +2053,6 @@ async function genererTousEcheanciersMois(mois, annee) {
     showTemporaryNotification(
       `✅ ${compteur} échéancier(s) généré(s) pour ${new Date(annee, mois - 1, 1).toLocaleDateString("fr-FR", { month: "long", year: "numeric" })}`,
     );
-    mettreAJourWidgetEcheancier();
     mettreAJourStatsEcheancier();
     if (typeof afficherListeEcheanciers === "function") {
       afficherListeEcheanciers();
@@ -2038,7 +2199,6 @@ function afficherListeEcheanciers() {
 async function forcerSynchronisation() {
   showTemporaryNotification("🔄 Synchronisation en cours...");
   await chargerEcheanciers();
-  mettreAJourWidgetEcheancier();
   mettreAJourStatsEcheancier();
   showTemporaryNotification("✅ Synchronisation terminée");
 }
@@ -2083,82 +2243,11 @@ async function chargerClientsPourEcheancier() {
     console.error("Erreur chargement clients:", error);
   }
 }
-function ajouterWidgetEcheancier() {
-  const alertsSection = document.getElementById("alertsSection");
-
-  const echeancierWidget = document.createElement("div");
-  echeancierWidget.className =
-    "bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-8";
-  echeancierWidget.id = "echeancierWidget";
-  echeancierWidget.innerHTML = `
-    <div class="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-emerald-50 to-teal-50">
-      <div class="flex justify-between items-center flex-wrap gap-4">
-        <h3 class="font-semibold text-gray-800">
-          <i class="fas fa-calendar-check text-emerald-600 mr-2"></i>
-          Échéanciers du mois
-        </h3>
-        <button onclick="afficherListeEcheanciers()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm transition">
-          <i class="fas fa-list mr-2"></i> Voir tous
-        </button>
-        <button onclick="forcerSynchronisation()" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg text-sm transition">
-          <i class="fas fa-cloud-upload-alt mr-2"></i> Sync
-        </button>
-      </div>
-    </div>
-    <div id="echeancierPreview" class="p-6 text-center text-gray-400">
-      <i class="fas fa-spinner fa-spin text-2xl mb-2 block"></i>
-      <p>Chargement...</p>
-    </div>
-  `;
-
-  if (alertsSection) {
-    alertsSection.insertAdjacentElement("afterend", echeancierWidget);
-  }
-}
 function mettreAJourWidgetEcheancier() {
-  const container = document.getElementById("echeancierPreview");
-  if (!container) return;
-
-  const echeanciersEnAttente = echeanciers.filter(
-    (e) => e.statut === "en_attente",
-  );
-  const totalDuMois = echeanciersEnAttente.reduce((s, e) => s + e.netAPayer, 0);
-
-  if (echeanciersEnAttente.length === 0) {
-    container.innerHTML = `
-      <div class="text-center text-gray-400 py-4">
-        <i class="fas fa-check-circle text-2xl mb-2 block text-emerald-500"></i>
-        <p>✅ Aucun paiement en attente</p>
-        <p class="text-xs">Tous les échéanciers du mois sont réglés</p>
-      </div>
-    `;
-  } else {
-    container.innerHTML = `
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div class="text-center p-3 bg-yellow-50 rounded-xl">
-          <p class="text-xs text-gray-500">En attente</p>
-          <p class="text-2xl font-bold text-yellow-700">${echeanciersEnAttente.length}</p>
-        </div>
-        <div class="text-center p-3 bg-blue-50 rounded-xl">
-          <p class="text-xs text-gray-500">Total à encaisser</p>
-          <p class="text-2xl font-bold text-blue-700">${formatNumberFC(totalDuMois)} FC</p>
-        </div>
-        <div class="text-center p-3 bg-orange-50 rounded-xl">
-          <p class="text-xs text-gray-500">Remise totale</p>
-          <p class="text-2xl font-bold text-orange-700">${formatNumberFC(echeanciersEnAttente.reduce((s, e) => s + e.remise, 0))} FC</p>
-        </div>
-        <div class="text-center p-3 bg-emerald-50 rounded-xl">
-          <p class="text-xs text-gray-500">Net à payer</p>
-          <p class="text-2xl font-bold text-emerald-700">${formatNumberFC(totalDuMois)} FC</p>
-        </div>
-      </div>
-      <div class="mt-4 text-right">
-        <button onclick="genererEcheancierMoisActuel()" class="text-sm text-emerald-600 hover:text-emerald-700">
-          <i class="fas fa-sync-alt mr-1"></i> Générer les échéanciers du mois
-        </button>
-      </div>
-    `;
-  }
+  // Cette fonction est conservée car elle pourrait être utilisée ailleurs
+  // Mais elle ne s'affiche plus dans la rubrique Achats
+  // Elle est utilisée uniquement pour la section Échéanciers
+  console.log("Widget échéancier mis à jour");
 }
 
 // ============================================
@@ -2545,24 +2634,92 @@ function displayClientsTable() {
 }
 function updateClientsPagination(totalPages) {
   const paginationDiv = document.getElementById("clientsPagination");
+  const infoDiv = document.getElementById("clientsInfo");
+  const pagesDiv = document.getElementById("clientsPages");
+
   if (!paginationDiv) return;
+
+  let info = document.getElementById("clientsInfo");
+  let pages = document.getElementById("clientsPages");
+
+  if (!info) {
+    info = document.createElement("span");
+    info.id = "clientsInfo";
+    info.className = "text-sm text-gray-500";
+    paginationDiv.prepend(info);
+  }
+
+  if (!pages) {
+    pages = document.createElement("div");
+    pages.id = "clientsPages";
+    pages.className = "flex gap-1";
+    paginationDiv.appendChild(pages);
+  }
+
+  const totalClients = filteredClients.length;
+  const start = (currentClientsPage - 1) * clientsPerPage + 1;
+  const end = Math.min(currentClientsPage * clientsPerPage, totalClients);
+
+  info.textContent = `Affichage ${start}-${end} sur ${totalClients} clients`;
+
   if (totalPages <= 1) {
-    paginationDiv.innerHTML = "";
+    pages.innerHTML = "";
     return;
   }
-  let paginationHtml = '<div class="flex gap-2">';
-  for (let i = 1; i <= totalPages; i++) {
-    paginationHtml += `<button class="client-page-btn px-3 py-1 rounded-lg text-sm transition ${i === currentClientsPage ? "bg-emerald-600 text-white" : "bg-gray-200 text-gray-700 hover:bg-gray-300"}" data-page="${i}">${i}</button>`;
+
+  let paginationHtml = "";
+
+  paginationHtml += `<button class="client-page-btn px-2 py-1 rounded text-sm transition ${currentClientsPage === 1 ? "bg-gray-100 text-gray-400 cursor-not-allowed" : "bg-gray-200 text-gray-700 hover:bg-gray-300"}" data-page="${currentClientsPage - 1}" ${currentClientsPage === 1 ? "disabled" : ""}>
+    ◄
+  </button>`;
+
+  let pagesToShow = [];
+  if (totalPages <= 7) {
+    for (let i = 1; i <= totalPages; i++) pagesToShow.push(i);
+  } else {
+    pagesToShow.push(1);
+    if (currentClientsPage > 3) pagesToShow.push("...");
+    for (
+      let i = Math.max(2, currentClientsPage - 1);
+      i <= Math.min(totalPages - 1, currentClientsPage + 1);
+      i++
+    ) {
+      pagesToShow.push(i);
+    }
+    if (currentClientsPage < totalPages - 2) pagesToShow.push("...");
+    pagesToShow.push(totalPages);
   }
-  paginationHtml += "</div>";
-  paginationDiv.innerHTML = paginationHtml;
+
+  pagesToShow.forEach((page) => {
+    if (page === "...") {
+      paginationHtml += `<span class="px-2 py-1 text-gray-400">…</span>`;
+    } else {
+      paginationHtml += `<button class="client-page-btn px-3 py-1 rounded-lg text-sm transition ${page === currentClientsPage ? "bg-emerald-600 text-white" : "bg-gray-200 text-gray-700 hover:bg-gray-300"}" data-page="${page}">
+        ${page}
+      </button>`;
+    }
+  });
+
+  paginationHtml += `<button class="client-page-btn px-2 py-1 rounded text-sm transition ${currentClientsPage === totalPages ? "bg-gray-100 text-gray-400 cursor-not-allowed" : "bg-gray-200 text-gray-700 hover:bg-gray-300"}" data-page="${currentClientsPage + 1}" ${currentClientsPage === totalPages ? "disabled" : ""}>
+    ►
+  </button>`;
+
+  pages.innerHTML = paginationHtml;
+
   document.querySelectorAll(".client-page-btn").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      currentClientsPage = parseInt(btn.dataset.page);
-      displayClientsTable();
-    });
+    btn.removeEventListener("click", handleClientPageClick);
+    btn.addEventListener("click", handleClientPageClick);
   });
 }
+
+function handleClientPageClick(e) {
+  const page = parseInt(e.currentTarget.dataset.page);
+  if (page && page !== currentClientsPage) {
+    currentClientsPage = page;
+    displayClientsTable();
+  }
+}
+
 function handleEditClient(e) {
   const btn = e.currentTarget;
   currentEditClientId = btn.getAttribute("data-id");
@@ -2990,7 +3147,68 @@ async function addVente() {
       }),
     });
     const data = await response.json();
-    printThermalTicket(data, clientData);
+
+    const choix = await new Promise((resolve) => {
+      const modal = document.createElement("div");
+      modal.className =
+        "fixed inset-0 bg-black/50 z-[100] flex items-center justify-center";
+      modal.innerHTML = `
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-sm mx-4 animate-fadeIn p-6">
+          <h3 class="text-lg font-semibold text-gray-800 mb-4 text-center">
+            <i class="fas fa-check-circle text-emerald-600 mr-2"></i>
+            Vente enregistrée !
+          </h3>
+          <p class="text-center text-gray-600 mb-4">
+            Montant total : <strong class="text-emerald-600">${formatNumberFC(total)} FC</strong>
+          </p>
+          <div class="space-y-3">
+            <button id="pdfBtn" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-lg transition flex items-center justify-center gap-2">
+              <i class="fas fa-file-pdf"></i> Télécharger la facture PDF
+            </button>
+            <button id="thermalBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg transition flex items-center justify-center gap-2">
+              <i class="fas fa-print"></i> Imprimer le ticket
+            </button>
+            <button id="skipBtn" class="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 py-2 rounded-lg transition">
+              Plus tard
+            </button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(modal);
+
+      const pdfBtn = modal.querySelector("#pdfBtn");
+      const thermalBtn = modal.querySelector("#thermalBtn");
+      const skipBtn = modal.querySelector("#skipBtn");
+
+      pdfBtn.addEventListener("click", () => {
+        modal.remove();
+        resolve("pdf");
+      });
+
+      thermalBtn.addEventListener("click", () => {
+        modal.remove();
+        resolve("thermal");
+      });
+
+      skipBtn.addEventListener("click", () => {
+        modal.remove();
+        resolve(null);
+      });
+
+      modal.addEventListener("click", (e) => {
+        if (e.target === modal) {
+          modal.remove();
+          resolve(null);
+        }
+      });
+    });
+
+    if (choix === "pdf") {
+      await genererFactureVentePDF(data.id, clientId);
+    } else if (choix === "thermal") {
+      printThermalTicket(data, clientData);
+    }
+
     panier = [];
     afficherPanier();
     messageVente.innerHTML = `<div class="bg-emerald-50 text-emerald-700 p-4 rounded-lg">✅ Vente enregistrée ! ID: ${data.id}<br>💰 Total: ${formatNumberFC(total)} FC</div>`;
@@ -2998,7 +3216,6 @@ async function addVente() {
     loadDashboardStats();
     getDailyStats();
     getWeeklyTrend();
-    mettreAJourWidgetEcheancier();
     setTimeout(() => {
       if (messageVente.innerHTML.includes("Vente enregistrée"))
         messageVente.innerHTML = "";
@@ -3062,7 +3279,67 @@ async function sauvegarderModificationVente() {
     if (!response.ok) throw new Error("Erreur modification");
 
     const data = await response.json();
-    printThermalTicket(data, clientData);
+
+    const choix = await new Promise((resolve) => {
+      const modal = document.createElement("div");
+      modal.className =
+        "fixed inset-0 bg-black/50 z-[100] flex items-center justify-center";
+      modal.innerHTML = `
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-sm mx-4 animate-fadeIn p-6">
+          <h3 class="text-lg font-semibold text-gray-800 mb-4 text-center">
+            <i class="fas fa-check-circle text-emerald-600 mr-2"></i>
+            Vente modifiée !
+          </h3>
+          <p class="text-center text-gray-600 mb-4">
+            Nouveau total : <strong class="text-emerald-600">${formatNumberFC(nouveauTotal)} FC</strong>
+          </p>
+          <div class="space-y-3">
+            <button id="pdfBtn" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-lg transition flex items-center justify-center gap-2">
+              <i class="fas fa-file-pdf"></i> Télécharger la facture PDF
+            </button>
+            <button id="thermalBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg transition flex items-center justify-center gap-2">
+              <i class="fas fa-print"></i> Imprimer le ticket
+            </button>
+            <button id="skipBtn" class="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 py-2 rounded-lg transition">
+              Plus tard
+            </button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(modal);
+
+      const pdfBtn = modal.querySelector("#pdfBtn");
+      const thermalBtn = modal.querySelector("#thermalBtn");
+      const skipBtn = modal.querySelector("#skipBtn");
+
+      pdfBtn.addEventListener("click", () => {
+        modal.remove();
+        resolve("pdf");
+      });
+
+      thermalBtn.addEventListener("click", () => {
+        modal.remove();
+        resolve("thermal");
+      });
+
+      skipBtn.addEventListener("click", () => {
+        modal.remove();
+        resolve(null);
+      });
+
+      modal.addEventListener("click", (e) => {
+        if (e.target === modal) {
+          modal.remove();
+          resolve(null);
+        }
+      });
+    });
+
+    if (choix === "pdf") {
+      await genererFactureVentePDF(data.id, clientId);
+    } else if (choix === "thermal") {
+      printThermalTicket(data, clientData);
+    }
 
     panier = [];
     afficherPanier();
@@ -3098,7 +3375,6 @@ async function sauvegarderModificationVente() {
     loadDashboardStats();
     getDailyStats();
     getWeeklyTrend();
-    mettreAJourWidgetEcheancier();
 
     setTimeout(() => {
       if (messageVente.innerHTML.includes("Vente modifiée"))
@@ -4102,7 +4378,6 @@ async function chargerAchats() {
 }
 
 async function ajouterAchat(fournisseur, item) {
-  // Déterminer si c'est un cassier en fonction du type stocké dans l'item
   const estCassier =
     item.type === "cassier" ||
     item.prix > 50000 ||
@@ -4313,10 +4588,13 @@ function afficherListeAchats(
   }
 
   let totalGeneral = 0;
+  let totalQuantite = 0;
+
   tbody.innerHTML = achatsFiltres
     .sort((a, b) => new Date(b.date) - new Date(a.date))
     .map((achat, idx) => {
       totalGeneral += achat.total;
+      totalQuantite += achat.quantite;
       const date = new Date(achat.date);
       const statutBadge =
         achat.statut === "actif"
@@ -4325,7 +4603,7 @@ function afficherListeAchats(
       return `<tr class="${idx % 2 === 0 ? "bg-white" : "bg-gray-50"} hover:bg-gray-100 transition">
       <td class="px-4 py-3 text-sm">${date.toLocaleDateString("fr-FR")} ${date.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}<\/td>
       <td class="px-4 py-3 font-medium">${escapeHtml(achat.produit)}<\/td>
-      <td class="px-4 py-3 text-center">${achat.quantite}<\/td>
+      <td class="px-4 py-3 text-center font-bold text-blue-600">${achat.quantite}<\/td>
       <td class="px-4 py-3 text-right">${formatNumberFC(achat.prixUnitaire)} FC<\/td>
       <td class="px-4 py-3 text-right font-bold text-emerald-600">${formatNumberFC(achat.total)} FC<\/td>
       <td class="px-4 py-3 text-center">${statutBadge}<\/td>
@@ -4354,8 +4632,12 @@ function afficherListeAchats(
     const footerTotal = document.getElementById(
       `${fournisseur.toLowerCase()}FooterTotal`,
     );
+    const footerQuantite = document.getElementById(
+      `${fournisseur.toLowerCase()}FooterQuantite`,
+    );
     if (footerTotal)
       footerTotal.textContent = formatNumberFC(totalGeneral) + " FC";
+    if (footerQuantite) footerQuantite.textContent = totalQuantite;
   }
 }
 
@@ -5182,15 +5464,26 @@ async function initModuleAchats() {
 }
 
 // ============================================
-// HISTORIQUE DES VENTES CLIENTS
+// HISTORIQUE DES VENTES CLIENTS - CORRECTION
 // ============================================
 const showHistoriqueBtn = document.getElementById("showHistoriqueBtn");
 const historiqueClientIdElem = document.getElementById("historiqueClientId");
 const historiqueMessageDiv = document.getElementById("historiqueMessage");
 const historiqueTableElem = document.getElementById("historiqueTable");
 const historiqueTableBody = document.getElementById("historiqueTableBody");
-if (showHistoriqueBtn)
-  showHistoriqueBtn.addEventListener("click", afficherHistorique);
+
+// Correction : Attacher l'événement correctement avec clonage
+if (showHistoriqueBtn) {
+  // Supprimer les anciens écouteurs en clonant
+  const newBtn = showHistoriqueBtn.cloneNode(true);
+  showHistoriqueBtn.parentNode.replaceChild(newBtn, showHistoriqueBtn);
+
+  newBtn.addEventListener("click", function (e) {
+    e.preventDefault();
+    afficherHistorique();
+  });
+}
+
 async function afficherHistorique() {
   const clientId = historiqueClientIdElem.value.trim();
   if (!clientId) {
@@ -5224,6 +5517,7 @@ async function afficherHistorique() {
     historiqueMessageDiv.innerHTML = `<span class="text-red-600">❌ Erreur: ${e.message}</span>`;
   }
 }
+
 function displayVentesMulti(ventes, clientData) {
   if (!historiqueTableBody) return;
   historiqueTableBody.innerHTML = "";
@@ -5248,9 +5542,20 @@ function displayVentesMulti(ventes, clientData) {
                      <td class="px-4 py-3 text-right font-bold text-emerald-600">${formatNumberFC(total)} FC<\/td>
                      <td class="px-4 py-3 text-sm">${formatDate(v.date)}<\/td>
                      <td class="px-4 py-3 text-center">
-                       <button onclick="modifierVente('${v.id}')" class="bg-yellow-600 text-white px-2 py-1 rounded text-xs mr-1">🔒 ✏️ Modifier</button>
-                       <button onclick="showVenteDetail('${v.id}')" class="bg-blue-600 text-white px-2 py-1 rounded text-xs mr-1">📄 Détails</button>
-                       <button onclick="genererFactureVente('${v.id}', '${clientData.id}')" class="bg-emerald-600 text-white px-2 py-1 rounded text-xs">🧾 Facture</button>
+                       <div class="flex flex-wrap gap-1 justify-center">
+                         <button onclick="genererFactureVente('${v.id}', '${clientData.id}')" class="bg-emerald-600 text-white px-2 py-1 rounded text-xs hover:bg-emerald-700 transition">
+                           <i class="fas fa-file-pdf mr-1"></i> PDF
+                         </button>
+                         <button onclick="imprimerTicketVente('${v.id}', '${clientData.id}')" class="bg-blue-600 text-white px-2 py-1 rounded text-xs hover:bg-blue-700 transition">
+                           <i class="fas fa-print mr-1"></i> Ticket
+                         </button>
+                         <button onclick="modifierVente('${v.id}')" class="bg-yellow-600 text-white px-2 py-1 rounded text-xs hover:bg-yellow-700 transition">
+                           <i class="fas fa-edit mr-1"></i> Modifier
+                         </button>
+                         <button onclick="showVenteDetail('${v.id}')" class="bg-purple-600 text-white px-2 py-1 rounded text-xs hover:bg-purple-700 transition">
+                           <i class="fas fa-info-circle mr-1"></i>
+                         </button>
+                       </div>
                      <\/td>`;
       historiqueTableBody.appendChild(row);
       totalQuantite += qt;
@@ -5269,36 +5574,36 @@ function displayVentesMulti(ventes, clientData) {
   filterContainer.className =
     "mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200";
   filterContainer.innerHTML = `
-    <div class="flex flex-wrap items-center justify-between gap-4">
-      <div>
-        <strong><i class="fas fa-filter mr-1"></i> 🔍 Filtrer :</strong>
-      </div>
-      <div class="flex flex-wrap gap-3">
-        <label class="inline-flex items-center gap-2 cursor-pointer">
-          <input type="radio" name="filterTypeHisto" value="all" class="filter-radio text-emerald-600" ${window.currentFilterType === "all" ? "checked" : ""}>
-          <span>📅 Toutes</span>
-        </label>
-        <label class="inline-flex items-center gap-2 cursor-pointer">
-          <input type="radio" name="filterTypeHisto" value="today" class="filter-radio text-emerald-600" ${window.currentFilterType === "today" ? "checked" : ""}>
-          <span>📆 Aujourd'hui</span>
-        </label>
-        <label class="inline-flex items-center gap-2 cursor-pointer">
-          <input type="radio" name="filterTypeHisto" value="week" class="filter-radio text-emerald-600" ${window.currentFilterType === "week" ? "checked" : ""}>
-          <span>📊 Semaine</span>
-        </label>
-        <label class="inline-flex items-center gap-2 cursor-pointer">
-          <input type="radio" name="filterTypeHisto" value="month" class="filter-radio text-emerald-600" ${window.currentFilterType === "month" ? "checked" : ""}>
-          <span>📈 Mois</span>
-        </label>
-        <button id="applyFilterHistoBtn" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1 rounded text-sm transition">
-          Appliquer
-        </button>
-        <button id="resetFilterHistoBtn" class="bg-gray-500 hover:bg-gray-600 text-white px-3 py-1 rounded text-sm transition">
-          Réinitialiser
-        </button>
-      </div>
-    </div>
-  `;
+        <div class="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <strong><i class="fas fa-filter mr-1"></i> 🔍 Filtrer :</strong>
+          </div>
+          <div class="flex flex-wrap gap-3">
+            <label class="inline-flex items-center gap-2 cursor-pointer">
+              <input type="radio" name="filterTypeHisto" value="all" class="filter-radio text-emerald-600" ${window.currentFilterType === "all" ? "checked" : ""}>
+              <span>📅 Toutes</span>
+            </label>
+            <label class="inline-flex items-center gap-2 cursor-pointer">
+              <input type="radio" name="filterTypeHisto" value="today" class="filter-radio text-emerald-600" ${window.currentFilterType === "today" ? "checked" : ""}>
+              <span>📆 Aujourd'hui</span>
+            </label>
+            <label class="inline-flex items-center gap-2 cursor-pointer">
+              <input type="radio" name="filterTypeHisto" value="week" class="filter-radio text-emerald-600" ${window.currentFilterType === "week" ? "checked" : ""}>
+              <span>📊 Semaine</span>
+            </label>
+            <label class="inline-flex items-center gap-2 cursor-pointer">
+              <input type="radio" name="filterTypeHisto" value="month" class="filter-radio text-emerald-600" ${window.currentFilterType === "month" ? "checked" : ""}>
+              <span>📈 Mois</span>
+            </label>
+            <button id="applyFilterHistoBtn" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1 rounded text-sm transition">
+              Appliquer
+            </button>
+            <button id="resetFilterHistoBtn" class="bg-gray-500 hover:bg-gray-600 text-white px-3 py-1 rounded text-sm transition">
+              Réinitialiser
+            </button>
+          </div>
+        </div>
+      `;
 
   const histContainer =
     document.getElementById("historiqueTable").parentElement;
@@ -5357,13 +5662,13 @@ function displayVentesMulti(ventes, clientData) {
   const actionDiv = document.createElement("div");
   actionDiv.className = "action-buttons-container flex gap-3 mt-4 justify-end";
   actionDiv.innerHTML = `
-    <button id="exportCsvBtn" class="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition">
-      <i class="fas fa-file-excel"></i> Exporter CSV
-    </button>
-    <button id="factureMensuelleBtn" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition">
-      <i class="fas fa-file-invoice"></i> Facture mensuelle
-    </button>
-  `;
+        <button id="exportCsvBtn" class="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition">
+          <i class="fas fa-file-excel"></i> Exporter CSV
+        </button>
+        <button id="factureMensuelleBtn" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition">
+          <i class="fas fa-file-invoice"></i> Facture mensuelle
+        </button>
+      `;
   histContainer.appendChild(actionDiv);
 
   const exportBtn = document.getElementById("exportCsvBtn");
@@ -5387,6 +5692,7 @@ function displayVentesMulti(ventes, clientData) {
     );
   }
 }
+
 function appliquerFiltreHisto(filterType, ventesOriginales, clientData) {
   const now = new Date();
   let filtrees = [];
@@ -5439,6 +5745,7 @@ function appliquerFiltreHisto(filterType, ventesOriginales, clientData) {
     historiqueMessageDiv.innerHTML = `<span class="text-emerald-600">✅ ${filtrees.length} vente(s) pour ${msg}</span>`;
   }
 }
+
 window.showVenteDetail = async function (venteId) {
   try {
     const response = await fetch(`${VENTES_URL}/${venteId}`);
@@ -5462,12 +5769,13 @@ window.showVenteDetail = async function (venteId) {
     const modal = document.createElement("div");
     modal.className =
       "fixed inset-0 bg-black/50 z-50 flex items-center justify-center";
-    modal.innerHTML = `<div class="bg-white rounded-xl shadow-xl max-w-md w-full mx-4 animate-fadeIn"><div class="px-6 py-4 border-b bg-gradient-to-r from-blue-50 to-white"><h3 class="text-lg font-semibold text-blue-800"><i class="fas fa-receipt text-blue-600 mr-2"></i> Détails de la vente</h3></div><div class="p-6 space-y-3"><div class="grid grid-cols-2 gap-2 text-sm"><p class="text-gray-500">🆔 ID Vente :</p><p class="font-mono font-medium">${vente.id}</p><p class="text-gray-500">👤 Client :</p><p class="font-medium">${escapeHtml(clientNom)}</p><p class="text-gray-500">🆔 Code Client :</p><p class="font-mono">${vente.clientId}</p></div><div class="border-t border-gray-100 pt-3"><p class="text-gray-500 text-sm mb-2">📦 Produits :</p><ul class="space-y-1 max-h-48 overflow-y-auto">${produitsHtml || '<li class="text-gray-400 text-center py-2">Aucun produit</li>'}</ul></div><div class="border-t border-gray-100 pt-3"><div class="flex justify-between items-center"><span class="text-gray-500">📊 Total articles :</span><span class="font-semibold">${totalArticles}</span></div><div class="flex justify-between items-center mt-2"><span class="text-gray-500">💰 Montant total :</span><span class="text-xl font-bold text-emerald-600">${formatNumberFC(total)} FC</span></div><div class="flex justify-between items-center mt-2"><span class="text-gray-500">📅 Date :</span><span class="text-sm">${formatDate(vente.date)}</span></div></div></div><div class="px-6 py-4 border-t flex justify-end gap-3"><button onclick="printThermalTicketFromIds('${vente.id}', '${vente.clientId}')" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition text-sm"><i class="fas fa-print mr-1"></i> Imprimer ticket</button><button onclick="genererFactureVente('${vente.id}', '${vente.clientId}')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg transition text-sm"><i class="fas fa-file-pdf mr-1"></i> PDF</button><button onclick="this.closest('.fixed').remove()" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg transition text-sm">Fermer</button></div></div>`;
+    modal.innerHTML = `<div class="bg-white rounded-xl shadow-xl max-w-md w-full mx-4 animate-fadeIn"><div class="px-6 py-4 border-b bg-gradient-to-r from-blue-50 to-white"><h3 class="text-lg font-semibold text-blue-800"><i class="fas fa-receipt text-blue-600 mr-2"></i> Détails de la vente</h3></div><div class="p-6 space-y-3"><div class="grid grid-cols-2 gap-2 text-sm"><p class="text-gray-500">🆔 ID Vente :</p><p class="font-mono font-medium">${vente.id}</p><p class="text-gray-500">👤 Client :</p><p class="font-medium">${escapeHtml(clientNom)}</p><p class="text-gray-500">🆔 Code Client :</p><p class="font-mono">${vente.clientId}</p></div><div class="border-t border-gray-100 pt-3"><p class="text-gray-500 text-sm mb-2">📦 Produits :</p><ul class="space-y-1 max-h-48 overflow-y-auto">${produitsHtml || '<li class="text-gray-400 text-center py-2">Aucun produit</li>'}</ul></div><div class="border-t border-gray-100 pt-3"><div class="flex justify-between items-center"><span class="text-gray-500">📊 Total articles :</span><span class="font-semibold">${totalArticles}</span></div><div class="flex justify-between items-center mt-2"><span class="text-gray-500">💰 Montant total :</span><span class="text-xl font-bold text-emerald-600">${formatNumberFC(total)} FC</span></div><div class="flex justify-between items-center mt-2"><span class="text-gray-500">📅 Date :</span><span class="text-sm">${formatDate(vente.date)}</span></div></div></div><div class="px-6 py-4 border-t flex justify-end gap-3"><button onclick="imprimerTicketVente('${vente.id}', '${vente.clientId}')" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition text-sm"><i class="fas fa-print mr-1"></i> Ticket</button><button onclick="genererFactureVente('${vente.id}', '${vente.clientId}')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg transition text-sm"><i class="fas fa-file-pdf mr-1"></i> PDF</button><button onclick="this.closest('.fixed').remove()" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg transition text-sm">Fermer</button></div></div>`;
     document.body.appendChild(modal);
   } catch (e) {
     showTemporaryNotification("❌ Erreur", "error");
   }
 };
+
 async function printThermalTicketFromIds(venteId, clientId) {
   try {
     const v = await (await fetch(`${VENTES_URL}/${venteId}`)).json();
@@ -5477,6 +5785,7 @@ async function printThermalTicketFromIds(venteId, clientId) {
     showTemporaryNotification("❌ Erreur d'impression", "error");
   }
 }
+
 function genererFactureMensuelleMulti(ventes, client) {
   if (typeof window.jspdf === "undefined") {
     showTemporaryNotification("❌ Erreur PDF", "error");
@@ -5604,6 +5913,7 @@ function genererFactureMensuelleMulti(ventes, client) {
   );
   showTemporaryNotification("✅ Facture mensuelle générée");
 }
+
 function exportToCSV(ventes, client) {
   if (!ventes || ventes.length === 0) {
     showTemporaryNotification("📭 Aucune donnée", "error");
@@ -5660,10 +5970,8 @@ initGestionClients();
 initRapports();
 initDailyStats();
 chargerEcheanciers();
-ajouterWidgetEcheancier();
-mettreAJourWidgetEcheancier();
-chargerClientsPourEcheancier();
 mettreAJourStatsEcheancier();
+chargerClientsPourEcheancier();
 
 setTimeout(() => {
   if (typeof produits !== "undefined" && produits.BRACONGO) {

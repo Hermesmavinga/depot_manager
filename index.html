@@ -477,14 +477,15 @@
             >
               <h3 class="font-semibold text-gray-800">
                 <i class="fas fa-calendar-day text-emerald-600 mr-2"></i>
-                Statistiques journalières & Traçabilité
+                Statistiques journalières
               </h3>
               <div class="flex gap-2">
                 <input
                   type="date"
                   id="dailyStatsDate"
                   class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 outline-none"
-                /><button
+                />
+                <button
                   id="refreshDailyStats"
                   class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm transition btn-hover"
                 >
@@ -577,26 +578,6 @@
                 <div class="relative h-64 w-full">
                   <canvas id="weeklyTrendChart" class="w-full h-full"></canvas>
                 </div>
-              </div>
-            </div>
-          </div>
-
-          <div
-            id="alertsSection"
-            class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-8"
-          >
-            <div class="px-6 py-4 border-b border-gray-100 bg-red-50">
-              <h3 class="font-semibold text-red-700">
-                <i class="fas fa-shield-alt text-red-600 mr-2"></i> Contrôle de
-                traçabilité & Alertes
-              </h3>
-            </div>
-            <div id="alertsContainer" class="p-4">
-              <div class="text-center text-gray-400 py-4">
-                <i
-                  class="fas fa-check-circle text-2xl mb-2 block text-emerald-500"
-                ></i>
-                <p>✅ Aucune anomalie détectée - Tout est conforme</p>
               </div>
             </div>
           </div>
@@ -877,7 +858,10 @@
               <div
                 id="clientsPagination"
                 class="mt-4 flex justify-between items-center"
-              ></div>
+              >
+                <span id="clientsInfo" class="text-sm text-gray-500"></span>
+                <div id="clientsPages" class="flex gap-1"></div>
+              </div>
             </div>
           </div>
         </div>
@@ -1943,7 +1927,14 @@
                       class="bg-gray-50 font-bold hidden"
                     >
                       <tr>
-                        <td colspan="4" class="px-4 py-3">TOTAL</td>
+                        <td colspan="2" class="px-4 py-3">TOTAL</td>
+                        <td
+                          id="bracongoFooterQuantite"
+                          class="px-4 py-3 text-center text-emerald-600"
+                        >
+                          0
+                        </td>
+                        <td class="px-4 py-3"></td>
                         <td
                           id="bracongoFooterTotal"
                           class="px-4 py-3 text-right text-emerald-600"
@@ -2101,7 +2092,14 @@
                       class="bg-gray-50 font-bold hidden"
                     >
                       <tr>
-                        <td colspan="4" class="px-4 py-3">TOTAL</td>
+                        <td colspan="2" class="px-4 py-3">TOTAL</td>
+                        <td
+                          id="bralimaFooterQuantite"
+                          class="px-4 py-3 text-center text-emerald-600"
+                        >
+                          0
+                        </td>
+                        <td class="px-4 py-3"></td>
                         <td
                           id="bralimaFooterTotal"
                           class="px-4 py-3 text-right text-emerald-600"
